@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <circle cx="50" cy="50" r="45" fill="#12121c" stroke="#d4af37" stroke-width="4"/>
+  <!-- Oko Opatrznosci / Trzecie Oko -->
+  <path d="M22 50 Q50 20 78 50 Q50 80 22 50 Z" fill="none" stroke="#d4af37" stroke-width="3" stroke-linejoin="round"/>
+  <circle cx="50" cy="50" r="11" fill="none" stroke="#d4af37" stroke-width="3"/>
+  <circle cx="50" cy="50" r="5" fill="#d4af37"/>
+  <!-- Promienie mistyczne -->
+  <path d="M50 12 L50 22 M50 78 L50 88 M12 50 L22 50 M78 50 L88 50" stroke="#d4af37" stroke-width="3" stroke-linecap="round"/>
+  <path d="M23 23 L31 31 M69 69 L77 77 M23 69 L31 61 M69 23 L77 31" stroke="#d4af37" stroke-width="2" stroke-linecap="round"/>
+</svg>

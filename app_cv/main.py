@@ -8,15 +8,21 @@ import json
 import copy
 import websockets
 import math
+import time
 
 # Konfiguracja
 CV_ASSETS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "biblioteka_talii", "rider-waite-smith", "produkcja", "wzorce_cv"))
-MIN_MATCH_COUNT = 25   # Obnizony z 38 do 25 — filtr geometryczny (homografia + validate_quad) skutecznie eliminuje szum
+MIN_MATCH_COUNT = 18   # Obnizony do 18 — filtry geometryczne (homografia + validate_quad + aspect ratio + inlier ratio) skutecznie eliminuja szum
 RATIO_THRESH = 0.79    # Zaostrzone z 0.83 do 0.79 dla czystosci dopasowan cech ORB
 MIN_INLIER_RATIO = 0.3 # Minimalna proporcja inlierow w homografii RANSAC (odrzuca niestabilne dopasowania)
 CARD_ASPECT_RATIO = 1.72  # Standardowy stosunek wysokosc/szerokosc kart tarota RWS (~1.72)
-CARD_ASPECT_TOLERANCE = 0.45  # Tolerancja odchylenia aspect ratio (dopuszcza lekkie znieksztalcenia perspektywiczne)
+CARD_ASPECT_TOLERANCE = 0.65  # Tolerancja odchylenia aspect ratio (poluzowana — perspektywa kamery silnie znieksztalca proporcje)
 EMA_ALPHA = 0.4        # Wspolczynnik wygladzania Exponential Moving Average dla pozycji (0 = pelne wygladzanie, 1 = brak)
+
+# System dwufazowy "Zlap i Zamroz" — eliminuje mikro-jitter statycznych kart
+LOCK_AFTER_FRAMES = 8      # Klatki stabilnej detekcji zanim pozycja zostanie zamrozona
+LOCK_DEAD_ZONE_POS = 1.5   # Minimalny ruch pozycji (w jednostkach sceny) zeby odblokowac karte
+LOCK_DEAD_ZONE_ANGLE = 0.3 # Minimalny ruch kata (w radianach, ~17 stopni) zeby odblokowac karte
 
 # Stan wspoldzielony miedzy watkiem wizyjnym (CV) a watkiem serwera WebSocket
 status_lock = threading.Lock()
@@ -136,8 +142,8 @@ print("[TAROT VISION] Computer Vision Module v2.0 (Audited)")
 print("========================================")
 
 # 1. Inicjalizacja detektora ORB (szybki i darmowy detektor cech)
-# Zwiekszona liczba punktow z 2000 do 3500 dla stabilniejszej detekcji wielu kart jednoczesnie
-orb = cv2.ORB_create(nfeatures=3500)
+# 2000 features przy 720p — zoptymalizowane pod kątem wydajności (3x szybsze dopasowanie!)
+orb = cv2.ORB_create(nfeatures=2000)
 
 # FLANN-LSH Matcher — 2-5x szybszy niz BruteForce dla binarnych deskryptorow ORB
 # Uzywa Locality Sensitive Hashing zamiast pelnego porownania N*M
@@ -182,7 +188,7 @@ for file_path in file_paths:
 
 print(f"[OK] Zaladowano {len(reference_cards)} wzorcow do pamieci!")
 
-# 3. Inicjalizacja Kamery
+# 3. Inicjalizacja Kamery — jawnie ustawiamy 720p (1280x720) dla wiecej cech ORB z wiekszej odleglosci
 print("[KAMERA] Uruchamianie kamery... (Wcisnij 'q' by zamknac, cyfry '0'-'9' by przelaczac kamery w locie!)")
 camera_index = 0
 cap = cv2.VideoCapture(camera_index)
@@ -190,15 +196,22 @@ cap = cv2.VideoCapture(camera_index)
 if not cap.isOpened():
     print("[OSTRZEZENIE] Brak kamery pod indeksem 0. Wcisnij np. 1 lub 2 by zmienic.")
 
-# Odczytujemy rzeczywista rozdzielczosc kamery zamiast hardcodowac 640x480
-frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) or 640
-frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) or 480
+# Wymuszamy 720p — wiecej pikseli per karta = wiecej cech ORB = lepsza detekcja z dystansu
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+
+frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) or 1280
+frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) or 720
 print(f"[KAMERA] Rozdzielczosc: {frame_width}x{frame_height}")
 
 # Parametry stabilizacji detekcji (debouncing) dla wielu kart
 debounce_state = {}
 DEBOUNCE_FRAMES = 3  # Karta musi byc stabilnie wykryta przez 3 klatki z rzedu
 LOSS_FRAMES = 8      # Karta musi zniknac na 8 klatek z rzedu, aby zostala schowana
+
+# Zoptymalizowana kolejka round-robin do sprawdzania nieaktywnych kart
+inactive_index = 0
+prev_time = time.time()  # Do pomiaru FPS
 
 # Petla glowna (Live feed)
 while True:
@@ -228,11 +241,35 @@ while True:
     # Slownik przechowujacy wykryte w tej klatce karty i ich dane
     detected_this_frame = {}
     
+    # Określamy aktywne karty w tym momencie (faza DETECTING lub LOCKED)
+    active_names = []
+    for name, state in debounce_state.items():
+        if state.get("stable_count", 0) > 0:
+            active_names.append(name)
+            
+    # Pozostałe, nieaktywne karty
+    all_card_names = list(reference_cards.keys())
+    inactive_names = [n for n in all_card_names if n not in active_names]
+    
     # Sprawdzamy czy w ogole cokolwiek na kamerze ma ostre krawedzie
     if des_frame is not None and len(des_frame) > MIN_MATCH_COUNT:
+        # Zoptymalizowany round-robin dla kart nieaktywnych (sprawdzamy tylko podzbiór 4 kart per frame)
+        NUM_INACTIVE_PER_FRAME = 4
+        inactive_to_check = []
+        if inactive_names:
+            if inactive_index >= len(inactive_names):
+                inactive_index = 0
+            for i in range(min(NUM_INACTIVE_PER_FRAME, len(inactive_names))):
+                idx = (inactive_index + i) % len(inactive_names)
+                inactive_to_check.append(inactive_names[idx])
+            inactive_index = (inactive_index + len(inactive_to_check)) % len(inactive_names)
+            
+        # Łączymy zbiory: zawsze sprawdzamy wszystkie aktywne + rotujący podzbiór nieaktywnych
+        cards_to_check = list(set(active_names + inactive_to_check))
         
-        # 5. Iterujemy po wszystkich kartach w pamieci i szukamy spelniajacych prog
-        for name, ref_data in reference_cards.items():
+        # 5. Iterujemy po wybranych kartach i szukamy spelniajacych prog
+        for name in cards_to_check:
+            ref_data = reference_cards[name]
             des_ref = ref_data["descriptors"]
             if des_ref is None: continue
                 
@@ -284,9 +321,9 @@ while True:
                         cx = float(np.mean(dst[:, 0, 0]))
                         cy = float(np.mean(dst[:, 0, 1]))
                         
-                        # 2. Przeliczamy wspolrzedne — dynamiczna rozdzielczosc zamiast hardcoded 640/480
-                        pos_x = float((cx / frame_width * 2.0 - 1.0) * 8.5)
-                        pos_y = float((1.0 - (cy / frame_height) * 2.0) * 4.0 + 4.5)
+                        # 2. Przeliczamy wspolrzedne — skalowanie dopasowane do pelnego pola widzenia kamery
+                        pos_x = float((cx / frame_width * 2.0 - 1.0) * 13.0)
+                        pos_y = float((1.0 - (cy / frame_height) * 2.0) * 7.8)
                         
                         # 3. Obliczamy kat obrotu karty na biurku
                         x0, y0 = dst[0][0][0], dst[0][0][1]
@@ -302,40 +339,81 @@ while True:
                             "angle": angle
                         }
                 
-    # 6. Stabilizacja detekcji (Debouncing) z wygladzaniem EMA
+    # 6. Dwufazowa stabilizacja: DETECTING -> LOCKED ("Zlap i Zamroz")
+    # Faza DETECTING: pelna moc ORB, szybka identyfikacja, EMA wygladzanie
+    # Faza LOCKED: pozycja zamrozona, aktualizacja TYLKO gdy karta ruszy sie o wiecej niz LOCK_DEAD_ZONE
     active_detected_cards = []
     
     for name in reference_cards.keys():
         if name not in debounce_state:
-            debounce_state[name] = {"stable_count": 0, "loss_count": 0}
+            debounce_state[name] = {
+                "stable_count": 0, 
+                "loss_count": 0,
+                "phase": "DETECTING"  # DETECTING lub LOCKED
+            }
             
         if name in detected_this_frame:
             debounce_state[name]["stable_count"] += 1
             debounce_state[name]["loss_count"] = 0
             
-            # EMA (Exponential Moving Average) — wygladzanie pozycji eliminuje jitter ORB
             new_x = detected_this_frame[name]["x"]
             new_y = detected_this_frame[name]["y"]
             new_angle = detected_this_frame[name]["angle"]
             
-            old_x = debounce_state[name].get("last_x", new_x)
-            old_y = debounce_state[name].get("last_y", new_y)
-            old_angle = debounce_state[name].get("last_angle", new_angle)
+            phase = debounce_state[name]["phase"]
             
-            debounce_state[name]["last_x"] = EMA_ALPHA * new_x + (1 - EMA_ALPHA) * old_x
-            debounce_state[name]["last_y"] = EMA_ALPHA * new_y + (1 - EMA_ALPHA) * old_y
-            debounce_state[name]["last_angle"] = EMA_ALPHA * new_angle + (1 - EMA_ALPHA) * old_angle
+            if phase == "DETECTING":
+                # Faza wykrywania — EMA wygladzanie, szybka konwergencja
+                old_x = debounce_state[name].get("last_x", new_x)
+                old_y = debounce_state[name].get("last_y", new_y)
+                old_angle = debounce_state[name].get("last_angle", new_angle)
+                
+                debounce_state[name]["last_x"] = EMA_ALPHA * new_x + (1 - EMA_ALPHA) * old_x
+                debounce_state[name]["last_y"] = EMA_ALPHA * new_y + (1 - EMA_ALPHA) * old_y
+                debounce_state[name]["last_angle"] = EMA_ALPHA * new_angle + (1 - EMA_ALPHA) * old_angle
+                
+                # Po LOCK_AFTER_FRAMES stabilnych klatkach — zamrazamy pozycje
+                if debounce_state[name]["stable_count"] >= LOCK_AFTER_FRAMES:
+                    debounce_state[name]["phase"] = "LOCKED"
+                    debounce_state[name]["locked_x"] = debounce_state[name]["last_x"]
+                    debounce_state[name]["locked_y"] = debounce_state[name]["last_y"]
+                    debounce_state[name]["locked_angle"] = debounce_state[name]["last_angle"]
+                    
+            elif phase == "LOCKED":
+                # Faza zamrozona — ignorujemy drobne wahania ORB
+                locked_x = debounce_state[name]["locked_x"]
+                locked_y = debounce_state[name]["locked_y"]
+                locked_angle = debounce_state[name]["locked_angle"]
+                
+                # Sprawdzamy czy karta NAPRAWDE sie ruszyla (duzy ruch)
+                dx = abs(new_x - locked_x)
+                dy = abs(new_y - locked_y)
+                d_angle = abs(new_angle - locked_angle)
+                
+                if dx > LOCK_DEAD_ZONE_POS or dy > LOCK_DEAD_ZONE_POS or d_angle > LOCK_DEAD_ZONE_ANGLE:
+                    # Karta sie ruszyla! Odblokowujemy i wracamy do fazy wykrywania
+                    debounce_state[name]["phase"] = "DETECTING"
+                    debounce_state[name]["stable_count"] = 0
+                    debounce_state[name]["last_x"] = new_x
+                    debounce_state[name]["last_y"] = new_y
+                    debounce_state[name]["last_angle"] = new_angle
+                else:
+                    # Karta statyczna — uzywamy zamrozonej pozycji (ZERO jitteru)
+                    debounce_state[name]["last_x"] = locked_x
+                    debounce_state[name]["last_y"] = locked_y
+                    debounce_state[name]["last_angle"] = locked_angle
         else:
             debounce_state[name]["loss_count"] += 1
             if debounce_state[name]["loss_count"] >= LOSS_FRAMES:
                 debounce_state[name]["stable_count"] = 0
+                debounce_state[name]["phase"] = "DETECTING"  # Reset do fazy wykrywania
                 
         # Karta jest uznana za aktywnie wykryta, jesli osiagnela prog stabilnosci
         if debounce_state[name]["stable_count"] >= DEBOUNCE_FRAMES:
             active_detected_cards.append({
                 "name": name,
                 "x": round(debounce_state[name].get("last_x", 0.0), 4),
-                "y": round(debounce_state[name].get("last_y", 4.5), 4),
+                "y": round(debounce_state[name].get("last_y", 0.0), 4),
                 "angle": round(debounce_state[name].get("last_angle", 0.0), 4)
             })
             
@@ -344,19 +422,42 @@ while True:
         current_status["detected"] = len(active_detected_cards) > 0
         current_status["cards"] = active_detected_cards
 
-    # 7. Rysowanie ramek i nazw dla wszystkich stabilnych, zatwierdzonych kart
+    # 7. Rysowanie ramek — kolor zalezy od fazy: ZIELONA = DETECTING, NIEBIESKA = LOCKED
     for name, data in detected_this_frame.items():
         dst = data["dst"]
         match_count = data["count"]
         
-        display_frame = cv2.polylines(display_frame, [np.int32(dst)], True, (0, 255, 0), 3, cv2.LINE_AA)
+        # Sprawdzamy faze karty
+        phase = debounce_state.get(name, {}).get("phase", "DETECTING")
+        
+        if phase == "LOCKED":
+            box_color = (255, 180, 0)   # Niebiesko-zlota (BGR) — zamrozona
+            text_color = (255, 180, 0)
+            status_text = "LOCKED"
+        else:
+            box_color = (0, 255, 0)     # Zielona — aktywne wykrywanie
+            text_color = (0, 0, 255)
+            status_text = "DETECTING"
+        
+        display_frame = cv2.polylines(display_frame, [np.int32(dst)], True, box_color, 3, cv2.LINE_AA)
         
         top_y = min([pt[0][1] for pt in dst])
         top_x = min([pt[0][0] for pt in dst])
         
-        cv2.putText(display_frame, f"KARTA: {name.upper()} ({match_count} pkt)", 
+        cv2.putText(display_frame, f"{name.upper()} ({match_count} pkt) [{status_text}]", 
                     (int(top_x), int(top_y) - 10), cv2.FONT_HERSHEY_SIMPLEX, 
-                    0.8, (0, 0, 255), 2, cv2.LINE_AA)
+                    0.7, text_color, 2, cv2.LINE_AA)
+
+    # Obliczanie i rysowanie FPS na żywo (pomaga w weryfikacji wydajności)
+    current_time = time.time()
+    time_diff = current_time - prev_time
+    fps = 1.0 / time_diff if time_diff > 0 else 0.0
+    prev_time = current_time
+    
+    cv2.putText(display_frame, f"FPS: {fps:.1f}", (20, 40), 
+                cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 255), 2, cv2.LINE_AA)
+    cv2.putText(display_frame, f"Sledzone: {len(active_names)} | Pula: {len(inactive_names)}", 
+                (20, 75), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (200, 200, 200), 1, cv2.LINE_AA)
 
     cv2.imshow('TarotVision - AI Detection (Wcisnij Q by wyjsc)', display_frame)
     
