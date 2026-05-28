@@ -45,3 +45,7 @@ models/*.pt
 models/*.onnx
 models/*.tflite
 *.weights
+
+# === Debugging / CV Temp ===
+app_cv/*.jpg
+

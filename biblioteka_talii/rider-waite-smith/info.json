@@ -1,0 +1,120 @@
+{
+  "deck_name": "Rider-Waite-Smith",
+  "deck_id": "rws_1909_wikimedia",
+  "language": "en",
+  "copyright": "public_domain",
+  "card_count": 22,
+  "source": "Wikimedia Commons (Pamela Colman Smith Commemorative Set)",
+  "cards": [
+    {
+      "id": 0,
+      "file_base": "00_fool",
+      "wiki_url": "https://upload.wikimedia.org/wikipedia/commons/9/90/RWS_Tarot_00_Fool.jpg"
+    },
+    {
+      "id": 1,
+      "file_base": "01_magician",
+      "wiki_url": "https://upload.wikimedia.org/wikipedia/commons/d/de/RWS_Tarot_01_Magician.jpg"
+    },
+    {
+      "id": 2,
+      "file_base": "02_high_priestess",
+      "wiki_url": "https://upload.wikimedia.org/wikipedia/commons/8/88/RWS_Tarot_02_High_Priestess.jpg"
+    },
+    {
+      "id": 3,
+      "file_base": "03_empress",
+      "wiki_url": "https://upload.wikimedia.org/wikipedia/commons/d/d2/RWS_Tarot_03_Empress.jpg"
+    },
+    {
+      "id": 4,
+      "file_base": "04_emperor",
+      "wiki_url": "https://upload.wikimedia.org/wikipedia/commons/c/c3/RWS_Tarot_04_Emperor.jpg"
+    },
+    {
+      "id": 5,
+      "file_base": "05_hierophant",
+      "wiki_url": "https://upload.wikimedia.org/wikipedia/commons/8/8d/RWS_Tarot_05_Hierophant.jpg"
+    },
+    {
+      "id": 6,
+      "file_base": "06_lovers",
+      "wiki_url": "https://upload.wikimedia.org/wikipedia/commons/d/db/RWS_Tarot_06_Lovers.jpg"
+    },
+    {
+      "id": 7,
+      "file_base": "07_chariot",
+      "wiki_url": "https://upload.wikimedia.org/wikipedia/commons/9/9b/RWS_Tarot_07_Chariot.jpg"
+    },
+    {
+      "id": 8,
+      "file_base": "08_strength",
+      "wiki_url": "https://upload.wikimedia.org/wikipedia/commons/f/f5/RWS_Tarot_08_Strength.jpg"
+    },
+    {
+      "id": 9,
+      "file_base": "09_hermit",
+      "wiki_url": "https://upload.wikimedia.org/wikipedia/commons/4/4d/RWS_Tarot_09_Hermit.jpg"
+    },
+    {
+      "id": 10,
+      "file_base": "10_wheel_of_fortune",
+      "wiki_url": "https://upload.wikimedia.org/wikipedia/commons/3/3c/RWS_Tarot_10_Wheel_of_Fortune.jpg"
+    },
+    {
+      "id": 11,
+      "file_base": "11_justice",
+      "wiki_url": "https://upload.wikimedia.org/wikipedia/commons/e/e0/RWS_Tarot_11_Justice.jpg"
+    },
+    {
+      "id": 12,
+      "file_base": "12_hanged_man",
+      "wiki_url": "https://upload.wikimedia.org/wikipedia/commons/2/2b/RWS_Tarot_12_Hanged_Man.jpg"
+    },
+    {
+      "id": 13,
+      "file_base": "13_death",
+      "wiki_url": "https://upload.wikimedia.org/wikipedia/commons/d/d7/RWS_Tarot_13_Death.jpg"
+    },
+    {
+      "id": 14,
+      "file_base": "14_temperance",
+      "wiki_url": "https://upload.wikimedia.org/wikipedia/commons/f/f8/RWS_Tarot_14_Temperance.jpg"
+    },
+    {
+      "id": 15,
+      "file_base": "15_devil",
+      "wiki_url": "https://upload.wikimedia.org/wikipedia/commons/5/55/RWS_Tarot_15_Devil.jpg"
+    },
+    {
+      "id": 16,
+      "file_base": "16_tower",
+      "wiki_url": "https://upload.wikimedia.org/wikipedia/commons/5/53/RWS_Tarot_16_Tower.jpg"
+    },
+    {
+      "id": 17,
+      "file_base": "17_star",
+      "wiki_url": "https://upload.wikimedia.org/wikipedia/commons/d/db/RWS_Tarot_17_Star.jpg"
+    },
+    {
+      "id": 18,
+      "file_base": "18_moon",
+      "wiki_url": "https://upload.wikimedia.org/wikipedia/commons/7/7f/RWS_Tarot_18_Moon.jpg"
+    },
+    {
+      "id": 19,
+      "file_base": "19_sun",
+      "wiki_url": "https://upload.wikimedia.org/wikipedia/commons/1/17/RWS_Tarot_19_Sun.jpg"
+    },
+    {
+      "id": 20,
+      "file_base": "20_judgement",
+      "wiki_url": "https://upload.wikimedia.org/wikipedia/commons/d/dd/RWS_Tarot_20_Judgement.jpg"
+    },
+    {
+      "id": 21,
+      "file_base": "21_world",
+      "wiki_url": "https://upload.wikimedia.org/wikipedia/commons/f/ff/RWS_Tarot_21_World.jpg"
+    }
+  ]
+}
