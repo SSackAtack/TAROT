@@ -1,17 +1,17 @@
 import './style.css'
 import * as THREE from 'three'
 
-// 1. Inicjalizacja sceny (z pełną przezroczystością pod nakładkę OBS)
+// 1. Inicjalizacja sceny (z pelna przezroczystoscia pod nakladke OBS)
 const container = document.getElementById('app')
 const scene = new THREE.Scene()
 
 // Ustawienia kamery
 const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000)
-camera.position.z = 20 // Nieco dalej, by zmieścić cały rozkład wielu kart
+camera.position.z = 20
 camera.position.y = 7  
 camera.lookAt(0, 3, 0) 
 
-// Renderer z kanałem Alpha i cieniami
+// Renderer z kanalem Alpha i cieniami
 const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true })
 renderer.setSize(window.innerWidth, window.innerHeight)
 renderer.setPixelRatio(window.devicePixelRatio)
@@ -19,7 +19,7 @@ renderer.shadowMap.enabled = true
 renderer.shadowMap.type = THREE.PCFShadowMap
 container.appendChild(renderer.domElement)
 
-// 2. Oświetlenie
+// 2. Oswietlenie
 const ambientLight = new THREE.AmbientLight(0xffffff, 1.4) 
 scene.add(ambientLight)
 
@@ -30,11 +30,11 @@ dirLight.shadow.camera.top = 12
 dirLight.shadow.camera.bottom = -12
 dirLight.shadow.camera.left = -15
 dirLight.shadow.camera.right = 15
-dirLight.shadow.mapSize.width = 2048
-dirLight.shadow.mapSize.height = 2048
+dirLight.shadow.mapSize.width = 1024
+dirLight.shadow.mapSize.height = 1024
 scene.add(dirLight)
 
-// 3. Stół/Shadow Catcher (Łapacz cieni)
+// 3. Shadow Catcher (Lapacz cieni)
 const shadowPlaneGeo = new THREE.PlaneGeometry(150, 150)
 const shadowPlaneMat = new THREE.ShadowMaterial({ opacity: 0.55 })
 const shadowPlane = new THREE.Mesh(shadowPlaneGeo, shadowPlaneMat)
@@ -43,9 +43,10 @@ shadowPlane.position.y = -0.1
 shadowPlane.receiveShadow = true
 scene.add(shadowPlane)
 
-// 4. Inicjalizacja mechanizmu Preloadu Tekstur
+// 4. Preload tekstur z Promise.all + flaga gotowosci
 const textureLoader = new THREE.TextureLoader()
 const texturesCache = {}
+let texturesReady = false  // Flaga blokujaca tworzenie kart przed zakonczeniem preloadu
 
 const cardNames = [
     "00_fool", "01_magician", "02_high_priestess", "03_empress", "04_emperor",
@@ -54,76 +55,112 @@ const cardNames = [
     "15_devil", "16_tower", "17_star", "18_moon", "19_sun", "20_judgement", "21_world"
 ]
 
-console.log("[PRELOAD] Rozpoczynam wczytywanie 22 tekstur tarota do pamięci...")
+console.log("[PRELOAD] Rozpoczynam wczytywanie 22 tekstur tarota do pamieci...")
 
-cardNames.forEach((name) => {
-    const path = `/karty/${name}.webp`
-    textureLoader.load(path, (texture) => {
-        texturesCache[name] = texture
-        // Konserwatywne ustawienia filtrowania dla maksymalnej ostrości tekstu i grafik
-        texture.minFilter = THREE.LinearMipmapLinearFilter
-        texture.magFilter = THREE.LinearFilter
-        console.log(`[PRELOAD] Załadowano pomyślnie: ${name}`)
-    }, undefined, (err) => {
-        console.error(`[PRELOAD BŁĄD] Nie udało się załadować: ${name}`, err)
+// Promise-based preloading — gwarantuje, ze texturesReady = true dopiero gdy WSZYSTKIE 22 sa gotowe
+const preloadPromises = cardNames.map((name) => {
+    return new Promise((resolve) => {
+        const path = `/karty/${name}.webp`
+        textureLoader.load(path, (texture) => {
+            texturesCache[name] = texture
+            texture.minFilter = THREE.LinearMipmapLinearFilter
+            texture.magFilter = THREE.LinearFilter
+            texture.colorSpace = THREE.SRGBColorSpace  // Poprawne odwzorowanie kolorow (wymagane od Three.js r152+)
+            console.log(`[PRELOAD] Zaladowano: ${name}`)
+            resolve()
+        }, undefined, (err) => {
+            console.error(`[PRELOAD BLAD] Nie udalo sie zaladowac: ${name}`, err)
+            resolve() // Rozwiazujemy mimo bledu, zeby nie blokowac reszty
+        })
     })
 })
 
-// 5. Zarządzanie instancjami kart 3D na stole
-const activeCards = {} // Słownik aktywnych kart: { "nazwa": { group, material, currentOpacity, targetOpacity } }
+Promise.all(preloadPromises).then(() => {
+    texturesReady = true
+    console.log(`[PRELOAD] Wszystkie ${Object.keys(texturesCache).length} tekstur zaladowane i gotowe!`)
+})
 
-// Funkcja tworzenia i inicjalizacji wirtualnej karty 3D o zaokrąglonych rogach i pozłacanych brzegi
-function createVirtualCard(name) {
-    const texture = texturesCache[name]
-    if (!texture) {
-        console.warn(`[WARN] Tekstura dla karty ${name} nie jest jeszcze gotowa w Cache!`)
-        return
-    }
+// 5. Wspoldzielona geometria karty — tworzona RAZ i reuzywana przez wszystkie instancje
+// Eliminuje zbedne alokacje GPU (audit: kazda karta tworzyla wlasna kopie geometrii)
+let sharedGeometry = null
+let sharedCardWidth = 0
+let sharedCardHeight = 0
 
-    const aspect = texture.image ? (texture.image.width / texture.image.height) : (70 / 120)
-    const cardHeight = 5.5
-    const cardWidth = cardHeight * aspect
+function getSharedGeometry(aspect) {
+    if (sharedGeometry) return sharedGeometry
 
-    // 1. Tworzymy kształt 2D zaokrąglonego prostokąta (Rounded Rectangle)
+    sharedCardHeight = 5.5
+    sharedCardWidth = sharedCardHeight * aspect
+
     const shape = new THREE.Shape()
-    const radius = 0.24 // Promień zaokrąglenia rogu dostosowany proporcjonalnie
-    const x = -cardWidth / 2
-    const y = -cardHeight / 2
+    const radius = 0.24
+    const x = -sharedCardWidth / 2
+    const y = -sharedCardHeight / 2
 
     shape.moveTo(x, y + radius)
-    shape.lineTo(x, y + cardHeight - radius)
-    shape.quadraticCurveTo(x, y + cardHeight, x + radius, y + cardHeight)
-    shape.lineTo(x + cardWidth - radius, y + cardHeight)
-    shape.quadraticCurveTo(x + cardWidth, y + cardHeight, x + cardWidth, y + cardHeight - radius)
-    shape.lineTo(x + cardWidth, y + radius)
-    shape.quadraticCurveTo(x + cardWidth, y, x + cardWidth - radius, y)
+    shape.lineTo(x, y + sharedCardHeight - radius)
+    shape.quadraticCurveTo(x, y + sharedCardHeight, x + radius, y + sharedCardHeight)
+    shape.lineTo(x + sharedCardWidth - radius, y + sharedCardHeight)
+    shape.quadraticCurveTo(x + sharedCardWidth, y + sharedCardHeight, x + sharedCardWidth, y + sharedCardHeight - radius)
+    shape.lineTo(x + sharedCardWidth, y + radius)
+    shape.quadraticCurveTo(x + sharedCardWidth, y, x + sharedCardWidth - radius, y)
     shape.lineTo(x + radius, y)
     shape.quadraticCurveTo(x, y, x, y + radius)
 
-    // 2. Wyciskamy kształt w 3D (Extrude) nadając mu grubość papieru i ścięcia krawędzi (bevel)
     const extrudeSettings = {
         steps: 1,
-        depth: 0.08, // Grubość karty (ok. 0.8mm w skali sceny)
+        depth: 0.08,
         bevelEnabled: true,
-        bevelThickness: 0.02, // Płaskie, lśniące ścięcie na brzegu
+        bevelThickness: 0.02,
         bevelSize: 0.015,
         bevelSegments: 4
     }
 
-    const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings)
-    geometry.center() // Środkujemy układ współrzędnych geometrii
+    sharedGeometry = new THREE.ExtrudeGeometry(shape, extrudeSettings)
+    sharedGeometry.center()
 
-    // Ręczna korekta i mapowanie współrzędnych UV na zakres [0, 1] dla idealnego rozłożenia tekstury na zaokrąglonym prostokącie
-    const pos = geometry.attributes.position
-    const uvs = geometry.attributes.uv
+    // Reczna korekta UV — wykonana RAZ, nie przy kazdej karcie
+    const pos = sharedGeometry.attributes.position
+    const uvs = sharedGeometry.attributes.uv
     for (let i = 0; i < pos.count; i++) {
-        const u = (pos.getX(i) + cardWidth / 2) / cardWidth
-        const v = (pos.getY(i) + cardHeight / 2) / cardHeight
+        const u = (pos.getX(i) + sharedCardWidth / 2) / sharedCardWidth
+        const v = (pos.getY(i) + sharedCardHeight / 2) / sharedCardHeight
         uvs.setXY(i, u, v)
     }
     uvs.needsUpdate = true
 
-    // 3. Definiujemy materiały (Przód/Tył z grafiką oraz metaliczne złote brzegi!)
+    console.log(`[AR] Wspoldzielona geometria utworzona (${sharedCardWidth.toFixed(2)} x ${sharedCardHeight})`)
+    return sharedGeometry
+}
+
+// 6. Zarzadzanie instancjami kart 3D
+const activeCards = {}
+
+// Wspoldzielony material zlotych krawedzi — identyczny dla wszystkich kart (audit: tworzony byl od nowa per karta)
+const sharedEdgeMaterial = new THREE.MeshStandardMaterial({
+    color: 0xd4af37,
+    roughness: 0.22,
+    metalness: 0.85,
+    transparent: true,
+    opacity: 0.0
+})
+
+function createVirtualCard(name) {
+    if (!texturesReady) {
+        console.warn(`[WARN] Preload jeszcze nie zakonczony — pomijam karte ${name}`)
+        return
+    }
+
+    const texture = texturesCache[name]
+    if (!texture) {
+        console.warn(`[WARN] Tekstura dla karty ${name} nie istnieje w Cache!`)
+        return
+    }
+
+    const aspect = texture.image ? (texture.image.width / texture.image.height) : (70 / 120)
+    const geometry = getSharedGeometry(aspect) // Reuzywamy wspoldzielona geometrie
+
+    // Kazda karta potrzebuje wlasnego materialu face (inna tekstura), ale klonujemy edge material
     const faceMaterial = new THREE.MeshStandardMaterial({ 
         map: texture,
         transparent: true,
@@ -133,22 +170,15 @@ function createVirtualCard(name) {
         side: THREE.DoubleSide
     })
 
-    const edgeMaterial = new THREE.MeshStandardMaterial({
-        color: 0xd4af37, // Przepiękny, głęboki odcień złota (Metallic Gold Leaf)
-        roughness: 0.22,
-        metalness: 0.85,  // Bardzo wysoka metaliczność dla lśnienia w świetle lampy!
-        transparent: true,
-        opacity: 0.0
-    })
+    // Klonujemy edge material (potrzebne bo kazda karta ma niezalezna opacity)
+    const edgeMaterial = sharedEdgeMaterial.clone()
 
-    // Mesh obsługuje tablicę materiałów (index 0: przód/tył, index 1: boczna krawędź extrude)
     const mesh = new THREE.Mesh(geometry, [faceMaterial, edgeMaterial])
     mesh.castShadow = true
     
     const cardInstanceGroup = new THREE.Group()
     cardInstanceGroup.add(mesh)
     
-    // Pozycjonujemy początkowo na środku (X=0)
     cardInstanceGroup.position.set(0, 4.5, 0)
     scene.add(cardInstanceGroup)
 
@@ -163,26 +193,28 @@ function createVirtualCard(name) {
         targetAngle: 0.0
     }
     
-    console.log(`[AR] Utworzono zaokrągloną kartę 3D o złotych brzegach: ${name}`)
+    console.log(`[AR] Utworzono karte 3D: ${name}`)
 }
 
-// 6. Integracja WebSocket (Odbiór rozkładu wielu kart)
+// 7. WebSocket z exponential backoff
+let wsReconnectDelay = 1000 // Start: 1s, max: 15s
+const WS_MAX_DELAY = 15000
+
 function connectWebSocket() {
-    console.log("[WEBSOCKET] Łączenie z TarotVision CV...")
+    console.log("[WEBSOCKET] Laczenie z TarotVision CV...")
     const ws = new WebSocket("ws://localhost:8765")
 
     ws.onopen = () => {
-        console.log("[WEBSOCKET] Połączono! Oczekiwanie na rozkłady kart...")
+        console.log("[WEBSOCKET] Polaczono! Oczekiwanie na rozklady kart...")
+        wsReconnectDelay = 1000 // Reset delay po udanym polaczeniu
     }
 
     ws.onmessage = (event) => {
         try {
             const data = JSON.parse(event.data)
-            const detectedCards = data.cards || [] // Lista obiektów { name, x, y, angle }
+            const detectedCards = data.cards || []
             const detectedNames = detectedCards.map(c => c.name)
             
-            // Oznaczamy wszystkie załadowane karty jako nieaktywne (do wygaszenia),
-            // chyba że znajdują się na nowej liście wykrytych kart.
             Object.keys(activeCards).forEach((name) => {
                 if (detectedNames.includes(name)) {
                     activeCards[name].targetOpacity = 1.0
@@ -191,9 +223,13 @@ function connectWebSocket() {
                 }
             })
 
-            // Dla każdej nowo wykrytej karty: tworzymy instancję i aktualizujemy jej docelową pozycję
             detectedCards.forEach((cardData) => {
                 const name = cardData.name
+                
+                // Walidacja danych WebSocket — chroni przed NaN/undefined
+                if (!cardNames.includes(name)) return
+                if (typeof cardData.x !== 'number' || typeof cardData.y !== 'number') return
+                
                 if (!activeCards[name]) {
                     createVirtualCard(name)
                 }
@@ -202,64 +238,62 @@ function connectWebSocket() {
                     activeCards[name].targetOpacity = 1.0
                     activeCards[name].targetX = cardData.x
                     activeCards[name].targetY = cardData.y
-                    activeCards[name].targetAngle = cardData.angle
+                    activeCards[name].targetAngle = cardData.angle || 0
                 }
             })
         } catch (e) {
-            console.error("[WEBSOCKET ERROR] Błąd przetwarzania danych:", e)
+            console.error("[WEBSOCKET ERROR] Blad przetwarzania danych:", e)
         }
     }
 
     ws.onclose = () => {
-        console.warn("[WEBSOCKET] Połączenie utracone. Próba wznowienia za 3s...")
-        // Wygaszamy wszystkie karty przy braku sygnału z backendu
+        console.warn(`[WEBSOCKET] Polaczenie utracone. Ponowna proba za ${(wsReconnectDelay / 1000).toFixed(1)}s...`)
         Object.keys(activeCards).forEach((name) => {
             activeCards[name].targetOpacity = 0.0
         })
-        setTimeout(connectWebSocket, 3000)
+        setTimeout(connectWebSocket, wsReconnectDelay)
+        // Exponential backoff — kazda nieudana proba podwaja delay (max 15s)
+        wsReconnectDelay = Math.min(wsReconnectDelay * 2, WS_MAX_DELAY)
     }
 
-    ws.onerror = (err) => {
+    ws.onerror = () => {
         ws.close()
     }
 }
 
 connectWebSocket()
 
-// 7. Pętla animacji z dynamicznym układem łukowym i płynnymi przejściami
-const startTime = Date.now()
+// 8. Petla animacji z frame-rate independent LERP (THREE.Clock zamiast Date.now)
+const clock = new THREE.Clock()
 
 function animate() {
     requestAnimationFrame(animate)
 
-    const t = (Date.now() - startTime) * 0.001
+    const delta = clock.getDelta()       // Czas miedzy klatkami w sekundach (frame-rate independent!)
+    const t = clock.getElapsedTime()     // Calkowity czas od startu (precyzyjniejszy niz Date.now)
 
-    // Pobieramy i sortujemy alfabetycznie nazwy wszystkich widocznych kart
-    // Sortowanie gwarantuje, że karty nie zamieniają się miejscami na ekranie!
     const visibleCardNames = Object.keys(activeCards)
         .filter((name) => activeCards[name].currentOpacity > 0.01 || activeCards[name].targetOpacity > 0.0)
         .sort()
 
-    const numCards = visibleCardNames.length
-    const step = 4.2 // Elegancki odstęp dostosowany do mniejszego rozmiaru kart
-    const totalWidth = (numCards - 1) * step
-
     visibleCardNames.forEach((name, index) => {
         const cardObj = activeCards[name]
 
-        // Płynna zmiana przezroczystości (LERP) dla obu materiałów
-        cardObj.currentOpacity += (cardObj.targetOpacity - cardObj.currentOpacity) * 0.07
-        cardObj.faceMaterial.opacity = cardObj.currentOpacity * 0.95
-        cardObj.edgeMaterial.opacity = cardObj.currentOpacity * 0.95
+        // Frame-rate independent LERP — identyczna predkosc animacji na 30Hz, 60Hz i 144Hz
+        const opacitySmooth = 1 - Math.pow(1 - 0.07, delta * 60)
+        const posSmooth = 1 - Math.pow(1 - 0.08, delta * 60)
 
-        // Czyszczenie pamięci (Garbage Collector) po pełnym wygaszeniu
+        // Plynna zmiana przezroczystosci
+        cardObj.currentOpacity += (cardObj.targetOpacity - cardObj.currentOpacity) * opacitySmooth
+        cardObj.faceMaterial.opacity = cardObj.currentOpacity
+        cardObj.edgeMaterial.opacity = cardObj.currentOpacity
+
+        // Czyszczenie pamieci po pelnym wygaszeniu (NIE disposujemy wspoldzielonej geometrii!)
         if (cardObj.targetOpacity === 0.0 && cardObj.currentOpacity <= 0.01) {
             scene.remove(cardObj.group)
             cardObj.group.traverse((child) => {
                 if (child.isMesh) {
-                    child.geometry.dispose()
-                    
-                    // Wsparcie dla czyszczenia tablicy materiałów (face + edge)
+                    // Geometria jest wspoldzielona — NIE disposujemy jej!
                     if (Array.isArray(child.material)) {
                         child.material.forEach((m) => m.dispose())
                     } else {
@@ -268,22 +302,22 @@ function animate() {
                 }
             })
             delete activeCards[name]
-            console.log(`[AR] Usunięto i wyczyszczono z pamięci kartę: ${name}`)
+            console.log(`[AR] Usunieto i wyczyszczono karte: ${name}`)
             return
         }
 
-        // Płynne podążanie (LERP) za pozycją X z kamery
-        cardObj.group.position.x += (cardObj.targetX - cardObj.group.position.x) * 0.08
+        // Plynne podazanie za pozycja X (frame-rate independent)
+        cardObj.group.position.x += (cardObj.targetX - cardObj.group.position.x) * posSmooth
 
-        // Płynne podążanie (LERP) za pozycją Y z kamery (łączymy pozycję Y z organiczną lewitacją)
+        // Plynne podazanie za pozycja Y + organiczna lewitacja
         const organicLevitation = Math.sin(t * 1.5 + index * 0.8) * 0.25
         const targetYWithLevitation = cardObj.targetY + organicLevitation
-        cardObj.group.position.y += (targetYWithLevitation - cardObj.group.position.y) * 0.08
+        cardObj.group.position.y += (targetYWithLevitation - cardObj.group.position.y) * posSmooth
 
-        // Płynne podążanie (LERP) za kątem obrotu (rotacja na płaszczyźnie ekranu Z)
-        cardObj.group.rotation.z += (cardObj.targetAngle - cardObj.group.rotation.z) * 0.08
+        // Plynne podazanie za katem obrotu Z (frame-rate independent)
+        cardObj.group.rotation.z += (cardObj.targetAngle - cardObj.group.rotation.z) * posSmooth
 
-        // Delikatne kołysanie w osi Y (3D depth feeling)
+        // Delikatne kolysanie w osi Y (3D depth feeling)
         cardObj.group.rotation.y = Math.sin(t * 0.8 + index * 0.5) * 0.06
     })
 

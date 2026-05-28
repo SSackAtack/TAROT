@@ -1,0 +1,5 @@
+opencv-python>=4.8
+numpy
+websockets>=12.0
+requests
+Pillow

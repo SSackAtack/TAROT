@@ -5,61 +5,67 @@ import os
 import asyncio
 import threading
 import json
+import copy
 import websockets
 import math
 
 # Konfiguracja
 CV_ASSETS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "biblioteka_talii", "rider-waite-smith", "produkcja", "wzorce_cv"))
-MIN_MATCH_COUNT = 38 # Skorygowane z 45 do 38 w celu wykrywania mniej detalicznych kart (filtr geometryczny wciąż chroni nas przed szumem)
-RATIO_THRESH = 0.79  # Zaostrzone z 0.83 do 0.79 dla znacznie wyższej czystości dopasowań cech ORB
+MIN_MATCH_COUNT = 25   # Obnizony z 38 do 25 — filtr geometryczny (homografia + validate_quad) skutecznie eliminuje szum
+RATIO_THRESH = 0.79    # Zaostrzone z 0.83 do 0.79 dla czystosci dopasowan cech ORB
+MIN_INLIER_RATIO = 0.3 # Minimalna proporcja inlierow w homografii RANSAC (odrzuca niestabilne dopasowania)
+CARD_ASPECT_RATIO = 1.72  # Standardowy stosunek wysokosc/szerokosc kart tarota RWS (~1.72)
+CARD_ASPECT_TOLERANCE = 0.45  # Tolerancja odchylenia aspect ratio (dopuszcza lekkie znieksztalcenia perspektywiczne)
+EMA_ALPHA = 0.4        # Wspolczynnik wygladzania Exponential Moving Average dla pozycji (0 = pelne wygladzanie, 1 = brak)
 
-# Stan współdzielony między wątkiem wizyjnym (CV) a wątkiem serwera WebSocket
+# Stan wspoldzielony miedzy watkiem wizyjnym (CV) a watkiem serwera WebSocket
 status_lock = threading.Lock()
 current_status = {
     "detected": False,
     "cards": []
 }
 
-# Zestaw połączonych klientów
+# Zestaw polaczonych klientow
 connected_clients = set()
 
 async def handler(websocket):
-    print(f"[WEBSOCKET] Połączono klienta: {websocket.remote_address}")
+    print(f"[WEBSOCKET] Polaczono klienta: {websocket.remote_address}")
     connected_clients.add(websocket)
     try:
-        # Wyślij natychmiast obecny stan
+        # Wyslij natychmiast obecny stan (bezpieczna gleboka kopia)
         with status_lock:
-            state = current_status.copy()
+            state = copy.deepcopy(current_status)
         await websocket.send(json.dumps(state))
         
-        # Utrzymujemy połączenie otwarte
+        # Utrzymujemy polaczenie otwarte
         async for message in websocket:
             pass
     except websockets.exceptions.ConnectionClosed:
         pass
     finally:
         connected_clients.remove(websocket)
-        print(f"[WEBSOCKET] Rozłączono klienta: {websocket.remote_address}")
+        print(f"[WEBSOCKET] Rozlaczono klienta: {websocket.remote_address}")
 
 async def broadcast_status():
-    last_sent = None
+    last_sent_json = None
     while True:
         if connected_clients:
+            # Bezpieczna gleboka kopia pod lockiem — eliminuje race condition z shallow copy
             with status_lock:
-                state_to_send = current_status.copy()
+                state_to_send = copy.deepcopy(current_status)
             
-            # Wysyłamy tylko przy zmianie stanu
-            if state_to_send != last_sent:
-                message = json.dumps(state_to_send)
-                websockets_tasks = [client.send(message) for client in connected_clients]
+            # Serializujemy do JSON raz i porownujemy stringi (unika problemow z float comparison)
+            current_json = json.dumps(state_to_send)
+            if current_json != last_sent_json:
+                websockets_tasks = [client.send(current_json) for client in connected_clients]
                 if websockets_tasks:
                     await asyncio.gather(*websockets_tasks, return_exceptions=True)
-                last_sent = state_to_send
+                last_sent_json = current_json
         await asyncio.sleep(0.05) # Odpytywanie co 50ms (20 FPS)
 
 async def main_ws():
     async with websockets.serve(handler, "localhost", 8765):
-        print("[WEBSOCKET] Serwer WebSocket działa pod adresem ws://localhost:8765")
+        print("[WEBSOCKET] Serwer WebSocket dziala pod adresem ws://localhost:8765")
         await broadcast_status()
 
 def start_websocket_server():
@@ -70,13 +76,14 @@ ws_thread = threading.Thread(target=start_websocket_server, daemon=True)
 ws_thread.start()
 
 def validate_quadrilateral(dst):
-    # dst ma kształt (4, 1, 2)
-    p0 = dst[0][0] # Górny-lewy (TL)
+    """Walidacja geometryczna czworokata: proporcje bokow, katy wewnetrzne i aspect ratio karty."""
+    # dst ma ksztalt (4, 1, 2)
+    p0 = dst[0][0] # Gorny-lewy (TL)
     p1 = dst[1][0] # Dolny-lewy (BL)
     p2 = dst[2][0] # Dolny-prawy (BR)
-    p3 = dst[3][0] # Górny-prawy (TR)
+    p3 = dst[3][0] # Gorny-prawy (TR)
     
-    # 1. Obliczamy długości czterech boków
+    # 1. Obliczamy dlugosci czterech bokow
     side_left = np.linalg.norm(p1 - p0)
     side_bottom = np.linalg.norm(p2 - p1)
     side_right = np.linalg.norm(p3 - p2)
@@ -86,15 +93,15 @@ def validate_quadrilateral(dst):
     if min(side_left, side_bottom, side_right, side_top) < 25.0:
         return False
         
-    # 2. Sprawdzamy stosunek długości naprzeciwległych boków (lewy vs prawy, góra vs dół)
-    # W rzucie perspektywicznym dopuszczamy drobne zwężenia, ale nie drastyczne kliny/trójkąty
+    # 2. Sprawdzamy stosunek dlugosci naprzeciwleglych bokow (lewy vs prawy, gora vs dol)
+    # W rzucie perspektywicznym dopuszczamy drobne zwezenia, ale nie drastyczne kliny/trojkaty
     ratio_lr = side_left / side_right if side_left > side_right else side_right / side_left
     ratio_tb = side_top / side_bottom if side_top > side_bottom else side_bottom / side_top
     
     if ratio_lr > 1.95 or ratio_tb > 1.95:
         return False
         
-    # 3. Sprawdzamy kąty wewnętrzne przy użyciu cosinusów (szukamy zbliżonych do 90 stopni)
+    # 3. Sprawdzamy katy wewnetrzne przy uzyciu cosinusow (szukamy zblizonych do 90 stopni)
     def get_cos_angle(a, b, c):
         ba = a - b
         bc = c - b
@@ -104,153 +111,189 @@ def validate_quadrilateral(dst):
             return 1.0
         return np.dot(ba, bc) / (norm_ba * norm_bc)
         
-    cos_0 = abs(get_cos_angle(p3, p0, p1)) # Kąt w p0
-    cos_1 = abs(get_cos_angle(p0, p1, p2)) # Kąt w p1
-    cos_2 = abs(get_cos_angle(p1, p2, p3)) # Kąt w p2
-    cos_3 = abs(get_cos_angle(p2, p3, p0)) # Kąt w p3
+    cos_0 = abs(get_cos_angle(p3, p0, p1))
+    cos_1 = abs(get_cos_angle(p0, p1, p2))
+    cos_2 = abs(get_cos_angle(p1, p2, p3))
+    cos_3 = abs(get_cos_angle(p2, p3, p0))
     
-    # Próg 0.82 odrzuca kąty ostrzejsze niż ~35° oraz rozwarte powyżej ~145°
+    # Prog 0.82 odrzuca katy ostrzejsze niz ~35 i rozwarte powyzej ~145 stopni
     MAX_COS = 0.82
     if cos_0 > MAX_COS or cos_1 > MAX_COS or cos_2 > MAX_COS or cos_3 > MAX_COS:
         return False
+    
+    # 4. Sprawdzamy aspect ratio czworokata (karty tarota maja proporcje ~1.72)
+    avg_height = (side_left + side_right) / 2.0
+    avg_width = (side_top + side_bottom) / 2.0
+    if avg_width > 0:
+        detected_ratio = avg_height / avg_width
+        if abs(detected_ratio - CARD_ASPECT_RATIO) > CARD_ASPECT_TOLERANCE:
+            return False
         
     return True
 
 print("========================================")
-print("[TAROT VISION] Computer Vision Module (WebSocket Ready)")
+print("[TAROT VISION] Computer Vision Module v2.0 (Audited)")
 print("========================================")
 
 # 1. Inicjalizacja detektora ORB (szybki i darmowy detektor cech)
-# Ustawiamy maksymalną liczbę punktów na wysoki poziom, karty tarota są bardzo detaliczne
-orb = cv2.ORB_create(nfeatures=2000)
+# Zwiekszona liczba punktow z 2000 do 3500 dla stabilniejszej detekcji wielu kart jednoczesnie
+orb = cv2.ORB_create(nfeatures=3500)
 
-# Brute-Force Matcher do porównywania deskryptorów Hamminga
-bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=False)
+# FLANN-LSH Matcher — 2-5x szybszy niz BruteForce dla binarnych deskryptorow ORB
+# Uzywa Locality Sensitive Hashing zamiast pelnego porownania N*M
+FLANN_INDEX_LSH = 6
+index_params = dict(algorithm=FLANN_INDEX_LSH, table_number=6, key_size=12, multi_probe_level=1)
+search_params = dict(checks=50)
+flann = cv2.FlannBasedMatcher(index_params, search_params)
 
-# 2. Ładowanie szablonów (naszych wygenerowanych kart JPG)
-print(f"[INFO] Ładowanie cyfrowych wzorców z {CV_ASSETS_DIR}")
+# CLAHE — tworzony RAZ (nie w kazdej klatce!) dla unikniecia zbednych alokacji pamieci
+clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+
+# 2. Ladowanie szablonow (naszych wygenerowanych kart JPG)
+print(f"[INFO] Ladowanie cyfrowych wzorcow z {CV_ASSETS_DIR}")
 reference_cards = {}
 file_paths = glob.glob(os.path.join(CV_ASSETS_DIR, "*.jpg"))
 
 if not file_paths:
-    print("[BŁĄD] Nie znaleziono żadnych plików wzorców .jpg w katalogu!")
+    print("[BLAD] Nie znaleziono zadnych plikow wzorcow .jpg w katalogu!")
     exit(1)
 
 for file_path in file_paths:
     card_name = os.path.basename(file_path).replace(".jpg", "")
     
-    # Wczytywanie w odcieniach szarości (kolor nie ma znaczenia w geometrii kształtów)
+    # Wczytywanie w odcieniach szarosci
     img = cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)
     
     if img is None:
         continue
+    
+    # Stosujemy CLAHE takze na wzorcach — zapewnia spojnosc z klatkami kamery
+    img = clahe.apply(img)
         
-    # Wyliczamy od razu kluczowe cechy dla karty by nie powtarzać tego w pętli
+    # Wyliczamy od razu kluczowe cechy dla karty
     kp, des = orb.detectAndCompute(img, None)
     
-    # Zapisujemy do pamięci referencyjnej
+    # Zapisujemy do pamieci referencyjnej
     reference_cards[card_name] = {
         "image": img,
         "keypoints": kp,
         "descriptors": des
     }
 
-print(f"[OK] Załadowano {len(reference_cards)} wzorców do pamięci!")
+print(f"[OK] Zaladowano {len(reference_cards)} wzorcow do pamieci!")
 
-# 3. Inicjalizacja Kamery (z DirectShow dla ominięcia błędów Windows MSMF)
-print("[KAMERA] Uruchamianie kamery... (Wciśnij 'q' by zamknąć, cyfry '0'-'9' by przełączać kamery w locie!)")
+# 3. Inicjalizacja Kamery
+print("[KAMERA] Uruchamianie kamery... (Wcisnij 'q' by zamknac, cyfry '0'-'9' by przelaczac kamery w locie!)")
 camera_index = 0
-cap = cv2.VideoCapture(camera_index) # Domyślny backend (MSMF) po naprawie kabla
+cap = cv2.VideoCapture(camera_index)
 
 if not cap.isOpened():
-    print("[OSTRZEŻENIE] Brak kamery pod indeksem 0. Wciśnij np. 1 lub 2 by zmienić.")
+    print("[OSTRZEZENIE] Brak kamery pod indeksem 0. Wcisnij np. 1 lub 2 by zmienic.")
+
+# Odczytujemy rzeczywista rozdzielczosc kamery zamiast hardcodowac 640x480
+frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) or 640
+frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) or 480
+print(f"[KAMERA] Rozdzielczosc: {frame_width}x{frame_height}")
 
 # Parametry stabilizacji detekcji (debouncing) dla wielu kart
 debounce_state = {}
-DEBOUNCE_FRAMES = 3  # Karta musi być stabilnie wykryta przez 3 klatki z rzędu, aby zaktualizować WebSocket
-LOSS_FRAMES = 8      # Karta musi zniknąć na 8 klatek z rzędu, aby została schowana
+DEBOUNCE_FRAMES = 3  # Karta musi byc stabilnie wykryta przez 3 klatki z rzedu
+LOSS_FRAMES = 8      # Karta musi zniknac na 8 klatek z rzedu, aby zostala schowana
 
-# Pętla główna (Live feed)
+# Petla glowna (Live feed)
 while True:
     ret, frame = cap.read()
     if not ret:
-        # Zastępcze okno ostrzegawcze by użytkownik mógł zmieniać klawisze
+        # Zastepcze okno ostrzegawcze
         display_frame = np.zeros((480, 640, 3), dtype=np.uint8)
         cv2.putText(display_frame, f"Brak wideo pod portem: {camera_index}", (50, 200), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
         cv2.putText(display_frame, f"Wcisnij inna cyfre (0-5) by szukac.", (50, 250), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
         gray_frame = None
     else:
-        # Kopiujemy klatkę do modyfikacji wizualnych i robimy kopię czarno-białą do analizy
+        # Aktualizujemy rozdzielczosc dynamicznie (na wypadek zmiany kamery)
+        frame_height, frame_width = frame.shape[:2]
+        
         display_frame = frame.copy()
         gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         
-        # Zastosowanie CLAHE w celu dynamicznego wyrównania oświetlenia i redukcji odblasków/cieni
-        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+        # Zastosowanie CLAHE — obiekt tworzony RAZ na poczatku, nie w kazdej klatce
         gray_frame = clahe.apply(gray_frame)
     
-    # 4. Wykrywamy punkty kluczowe w obecnej klatce (to co widzi kamera)
+    # 4. Wykrywamy punkty kluczowe w obecnej klatce
     if gray_frame is not None:
         kp_frame, des_frame = orb.detectAndCompute(gray_frame, None)
     else:
         des_frame = None
     
-    # Słownik przechowujący wykryte w tej klatce karty i ich dane
+    # Slownik przechowujacy wykryte w tej klatce karty i ich dane
     detected_this_frame = {}
     
-    # Sprawdzamy czy w ogóle cokolwiek na kamerze ma ostre krawędzie
+    # Sprawdzamy czy w ogole cokolwiek na kamerze ma ostre krawedzie
     if des_frame is not None and len(des_frame) > MIN_MATCH_COUNT:
         
-        # 5. Iterujemy po wszystkich 22 kartach w pamięci i szukamy wszystkich spełniających próg
+        # 5. Iterujemy po wszystkich kartach w pamieci i szukamy spelniajacych prog
         for name, ref_data in reference_cards.items():
             des_ref = ref_data["descriptors"]
             if des_ref is None: continue
                 
-            # Porównujemy (knnMatcher z k=2 szuka dwóch najlepszych dopasowań dla każdego punktu)
-            matches = bf.knnMatch(des_ref, des_frame, k=2)
+            # FLANN-LSH knnMatch — 2-5x szybszy niz BruteForce
+            try:
+                matches = flann.knnMatch(des_ref, des_frame, k=2)
+            except cv2.error:
+                continue
             
             good_matches = []
-            # Lowe's ratio test (odrzuca niepewne i błędne dopasowania szumu)
-            for m, n in matches:
-                if m.distance < RATIO_THRESH * n.distance:
-                    good_matches.append(m)
+            # Lowe's ratio test (odrzuca niepewne i bledne dopasowania szumu)
+            for match_pair in matches:
+                if len(match_pair) == 2:
+                    m, n = match_pair
+                    if m.distance < RATIO_THRESH * n.distance:
+                        good_matches.append(m)
                     
             if len(good_matches) >= MIN_MATCH_COUNT:
-                # Karta ma dużo punktów! Teraz liczymy homografię i sprawdzamy geometrię
+                # Karta ma duzo punktow! Liczymy homografie i sprawdzamy geometrie
                 ref_kp = ref_data["keypoints"]
                 src_pts = np.float32([ref_kp[m.queryIdx].pt for m in good_matches]).reshape(-1, 1, 2)
                 dst_pts = np.float32([kp_frame[m.trainIdx].pt for m in good_matches]).reshape(-1, 1, 2)
                 
                 M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
                 
-                if M is not None:
+                if M is not None and mask is not None:
+                    # Sprawdzamy proporcje inlierow (czy homografia jest stabilna)
+                    inlier_ratio = np.sum(mask) / len(mask)
+                    if inlier_ratio < MIN_INLIER_RATIO:
+                        continue
+                    
                     h, w = ref_data["image"].shape
                     pts = np.float32([[0, 0], [0, h-1], [w-1, h-1], [w-1, 0]]).reshape(-1, 1, 2)
                     dst = cv2.perspectiveTransform(pts, M)
                     
-                    # A. Sprawdzamy wypukłość (czy linie ramki się nie krzyżują, co zapobiega pociętym ekranom)
+                    # A. Sprawdzamy wypuklosc
                     is_convex = cv2.isContourConvex(np.int32(dst))
                     
-                    # B. Sprawdzamy pole powierzchni czworokąta
+                    # B. Sprawdzamy pole powierzchni czworokata
                     area = cv2.contourArea(dst)
                     
-                    # C. Rozsądny rozmiar karty na ekranie 640x480 (między 3500 a 280000 pikseli)
-                    is_reasonable_size = (3500 <= area <= 280000)
+                    # C. Rozsadny rozmiar karty (dynamicznie skalowany do rozdzielczosci kamery)
+                    max_area = frame_width * frame_height * 0.9
+                    min_area = frame_width * frame_height * 0.008
+                    is_reasonable_size = (min_area <= area <= max_area)
                     
                     if is_convex and is_reasonable_size and validate_quadrilateral(dst):
-                        # 1. Obliczamy geometryczny środek (centroid) karty na obrazie w pikselach
+                        # 1. Obliczamy geometryczny srodek (centroid) karty
                         cx = float(np.mean(dst[:, 0, 0]))
                         cy = float(np.mean(dst[:, 0, 1]))
                         
-                        # 2. Przeliczamy i normalizujemy współrzędne do wirtualnego świata Three.js
-                        pos_x = float((cx / 640.0 * 2.0 - 1.0) * 8.5)
-                        pos_y = float((1.0 - (cy / 480.0) * 2.0) * 4.0 + 4.5)
+                        # 2. Przeliczamy wspolrzedne — dynamiczna rozdzielczosc zamiast hardcoded 640/480
+                        pos_x = float((cx / frame_width * 2.0 - 1.0) * 8.5)
+                        pos_y = float((1.0 - (cy / frame_height) * 2.0) * 4.0 + 4.5)
                         
-                        # 3. Obliczamy kąt obrotu karty na biurku na podstawie wektora górnych rogów
-                        x0, y0 = dst[0][0][0], dst[0][0][1] # Lewy górny róg
-                        x3, y3 = dst[3][0][0], dst[3][0][1] # Prawy górny róg
+                        # 3. Obliczamy kat obrotu karty na biurku
+                        x0, y0 = dst[0][0][0], dst[0][0][1]
+                        x3, y3 = dst[3][0][0], dst[3][0][1]
                         angle = -float(math.atan2(y3 - y0, x3 - x0))
 
-                        # Karta przeszła wszystkie filtry geometryczne! Zapisujemy dane detekcji i pozycje
+                        # Karta przeszla wszystkie filtry! Zapisujemy dane detekcji
                         detected_this_frame[name] = {
                             "count": len(good_matches),
                             "dst": dst,
@@ -259,37 +302,44 @@ while True:
                             "angle": angle
                         }
                 
-    # 6. Stabilizacja detekcji dla każdej z 22 kart (Debouncing)
+    # 6. Stabilizacja detekcji (Debouncing) z wygladzaniem EMA
     active_detected_cards = []
     
     for name in reference_cards.keys():
-        # Inicjalizacja stanu debouncingu dla danej karty, jeśli nie istnieje
         if name not in debounce_state:
             debounce_state[name] = {"stable_count": 0, "loss_count": 0}
             
         if name in detected_this_frame:
-            # Karta wykryta w tej klatce - uaktualniamy jej współrzędne w pamięci podręcznej debouncingu
             debounce_state[name]["stable_count"] += 1
             debounce_state[name]["loss_count"] = 0
-            debounce_state[name]["last_x"] = detected_this_frame[name]["x"]
-            debounce_state[name]["last_y"] = detected_this_frame[name]["y"]
-            debounce_state[name]["last_angle"] = detected_this_frame[name]["angle"]
+            
+            # EMA (Exponential Moving Average) — wygladzanie pozycji eliminuje jitter ORB
+            new_x = detected_this_frame[name]["x"]
+            new_y = detected_this_frame[name]["y"]
+            new_angle = detected_this_frame[name]["angle"]
+            
+            old_x = debounce_state[name].get("last_x", new_x)
+            old_y = debounce_state[name].get("last_y", new_y)
+            old_angle = debounce_state[name].get("last_angle", new_angle)
+            
+            debounce_state[name]["last_x"] = EMA_ALPHA * new_x + (1 - EMA_ALPHA) * old_x
+            debounce_state[name]["last_y"] = EMA_ALPHA * new_y + (1 - EMA_ALPHA) * old_y
+            debounce_state[name]["last_angle"] = EMA_ALPHA * new_angle + (1 - EMA_ALPHA) * old_angle
         else:
-            # Brak wykrycia karty w tej klatce
             debounce_state[name]["loss_count"] += 1
             if debounce_state[name]["loss_count"] >= LOSS_FRAMES:
                 debounce_state[name]["stable_count"] = 0
                 
-        # Karta jest uznana za aktywnie wykrytą, jeśli osiągnęła próg stabilności
+        # Karta jest uznana za aktywnie wykryta, jesli osiagnela prog stabilnosci
         if debounce_state[name]["stable_count"] >= DEBOUNCE_FRAMES:
             active_detected_cards.append({
                 "name": name,
-                "x": debounce_state[name].get("last_x", 0.0),
-                "y": debounce_state[name].get("last_y", 4.5),
-                "angle": debounce_state[name].get("last_angle", 0.0)
+                "x": round(debounce_state[name].get("last_x", 0.0), 4),
+                "y": round(debounce_state[name].get("last_y", 4.5), 4),
+                "angle": round(debounce_state[name].get("last_angle", 0.0), 4)
             })
             
-    # Aktualizujemy współdzielony stan dla serwera WebSocket
+    # Aktualizujemy wspoldzielony stan (bezpieczna gleboka kopia wewnatrz locka)
     with status_lock:
         current_status["detected"] = len(active_detected_cards) > 0
         current_status["cards"] = active_detected_cards
@@ -299,19 +349,15 @@ while True:
         dst = data["dst"]
         match_count = data["count"]
         
-        # Rysowanie zielonego bounding boxa (Polylines po 4 rogach)
         display_frame = cv2.polylines(display_frame, [np.int32(dst)], True, (0, 255, 0), 3, cv2.LINE_AA)
         
-        # Obliczanie najwyższego punktu żeby ładnie nałożyć nazwę
         top_y = min([pt[0][1] for pt in dst])
         top_x = min([pt[0][0] for pt in dst])
         
-        # Wypisywanie nazwy karty wielką czerwoną czcionką
         cv2.putText(display_frame, f"KARTA: {name.upper()} ({match_count} pkt)", 
                     (int(top_x), int(top_y) - 10), cv2.FONT_HERSHEY_SIMPLEX, 
                     0.8, (0, 0, 255), 2, cv2.LINE_AA)
 
-    # Pokazujemy klatkę wynikową na ekranie
     cv2.imshow('TarotVision - AI Detection (Wcisnij Q by wyjsc)', display_frame)
     
     key = cv2.waitKey(1) & 0xFF
@@ -319,10 +365,14 @@ while True:
         break
     elif ord('0') <= key <= ord('5'):
         new_index = key - ord('0')
-        print(f"🔄 Zmiana kamery na indeks: {new_index}")
+        print(f"Zmiana kamery na indeks: {new_index}")
         cap.release()
         cap = cv2.VideoCapture(new_index)
         camera_index = new_index
+        # Aktualizacja rozdzielczosci po zmianie kamery
+        frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) or 640
+        frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) or 480
+        print(f"[KAMERA] Nowa rozdzielczosc: {frame_width}x{frame_height}")
 
 cap.release()
 cv2.destroyAllWindows()
