@@ -1,0 +1,66 @@
+Raport Analityczny: Stress-Test "TarotVision AR"
+Autorzy: Panel Ekspertów (Architekt Systemów RT/CV, Strateg UX/UI, Ekspert YouTube)
+
+**Werdykt Ogólny (Executive Summary):**
+Koncepcja "TarotVision AR" jest nie tylko wykonalna, ale stanowi potencjalny *game-changer* w niszy ezoterycznej. Rozwiązuje palący problem produkcyjny (czas postprodukcji) i UX-owy (czytelność na mobile), zachowując przy tym kluczowy dla widzów czynnik "autentyczności". Główne wyzwanie inżynieryjne nie leży w samej detekcji, ale w **bezsztucznym połączeniu analogowego wideo z cyfrową nakładką (tzw. Uncanny Valley AR)** oraz w bezwzględnym zarządzaniu stanami okluzji (zasłaniania). Poniżej szczegółowa dekonstrukcja.
+
+---
+
+### Sekcja 1: Otwarta Architektura Technologiczna
+
+Odrzucamy klasyczne, ciężkie środowiska (czysty C++ z OpenCV) na rzecz stosów, które maksymalizują szybkość prototypowania (Vibe Coding z asystentami AI) przy zachowaniu wydajności RT. Proponujemy dwie ścieżki:
+
+**Stos Rekomendowany #1: "The AR Studio" (Godot 4 + Python Backend + OBS)**
+*   **Detekcja:** Skrypt w Pythonie z użyciem biblioteki Ultralytics (YOLO) i OpenCV. Python jest królem w AI/CV i asystenci AI piszą w nim kod błyskawicznie.
+*   **Renderowanie i Kompozycja:** Silnik gry **Godot 4**. Jako jedyny silnik open-source oferuje natywną, świetną obsługę wideo z kamery (WebRTC/VideoStream), zaawansowany system shaderów (kluczowy dla realistycznych cieni i blendowania) i natywną obsługę węzłów (kontroler animacji). Godot połyka dane z Pythona przez lokalny WebSocket/ZeroMQ w milisekundach.
+*   **Nagrywanie:** Nie piszemy własnego muxera. Używamy **OBS Studio** z wtyczką *Virtual Camera* lub przechwytujemy okno Godota (Game Capture). Kamera Anker idzie do OBS jako warstwa wideo, Godot jako warstwa AR na górze. OBS nagrywa wynik do pliku MP4 (Live-to-Tape).
+
+**Stos Alternatywny #2: "The Web-Native Vibe" (Electron + Three.js + TensorFlow.js)**
+*   Całość w jednym oknie. Wykorzystujemy Electron.js, aby mieć dostęp do systemowej kamery w pełnej rozdzielczości. TensorFlow.js (z modelem YOLO zoptymalizowanym pod WebGL) wykonuje detekcję na karcie graficznej. Three.js renderuje karty z fizyką PBR.
+*   **Zalety:** Najszybszy do iterowania z AI (Copilot/GPT doskonale zna webowe API). Wszystko w jednej aplikacji, brak synchronizacji międzyprocesowej.
+*   **Wady:** Ciężki profil pamięciowy, potencjalne problemy z wydajnością na słabszym sprzęcie przy 4K i 60fps.
+
+---
+
+### Sekcja 2: Computer Vision - Logika i Edge Cases
+
+**Algorytm Detekcji: YOLOv8-OBB (Oriented Bounding Boxes) + Klasyfikator Wtórny**
+Tradycyjny Feature Matching (SIFT/ORB) polegnie przy zmieniającym się świetle i okluzji dłoni. YOLOv8 wspiera OBB (obręcze z rotacją), co pozwala idealnie określić kąt położenia karty. Zamiast jednak zmuszać YOLO do rozpoznawania 78 klas (co przy podobnych kartach dwójkach/piątkach prowadzi do halucynacji), stosujemy architekturę kaskadową:
+1.  **YOLO-OBB (1 klasa: "Karta Tarota"):** Tylko wykrywa, że na stole pojawił się prostokąt, zwraca jego współrzędne i wektor rotacji.
+2.  **Klasyfikator Wtórny (ResNet/Lightweight CNN):** Wycięty obszar karty (tzw. crop) z perspektywy wyprostowanej (wirtualna deskew) jest podawany do lekkiej sieci, która klasyfikuje ją do 1 z 78 kart.
+
+**Zarządzanie Okluzją i Debouncing (Maszyna Stanów):**
+To tu system wygrywa lub przegrywa. Dłoń przesłaniająca kartę przy jej kładzeniu nie może powodować migotania (glitchy) cyfrowej nakładki. Implementujemy **State Machine per Slot**:
+*   *State 0: Puste.* Brak karty.
+*   *State 1: Ruch (Motion).* Wykryto obiekt i dłoń w strefie. System ignoruje wyświetlanie grafiki AR, widz widzi tylko fizyczną kartę z kamery.
+*   *State 2: Stabilizacja.* Dłoń opuściła strefę (MediaPipe Hands potwierdza brak palców), ale karta wciąż lekko się osuwa. Odpala się timer debouncingu (np. 300ms). Jeśli wektor ruchu centroidu karty < próg przez ten czas -> przejście do State 3.
+*   *State 3: Zablokowano (Locked).* Karta leży bez ruchu. System renderuje płynną animację wejścia (fade-in) cyfrowej nakładki i ją "zamraża". Nawet jeśli widz później położy na niej palec (okluzja), cyfrowa karta pozostaje stabilnie wyrenderowana, a palce widza przechodzą "przed nią" (wymaga to maskowania dłoni w Godot - tzw. Depth Mask).
+
+---
+
+### Sekcja 3: Strategia, Prawa Autorskie i Psychologia Widza
+
+**Wariant A vs Wariant B: Bezlitośnie wybieramy Wariant B.**
+*   *Wariant A (Skan + Upscaler):* Prawna mina pułapka. Wykorzystywanie obrazów z talii RWS (Rider-Waite-Smith) lub współczesnych (np. Moonchild) do generowania zysków na YouTube bez licencji to proszenie się o strike. AI Upscaler może też "wymyślić" zniekształcenia drobnych symboli, co w ezoterii obnaża fałsz.
+*   *Wariant B (Autorska AI):* Jedyna słuszna droga biznesowa. Midjourney/DALL-E 3 wygeneruje spójną talię. **Ryzyko:** AI generując 78 kart może zachwiać spójność stylu. **Rozwiązanie:** Użycie ControlNet + Img2Img z wrysowanymi z góry sztywnymi ramkami (numer, symbolika suits), aby zachować strukturę. Zysk: Masz 100% praw do talii. Za rok sprzedajesz własną fizyczną talię jako merch pod kanał.
+
+**Psychologia Widza i UX/UI (Zabiegi "Scream Realism"):**
+Ezoteryka to rynek oparty na emocjach. Zbyt idealna cyfrowa karta wygląda jak z appki i budzi niechęć ("to fałszywe").
+*   **Perspektywa i Zniekształcenie:** Cyfrowa karta nie może być idealnie płaska (2D billboard). Musi być wirtualnym obiektem 3D ułożonym na stole, z nałożonym shaderem "fisheye" pasującym do obiektywu kamery Anker.
+*   **Cienie i Ambient Occlusion:** Brak cienia odcina obiekt od rzeczywistości. Cyfrowa karta musi rzucać na stół miękki cień, a nałożony obraz musi mieć cienie na krawędziach.
+*   **Lekki Grunge/Noise:** Na cyfrową grafikę karty nakładamy w Godot proceduralny, delikatny szum ziarna pasujący do ISO kamery nagrywającej w klimatycznym, słabym świetle. To "sklei" piksele wideo z pikselami AR.
+
+---
+
+### Sekcja 4: Innowacje i Wartość Dodana
+
+Skoro mamy stabilny strumień JSON na żywo, otwiera to drzwi do automatyzacji, która oszczędzi setki godzin i zmonetyzuje kanał:
+
+1.  **Auto-Chaptering & SEO Tags (Dla Twórcy):**
+    System nasłuchuje momentu "State 3: Locked". Gdy wykryje stabilną kartę, wpisuje do logu: `[00:14:32] The Tower, Reversed, Position 3`. Po nagraniu skrypt parsuje log i automatycznie generuje opis pod YT z rozkładem oraz rozdziały (Timestampy): *"03:15 - Card 3: The Tower (Reversed)"*. To potężny cios w algorytm YouTube, który uwielbia precyzyjne rozdziały i słowa kluczowe w opisie.
+
+2.  **Dynamiczny "Second Screen" Companion (Dla Widza):**
+    Generujesz na żywo prostą stronę WWW (hostowaną lokalnie przez aplikację, dostępną po QR na ekranie). Widz skanuje kod telefonem. Gdy kładziesz karty na stole, na ekranie jego telefonu pojawiają się czyste grafiki z krótkim, spersonalizowanym opisem (niezależnie od tego, co mówi żona na wideo). Eliminuje to konieczność robienia zrzutów ekranu przez widzów.
+
+3.  **E-SL Subtitles (Emotive Subtle Labels):**
+    Ezoteryka bywa hermetyczna. Karta "Głupiec" dla laika brzmi obraźliwie. Gdy JSON zidentyfikuje kartę, na ekranie (w narożniku, jako subtelny napis blendujący się z tłem) pojawia się jej rdzenna symbolika np. *"Nowy Początek / Wiara w los"*. Dla odwróconej karty: *"Błąd / Lęk przed zmianą"*. Daje to gigantyczną wartość edukacyjną i zatrzymuje widza na dłużej (Watch Time++), bez obciążania żony koniecznością recytowania znaczeń za każdym razem.

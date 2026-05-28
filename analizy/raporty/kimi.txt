@@ -1,0 +1,218 @@
+# Raport Stress-Test: TarotVision AR
+## Werdykt Panelu Ekspertów
+
+**Wykonalność: TAK, ale nie jest to projekt na "weekend vibe coding".** To zadanie na 8–12 tygodni pracy inżynierskiej przez osobę z doświadczeniem w CV lub game dev. Kluczowe wyzwania to nie sama detekcja (rozwiązana technologicznie), lecz **zbudowanie wiarygodnego datasetu treningowego** i **stworzenie płynnego UX, który nie zdradzi widzowi, że ogląda kompozyt**.
+
+Poniżej raport w 4 sekcjach.
+
+---
+
+## Sekcja 1: Otwarta Architektura Technologiczna
+
+### Werdykt krytyczny: unikaj przeglądarek i OBS jako rdzenia kompozycji
+
+Przy bezwzględnym wymogu **low latency** i **live-to-tape**, architektura musi być hybrydowa: silnik renderujący (game engine) + autonomiczny proces detekcji (Python). Próba zrobienia wszystkiego w OBS (np. przez pluginy Lua/Python) skończy się frustrującym waleniem w ograniczenia API i problemami z synchronizacją audio.
+
+### Rekomendacja A: "The Pragmatic Vibe Coder" (Stack Priorytetowy)
+
+**Rdzeń renderujący: Godot 4.3+ (GDScript / C#)**
+- **Dlaczego Godot, a nie Unity/Unreal?** Open source, bezkompromisowy renderer 2D, natywne wsparcie dla shaderów, brak opłat licencyjnych. Godot ma najlepszy stosunek "jakość renderingu 2D" do "lekkości silnika". W Unity zrobisz to samo, ale połowę czasu stracisz na nawigację po edytorze i asset store.
+- **Jak połączyć z kamerą?** Osobny proces Pythonowy (OpenCV) przechwytuje klatki z Anker C310, wykonuje inferencję CV i wysyła metadane JSON przez **ZeroMQ** (pub/sub, lokalny socket) do Godota. Opóźnienie < 5 ms.
+- **Jak nagrywać?** Godot posiada `MovieWriter` (zapis sekwencji PNG + muxowanie audio przez FFmpeg) lub możesz użyć wbudowanego `FFmpeg` via GDExtension. **Nie potrzebujesz OBS w głównym pipeline'ie.** Nagrywasz bezpośrednio z viewportu Godota.
+
+**Rdzeń detekcji: Python 3.11 + ONNX Runtime + OpenCV**
+- Model detekcji: **YOLOv8m-obb** (Oriented Bounding Box) lub standardowy YOLOv8m + klasyfikator rotacji.
+- Klasyfikacja karty: **EfficientNet-B0** (lightweight, 156 klas: 78 kart × 2 orientacje).
+- Komunikacja: ZeroMQ PUB z Pythona, SUB w Godocie. Format: `{"card_id": 12, "orientation": "reversed", "bbox": [x,y,w,h], "confidence": 0.97, "timestamp": 123456}`.
+
+**Warstwa kompozycji w Godocie:**
+- `CameraFeed` (TextureRect) jako tło.
+- `CardOverlay` (Sprite2D/TextureRect) dla cyfrowych kart z shaderami: cienie, blendowanie kolorów, mikro-rotacje.
+- `StateMachine` (GDScript) obsługująca debouncing i logikę slotów.
+
+**OS:** Linux (Ubuntu/Pop!_OS) – lepsza kontrola nad pipeline'em wideo, mniej overheadu niż Windows. Anker C310 ma sterowniki UVC, więc działa out-of-the-box.
+
+### Rekomendacja B: "The Creative Technologist" (Stack Alternatywny)
+
+**TouchDesigner + Python DATs**
+- Jeśli twórczyni ma bardziej wizualne niż programistyczne myślenie, TD to potężne środowisko node-based.
+- `Video Device In` (kamera) → `Script TOP` (Python z ONNX Runtime/YOLO) → `Composite` → `Render` → `Movie File Out` (zapis ProRes/DXVI).
+- **Zaleta:** Można prototypować w ciągu dni, nie tygodni. Wbudowane wsparcie dla NDI/Spout, świetne shaderowe operatory.
+- **Wada:** 600+ USD licencja komercyjna, trudność w "vibe coding" (LLM nie rozumieją dobrze logiki node-based), problemy z version control.
+- **Werdykt:** TD jest świetny jako proof-of-concept, ale na dłuższą metę Godot daje większą kontrolę i przenośność.
+
+### Dlaczego NIE te stacki:
+
+- **Web/Electron/TensorFlow.js:** Opóźnienie WebRTC + sandbox przeglądarki + wydajność JS przy 4K = śmierć dla real-time. Odrzuć od razu.
+- **Czysty Python (PyQt/OpenCV):** Da się zrobić UI, ale animacje, cienie i antyaliasing będą wyglądać jak z 2005 roku. Widz YouTube natychmiast poczuje "sztuczność".
+- **OBS jako kompozytor:** OBS jest rejestratorem, nie silnikiem AR. Pluginy Lua są zbyt ograniczone, a integracja z modelami ML przez API to walka z architekturą.
+
+---
+
+## Sekcja 2: Computer Vision – Logika i Edge Cases
+
+### Werdykt krytyczny: SIFT/ORB zawiedzie cię natychmiast
+
+Foliowane karty + oświetlenie LED z góry = **specular reflections** i **highlights**, które zabijają tradycyjne feature matching. Nie trać czasu na SIFT, ORB ani AKAZE. Potrzebujesz **data-driven approach** (głębokie uczenie).
+
+### Architektura detekcji: Two-Stage Pipeline
+
+**Stage 1 – Detekcja obecności: YOLOv8m**
+- Nie próbuj rozpoznawać karty i orientacji jednym modelem detekcyjnym (156 klas to chaos dla bboxów).
+- YOLOv8m wykrywa: `card`, `hand`, `deck`.
+- Wyjście: bounding box karty + maska dłoni (segmentacja instancji jeśli YOLOv8-seg).
+
+**Stage 2 – Klasyfikacja: EfficientNet-B0 (ONNX)**
+- Wycinek karty z YOLO (crop, perspektywa, resize do 224×224) trafia do klasyfikatora.
+- **156 klas:** `0_the_fool_upright`, `0_the_fool_reversed`, ..., `21_world_upright`, `21_world_reversed`, + 56 minor arcana.
+- Dlaczego klasyfikacja, a nie keypointy dla rotacji? Karty tarota mają skomplikowany, symetryczny artwork. Detekcja kąta obrotu przez keypointy jest niestabilna. Klasyfikator z osobnymi klasami dla `upright` i `reversed` jest znacznie bardziej robust.
+
+### Dataset: najtrudniejsza część projektu
+
+- Potrzebujesz **minimum 100–150 zdjęć per klasę** (15 000–23 000 obrazów total).
+- Zrób to metodycznie: ustaw statyw z telefonem, oświetlenie studyjne, i fotografuj każdą kartę w 5–8 wariantach:
+  - Oświetlenie ciepłe / zimne / boczne
+  - Częściowe okluzje (palce zakrywające 10%, 30%, 50%)
+  - Lekki kąt (karta nieidealnie płaska, ~5–10° nachylenia)
+  - Odbicia światła (ustaw lampę tak, by powstał highlight – model musi się go nauczyć ignorować)
+- **Augmentacja:** Albumentations (rotacje, blur, noise, brightness, cutout symulujące palce).
+- **Narzędzie do labelowania:** Roboflow (darmowe dla małych projektów) lub LabelImg.
+
+### Logika Debouncing i Okluzji: Finite State Machine
+
+Zaimplementuj w Godocie (lub Pythonie) maszynę stanów per slot:
+
+```
+STANY:
+EMPTY       -> slot pusty
+DETECTING   -> YOLO widzi kartę, ale hand_overlap > 30% lub confidence < 0.85
+STABLE      -> karta wykrywana przez N=15 klatek (500ms@30fps) w tej samej pozycji (±8px)
+LOCKED      -> cyfrowa nakładka pojawia się z animacją, pozycja zamrożona (snap to slot)
+REMOVING    -> karta zniknęła z FOV lub hand ją przesuwa
+```
+
+**Reguły krytyczne:**
+1. **Hand Occlusion Gate:** Jeśli IoU (Intersection over Union) dłoni z kartą > 0.25, ignoruj detekcję. Użyj MediaPipe Hands lub YOLOv8-seg dla segmentacji dłoni.
+2. **Hysteresis pozycyjna:** Karta musi utrzymać środek ciężkości w promieniu 10px przez 15 klatek, by przejść do STABLE. Zapobiega to "miganiu" nakładki przy ruchu dłoni.
+3. **Snap-to-Slot:** Nie renderuj cyfrowej karty w dokładnym bbox z YOLO (będzie skakać o 2–3px). Po LOCK, przypnij do predefiniowanego centrum slotu na stole. Użyj `lerp()` w Godocie dla płynnego przejścia.
+4. **Temporal Smoothing:** Eksponencjalne wygładzanie skali i rotacji cyfrowej karty (alpha = 0.3), by uniknąć mikro-jittera.
+5. **Confidence Threshold:** Pokaż nakładkę dopiero przy `confidence > 0.92`. Poniżej – pokaż subtelny, półprzezroczysty outline (widoczny tylko dla twórcy jako feedback).
+
+### Kalibracja kamery – często pomijana
+
+Anker C310 to kamera USB, nie przemysłowa. Ma:
+- Auto-exposure (wyłącz to natychmiast w `v4l2-ctl` lub aplikacji kamery!)
+- Auto-white-balance (zablokuj na 5500K lub zmierz temperaturę lamp)
+- Rolling shutter (przy szybkich ruchach dłoni wystąpią dystorsje – akceptuj to, nie naprawiaj)
+- Dystorsję obiektywu (szeroki kąt z bliska). **Zrób kalibrację chessboardem** (OpenCV `findChessboardCorners`) i zastosuj `undistort()` na klatce przed inferencją. To poprawi precyzję detekcji krawędzi o 15–20%.
+
+---
+
+## Sekcja 3: Strategia, Prawa Autorskie i Psychologia Widza
+
+### Wariant A vs B: Werdykt bezlitośnie szczery
+
+| Kryterium | Wariant A (Skan talii rynkowej) | Wariant B (AI-generowana talia autorska) |
+|-----------|-----------------------------------|------------------------------------------|
+| **Prawo autorskie** | ❌ **Wysokie ryzyko.** Skanowanie decku RWS czy innego komercyjnego to reprodukcja dzieła chronionego. YouTube Content ID może to złapać. Właściciel praw może zgłosić kanał. | ✅ **Bezpieczne**, pod warunkiem sprawdzenia TOS generatora (Midjourney Pro/Imagen 3 dają komercyjne prawa). Masz pełną kontrolę nad IP. |
+| **Potencjał biznesowy** | ❌ Żaden. Nie możesz sprzedawać cudzych obrazów na merchu. | ✅ **Ogromny.** Własna talia = produkt. Kickstarter, Etsy, druk na życzenie, licencje dla innych wróżbitów. |
+| **Zaufanie widza** | ⚠️ Neutralne. Widzowie znają Rider-Waite, co buduje komfort. | ⚠️ Ryzyko "AI-stigma". Społeczność ezoteryczna jest wyczulona na "bezduszną sztuczną inteligencję". |
+| **Jakość assetów cyfrowych** | ⚠️ Skany wymagają AI upscalingu (Real-ESRGAN). Ryzyko artefaktów na drobnych symbolach. | ✅ Natywne 4K/8K. Brak artefaktów skanowania. Pełna kontrola nad stylem. |
+| **Koszt startowy** | Niski (skaner + talia). | Wysoki (generacja, kuracja, druk próbny). |
+
+**Werdykt:** **Wariant B jest strategicznie bezwzględnie lepszy**, ale wymaga zabezpieczenia przed odrzuceniem przez społeczność.
+
+### Jak obronić Wariant B przed "AI-stigma":
+
+1. **Nigdy nie mów "wygenerowane przez AI".** Mów: *"nasza autorska talia stworzona w cyfrowym atelier"* lub *"unikalny projekt wizualny kanału"*. Język kształtuje percepcję.
+2. **Kuracja > Generacja.** Wygeneruj 300–400 kandydatów, wybierz 78 najlepszych. Przepuść przez Procreate/Photoshop dla spójności kolorów i detali. To już nie jest "czyste AI" – to AI-assisted design.
+3. **Fizyczna legitymizacja.** Fakt, że trzymasz **fizyczny, wydrukowany egzemplarz** w rękach, jest psychologicznym "proof of work". Widz widzi, że to nie jest tylko slajd w PowerPointcie.
+4. **Spójność stylu.** AI często generuje "generic mystical aesthetic". Zainwestuj w unikalny prompt style (np. odniesienia do konkretnego artysty, techniki malarskiej, palety kolorów). Niech talia ma **tożsamość**, nie tylko ładne obrazki.
+
+### UX/UI: Jak stopić cyfrową kartę z analogowym kadrem
+
+Widz musi poczuć, że cyfrowa karta "leży na stole", nie że jest naklejką z Painta.
+
+1. **Dopasowanie oświetlenia (Color Grading Shader):**
+   - Próbkuj średnią temperaturę barwową z okolic slotu na stole.
+   - Nałóż na cyfrową kartę shader `mix()` z kolorem tła × 0.15. Karta delikatnie przyjmie odcień stołu.
+
+2. **Cienie kontaktowe (Contact Shadows):**
+   - Renderuj miękkiego drop shadow pod kartą (rozmycie Gaussa 20px, opacity 0.4), skierowanego zgodnie z kierunkiem głównego źródła światła. To najważniejszy element "grounding".
+   - Dodaj cień ambient occlusion w miejscu styku karty ze stołem (bardzo subtelny, 2–3px).
+
+3. **Mikro-niedoskonałości:**
+   - Dodaj losowy `rotation_offset` ±0.8° i `scale_offset` ±0.5%. Idealnie prosta karta wygląda jak CGI.
+   - Nałóż bardzo subtelny noise shader (film grain, 3% opacity) na całą kompozycję, by zdigitalizowana karta miała "teksturę".
+
+4. **Blend modes na krawędziach:**
+   - Użyj `SCREEN` lub `ADD` na 1px wokół krawędzi karty, by zasymulować odbicie światła od folii (jeśli fizyczne karty są foliowane, cyfrowe też powinny "błyszczeć").
+
+5. **Animacja wejścia (Tactile Easing):**
+   - Nie używaj liniowej interpolacji. Użyj `ease_out_back` (przemieszczenie lekko "przestrzeliwuje" cel i wraca – efekt sprężystości).
+   - Czas: 350–450 ms. Zbyt szybko = glitch. Zbyt wolno = nudne.
+   - Opcjonalnie: efekt "przewietrzenia" (karta "przylatuje" z pozycji talii na slot).
+
+6. **Ciągłość narracji (Card Back):**
+   - Podczas tasowania pokazuj cyfrowy **rewers** karty (jeśli kamera widzi tył). Gdy karta zostaje położona i LOCKED, animuj "obrót" (flip) na rewers. To wzmacnia iluzję fizyczności.
+
+---
+
+## Sekcja 4: Innowacje i Wartość Dodana
+
+Zakładając stabilny strumień JSON z metadanymi, oto 3 innowacje o wysokim ROI:
+
+### Innowacja 1: "Auto-Chapters & SEO Engine" (Automatyzacja twórcy)
+
+System loguje dokładne timestampy (`frame_count / fps`) dla każdego zdarzenia:
+```json
+{"event": "CARD_LOCKED", "card": "The Fool", "orientation": "upright", "slot": 2, "timestamp": 145.33}
+```
+
+**Wdrożenie:** Prosty skrypt Python (post-processing, nie real-time) parsuje log z nagrania i generuje:
+- **YouTube Chapters** w formacie `01:23 Card 2: The Fool (Upright) | 03:45 Card 3: ...`
+- **Opis wideo** z listą kart i timestampami.
+- **Sugestie miniaturek** – ekstraktuje klatkę z kompozytu w momencie `CARD_LOCKED` jako kandydat na miniaturkę.
+
+**Wartość:** Oszczędność 30–60 minut pracy manualnej na film. Lepsze SEO = wyższe CTR.
+
+### Innowacja 2: "Dynamic Director" (Multi-Camera Logic bez ekipy)
+
+Wykorzystaj metadane do **automatycznego reżyserowania** ujęcia w czasie nagrywania:
+- **Faza tasowania:** Gdy `hand_detected == true` i `card_count == 0`, przełącz na "close-up hands" (crop kamery 4K do centralnego regionu 1080p).
+- **Faza rozkładu:** Gdy `CARD_LOCKED` w slocie 1, animuj transition (fade/pan) do widoku szerokiego z nakładkami AR.
+- **Picture-in-Picture:** Gdy wszystkie 3 sloty zajęte, pokaż inset z twarzą twórczyni (druga kamera USB) w rogu.
+
+**Wdrożenie:** W Godocie zarządzaj wieloma `Viewport` i `Camera2D` (crop/region). Rejestruj jednocześnie "program output" (to, co widz zobaczy) i "clean feed" (samo tło bez AR) jako backup.
+
+**Wartość:** Efekt multi-kamery studyjnej przy użyciu jednej kamery 4K (cropy) i jednej webcamki. Profesjonalna produkcja bez operatora.
+
+### Innowacja 3: "Interpretation Layer & Community Hook" (Wartość dla widza)
+
+Baza danych (SQLite/JSON) zawiera znaczenia kart (upright/reversed + słowa kluczowe).
+
+**Wdrożenie:**
+- W czasie nagrywania (lub w post-procesie), gdy karta jest LOCKED, system pobiera z bazy 3 słowa kluczowe i generuje **subtelny text overlay** pojawiający się obok karty (np. fade-in po 2 sekundach).
+- Eksportuj pełną sekwencję czytania jako interaktywny post na YouTube Community lub krótki URL z "podsumowaniem rozkładu".
+
+**Long-term:** Stwórz companion mini-app (HTML/JS): widz wpisuje datę urodzenia, a system łączy ją z metadatami z filmu, generując spersonalizowane "Twoje czytanie na dziś".
+
+**Wartość:** Pozycjonuje kanał jako **technologicznie najbardziej zaawansowany** w niszy ezoterycznej. USP, którego konkurencja nie skopiuje w ciągu miesiąca.
+
+---
+
+## Podsumowanie i Roadmapa MVP
+
+| Etap | Czas | Kluczowe zadanie |
+|------|------|------------------|
+| **Miesiąc 1** | 2–3 tyg. | Wariant B: Generacja talii w Midjourney/Imagen 3, kuracja 78 kart, druk próbny. |
+| | 1 tydz. | Zbudowanie datasetu CV: 100 zdjęć/karta, labelowanie w Roboflow. |
+| **Miesiąc 2** | 2 tyg. | Trening YOLOv8 + EfficientNet (Google Colab Pro / lokalny RTX). |
+| | 2 tyg. | Prototyp Godot + Python + ZeroMQ. Podstawowy debouncing i snap-to-slot. |
+| **Miesiąc 3** | 2 tyg. | Shadery, cienie, animacje. Tuning UX dla "analogowego" looku. |
+| | 2 tyg. | Integracja nagrywania (MovieWriter/FFmpeg). Testy live-to-tape. |
+| **Miesiąc 4** | 2 tyg. | Innowacje: Auto-chapters, Dynamic Director. Beta testy z 10 filmami. |
+
+**Ostateczny werdykt:** Projekt jest **wykonalny, innowacyjny i ma potencjał monetyzacyjny znacznie wykraczający poza AdSense** (merchandising talii). Jednak wymaga traktowania jako **produkt inżynierski**, nie hackathon. Inwestycja w dobry dataset CV i spójną talię autorską zwróci się w ciągu 6–9 miesięcy działania kanału.
+
+Powodzenia w implementacji. Panel ekspertów pozostaje do dyspozycji przy dalszych iteracjach architektury.

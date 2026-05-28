@@ -1,0 +1,47 @@
+# === Assety graficzne (za duże na Git) ===
+# Mastery TIFF/PNG (skanowane karty)
+biblioteka_talii/*/mastery/
+*.tiff
+*.tif
+
+# Duże pliki graficzne
+*.psd
+*.xcf
+
+# === Python ===
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+venv/
+.venv/
+env/
+
+# === Node.js ===
+node_modules/
+package-lock.json
+
+# === IDE ===
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# === System ===
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# === OBS ===
+*.mkv
+*.mp4
+*.avi
+*.mov
+
+# === Modele ML (za duże na Git) ===
+models/*.pt
+models/*.onnx
+models/*.tflite
+*.weights

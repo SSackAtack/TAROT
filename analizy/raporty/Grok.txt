@@ -1,0 +1,48 @@
+**Sekcja 1: Otwarta Architektura Technologiczna**
+
+**Optymalny stack 1 (najlepszy dla szybkiego Vibe Coding):**  
+TouchDesigner + TDYolo (lub nowszy plugin pod YOLO26).  
+CV w node’ach/OpenCV + natywna detekcja YOLO26 przez ONNX. Renderowanie i kompozycja AR bezpośrednio w TD (GLSL shaders, instancing, cienie, blend). Wyjście: Movie File Out lub Spout/NDI → ewentualnie OBS tylko jako backup. Niskie opóźnienie (<80 ms na RTX 4060), wszystko w jednej aplikacji.
+
+**Stack 2 (najlepszy rendering i animacje):**  
+Unity 6 + Sentis (Inference Engine) z modelem YOLO26 ONNX.  
+Kamera jako WebCamTexture → detekcja + tracking w C#. AR karty jako 2D/3D z shaderami dopasowującymi oświetlenie. Nagrywanie natywne przez Recorder package. Zero zewnętrznych narzędzi.
+
+Oba lokalne, low-latency, AI-asystowane. C++/Python czysty jest wolniejszy w renderingu i niepotrzebny.
+
+**Sekcja 2: Computer Vision – Logika i Edge Cases**
+
+Najlepsze rozwiązanie 2026: **YOLO26-nano/s** (NMS-free, ~40 ms na CPU, jeszcze szybciej na GPU) wytrenowany na 78 klasach + orientacjach (OBB lub klasa + rotacja).  
+Alternatywa dla maksymalnej precyzji i minimalnego compute: feature matching ORB/SIFT + homografia na szablonach (78 kart × dyskretne rotacje) – szybsze i bardziej stabilne przy znanych obiektach 2D.
+
+**Debouncing i okluzje:**  
+- Multi-frame stability (pozycja + rotacja variance < próg przez 8–12 klatek).  
+- Tracking (ByteTrack lub OpenCV KCF).  
+- Oddzielna detekcja dłoni (MediaPipe Hands) – ignorujemy regiony pod dłonią i czekamy na pełną widoczność + stabilność.  
+- Stan maszynowy: “appearing → moving → locked”. Glitche praktycznie eliminowane.
+
+Wykonalne w 100%, ale wymaga 1–2 tygodni tuningu na rzeczywistym świetle i dłoniach.
+
+**Sekcja 3: Strategia, Prawa Autorskie i Psychologia Widza**
+
+**Wariant B wygrywa zdecydowanie.**  
+A (skan rynkowej talii) = ryzyko strike’ów za naruszenie praw autorskich (większość talii jest chroniona).  
+B (autorska talia AI + ludzka korekta + druk) = oryginalna własność intelektualna (przy sensownym human input), pełna ochrona copyrightu, wysoki potencjał merch (sprzedaż fizycznych i cyfrowych decków).
+
+**UX/UI blending (klucz do akceptacji):**  
+- Estymacja oświetlenia sceny i dopasowanie cieni/specular na cyfrowej karcie.  
+- Subtelny soft shadow + micro-animacja „opadania” karty.  
+- Delikatny noise + film grain + lekkie vignette na nakładce.  
+- Blend mode „multiply + overlay” zamiast twardego alpha.  
+Efekt musi wyglądać jak „idealna karta w idealnym świetle”, a nie CGI.
+
+**Sekcja 4: Innowacje i Wartość Dodana**
+
+Przy stabilnym streamie metadanych JSON:
+
+1. **Auto-log + smart chapters** – automatyczne znaczniki w pliku wideo + JSON z pełną historią rzutu (czas, karta, orientacja) → zero ręcznego montażu i łatwe archiwum.
+2. **Dynamiczne efekty energii** – na podstawie kart i rotacji aplikacja generuje subtelne particle/glow paths (np. „przepływ energii”) widoczne tylko w finalnym nagraniu.
+3. **One-click export dual version** – z tych samych metadanych generuje drugą wersję filmu (czysto cyfrowa, bez fizycznych dłoni) lub interaktywny web pick-a-card do wrzucenia jako community post.
+
+**Werdykt ogólny:**  
+Projekt jest w pełni wykonalny już dziś na lokalnym PC. Największe ryzyko to nie technologia, tylko precyzyjne dostrojenie CV pod konkretne karty i oświetlenie. Stack TouchDesigner lub Unity pozwala na Live-to-Tape w jednej aplikacji bez OBS. Idź w wariant B i zaczynaj prototyp od YOLO26 w TouchDesigner – najszybsza ścieżka do działającego MVP.
