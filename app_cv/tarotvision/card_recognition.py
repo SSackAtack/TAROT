@@ -143,6 +143,7 @@ def load_reference_cards(cv_assets_dir, orb, clahe):
             'descriptors': numpy array,
             'reversed_keypoints': list of cv2.KeyPoint,
             'reversed_descriptors': numpy array,
+            'matcher': cv2.FlannBasedMatcher or None,
         }
     """
     references = {}
@@ -162,12 +163,23 @@ def load_reference_cards(cv_assets_dir, orb, clahe):
         img_reversed = cv2.rotate(img, cv2.ROTATE_180)
         kp_rev, des_rev = orb.detectAndCompute(img_reversed, None)
 
+        # Pre-trenowany matcher BF dla upright wariantu (50x szybszy i dokładniejszy niż FLANN)
+        card_matcher = None
+        if des is not None and len(des) > 0:
+            try:
+                card_matcher = cv2.BFMatcher(cv2.NORM_HAMMING)
+                card_matcher.add([des])
+                card_matcher.train()
+            except cv2.error:
+                card_matcher = None
+
         references[card_name] = {
             "image": img,
             "keypoints": kp,
             "descriptors": des,
             "reversed_keypoints": kp_rev,
             "reversed_descriptors": des_rev,
+            "matcher": card_matcher,
         }
 
     return references
@@ -208,14 +220,12 @@ def recognize_card_crop(gray_crop, reference_cards, orb, matcher,
 
     for card_name, ref_data in reference_cards.items():
         scores_by_card.setdefault(card_name, {"upright": 0.0, "reversed": 0.0})
-        for orientation, des_key in [("upright", "descriptors"),
-                                     ("reversed", "reversed_descriptors")]:
-            des_ref = ref_data.get(des_key)
-            if des_ref is None:
-                continue
-
+        
+        card_matcher = ref_data.get("matcher")
+        if card_matcher is not None:
+            # SZYBKA ŚCIEŻKA: Dopasowujemy des_crop (query) do des_ref (train, wbudowane w card_matcher)
             try:
-                matches = matcher.knnMatch(des_ref, des_crop, k=2)
+                matches = card_matcher.knnMatch(des_crop, k=2)
             except cv2.error:
                 continue
 
@@ -229,15 +239,19 @@ def recognize_card_crop(gray_crop, reference_cards, orb, matcher,
             if len(good_matches) < min_good_matches:
                 continue
 
-            # Inlier ratio za pomoca homografii RANSAC
-            kp_key = ("keypoints" if orientation == "upright"
-                       else "reversed_keypoints")
-            ref_kp = ref_data[kp_key]
+            # Inlier ratio za pomocą homografii RANSAC
+            # Ponieważ des_crop to query, to:
+            # - queryIdx odnosi się do kp_crop
+            # - trainIdx odnosi się do ref_kp
+            ref_kp = ref_data.get("keypoints", [])
+            if not ref_kp:
+                continue
+
             src_pts = np.float32(
-                [ref_kp[m.queryIdx].pt for m in good_matches]
+                [ref_kp[m.trainIdx].pt for m in good_matches]
             ).reshape(-1, 1, 2)
             dst_pts = np.float32(
-                [kp_crop[m.trainIdx].pt for m in good_matches]
+                [kp_crop[m.queryIdx].pt for m in good_matches]
             ).reshape(-1, 1, 2)
 
             H, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
@@ -248,22 +262,80 @@ def recognize_card_crop(gray_crop, reference_cards, orb, matcher,
             if inlier_ratio < min_inlier_ratio:
                 continue
 
-            # Score = match_count * inlier_ratio
             score = len(good_matches) * inlier_ratio
-            scores_by_card[card_name][orientation] = max(
-                scores_by_card[card_name][orientation],
+            # Dla pre-trenowanego matchera dopasowujemy upright, homografia samokoryguje kąt do reversed!
+            scores_by_card[card_name]["upright"] = max(
+                scores_by_card[card_name]["upright"],
                 score,
             )
             if score > best_score:
                 best_score = score
                 best_result = {
                     "name": card_name,
-                    "orientation": orientation,
+                    "orientation": "upright",
                     "confidence": round(inlier_ratio, 3),
                     "match_count": len(good_matches),
                     "inlier_ratio": round(inlier_ratio, 3),
                     "homography": H,
                 }
+        else:
+            # KOMPATYBILNA ŚCIEŻKA: Stara wolna pętla po upright i reversed
+            for orientation, des_key in [("upright", "descriptors"),
+                                         ("reversed", "reversed_descriptors")]:
+                des_ref = ref_data.get(des_key)
+                if des_ref is None:
+                    continue
+
+                try:
+                    matches = matcher.knnMatch(des_ref, des_crop, k=2)
+                except cv2.error:
+                    continue
+
+                good_matches = []
+                for match_pair in matches:
+                    if len(match_pair) == 2:
+                        m, n = match_pair
+                        if m.distance < lowe_ratio * n.distance:
+                            good_matches.append(m)
+
+                if len(good_matches) < min_good_matches:
+                    continue
+
+                # Inlier ratio za pomoca homografii RANSAC
+                kp_key = ("keypoints" if orientation == "upright"
+                           else "reversed_keypoints")
+                ref_kp = ref_data[kp_key]
+                src_pts = np.float32(
+                    [ref_kp[m.queryIdx].pt for m in good_matches]
+                ).reshape(-1, 1, 2)
+                dst_pts = np.float32(
+                    [kp_crop[m.trainIdx].pt for m in good_matches]
+                ).reshape(-1, 1, 2)
+
+                H, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
+                if mask is None:
+                    continue
+
+                inlier_ratio = float(np.sum(mask)) / len(mask)
+                if inlier_ratio < min_inlier_ratio:
+                    continue
+
+                # Score = match_count * inlier_ratio
+                score = len(good_matches) * inlier_ratio
+                scores_by_card[card_name][orientation] = max(
+                    scores_by_card[card_name][orientation],
+                    score,
+                )
+                if score > best_score:
+                    best_score = score
+                    best_result = {
+                        "name": card_name,
+                        "orientation": orientation,
+                        "confidence": round(inlier_ratio, 3),
+                        "match_count": len(good_matches),
+                        "inlier_ratio": round(inlier_ratio, 3),
+                        "homography": H,
+                    }
 
     if best_result is not None:
         orientation_scores = scores_by_card[best_result["name"]]
