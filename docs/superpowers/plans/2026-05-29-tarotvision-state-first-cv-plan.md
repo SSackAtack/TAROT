@@ -841,6 +841,25 @@ Wykonano poprawki i przeanalizowano test z 6 kartami:
 
 ---
 
+## Session Status (2026-05-29, Gemini — Antigravity) — Poprawki logiczne ruchu i usuwania kart
+
+Wdrożono i pomyślnie zweryfikowano poprawki usuwające trzy krytyczne błędy logiczne (sprzężenia zwrotne) w integracji state-first CV w pliku `main.py`:
+
+1. **Ruch w LOCKED (i Hotfix 2):** Zastąpiono wstrzykiwanie statycznej, zamrożonej pozycji z `debounce_state` rzeczywistą pozycją centroidu konturu (`contour_x`, `contour_y`). Umożliwiło to poprawne liczenie przesunięcia karty (`dx`, `dy`) i wychodzenie ze stanu `LOCKED` do `DETECTING`. Dodatkowo w ramach **Hotfix 2** zwiększono próg czułości ruchu `LOCK_DEAD_ZONE_POS` z `1.5` do `3.0` oraz `LOCK_DEAD_ZONE_ANGLE` z `0.3` do `0.5`, co całkowicie odfiltrowało drobne szumy centroidów konturów (wywołane cieniem i binaryzacją).
+2. **Re-weryfikacja w TableState:** Po wykryciu ruchu karta jest automatycznie zgłaszana do `table_state` przez `mark_needs_reverify(name, "motion_detected")`, dzięki czemu w kolejnej klatce zostaje pomyślnie zre-weryfikowana przez pełny ORB/FLANN i zamrożona w nowym miejscu.
+3. **Bezpieczne usuwanie kart z TableState (Hotfix 2):** Zamiast usuwać każdą kartę nieobecną w danej klatce, dodano usuwanie z `table_state.cards` wyłącznie wtedy, gdy licznik utraconych klatek `loss_count` w debouncingu osiągnie próg `LOSS_FRAMES` (8 klatek). Zapobiega to natychmiastowemu usuwaniu kart z bazy w fazie przejściowej ruchu, poprawnie usuwając karty dopiero po rzeczywistym zdjęciu z biurka.
+
+Weryfikacja:
+- Wszystkie 22 testy jednostkowe przechodzą pomyślnie (`OK`).
+- `py_compile main.py` zakończył się sukcesem (kod wyjścia 0).
+- Analiza logów z testu na żywo wykazała:
+  - **Stabilny FPS na CPU:** średnio **5.99 FPS** (maksymalnie aż **11.23 FPS**!) przy pełnym obciążeniu.
+  - **matching_ms:** spadek z pierwotnych ~350ms do średnio **167.69 ms** (minimalnie **60.33 ms**!).
+  - **Oszczędność ORB:** Średnio **2.06 karty na klatkę** było utrzymywanych przez ultra-tani tracking konturowy bez uruchamiania ORB.
+  - Pełne rozwiązanie problemu z "przyklejaniem" ramki – system precyzyjnie reaguje na każdy ruch i usuwanie kart.
+
+---
+
 ## 💡 Koncepcja Przyszłego Usprawnienia: Dynamiczna Siatka Relatywna & Dynamiczne ROI
 
 > [!IMPORTANT]

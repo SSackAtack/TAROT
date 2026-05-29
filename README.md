@@ -148,6 +148,7 @@ TAROT/
 - [Plan koncepcyjny (FINAL)](docs/plan_koncepcyjny_v4.md)
 - [Roadmapa wdrozenia CV](docs/superpowers/plans/2026-05-29-tarotvision-cv-roadmap.md)
 - [Plan fazy state-first CV](docs/superpowers/plans/2026-05-29-tarotvision-state-first-cv-plan.md)
+- [Plan panelu kalibracji i auto-tuningu](docs/superpowers/plans/2026-05-29-tarotvision-auto-tuning-plan.md)
 - [Synteza analiz AI](analizy/synteza/synteza_glowna.md)
 - [Raporty poszczegolnych agentow](analizy/raporty/)
 

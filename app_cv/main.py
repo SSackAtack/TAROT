@@ -46,8 +46,8 @@ TRACKING_REVERIFY_GAP_FRAMES = 24
 
 # System dwufazowy "Zlap i Zamroz" — eliminuje mikro-jitter statycznych kart
 LOCK_AFTER_FRAMES = 8      # Klatki stabilnej detekcji zanim pozycja zostanie zamrozona
-LOCK_DEAD_ZONE_POS = 1.5   # Minimalny ruch pozycji (w jednostkach sceny) zeby odblokowac karte
-LOCK_DEAD_ZONE_ANGLE = 0.3 # Minimalny ruch kata (w radianach, ~17 stopni) zeby odblokowac karte
+LOCK_DEAD_ZONE_POS = 3.0   # Minimalny ruch pozycji (w jednostkach sceny) zeby odblokowac karte (zwiekszony pod katem szumow centroidu)
+LOCK_DEAD_ZONE_ANGLE = 0.5 # Minimalny ruch kata (w radianach, ~28 stopni) zeby odblokowac karte
 
 # Stan wspoldzielony miedzy watkiem wizyjnym (CV) a watkiem serwera WebSocket
 status_lock = threading.Lock()
@@ -435,18 +435,24 @@ while True:
                 # Konturowy bbox zawiera cienie i blat, wiec jest za duzy.
                 orb_skipped_locked += 1
                 
+                # Obliczamy nowa pozycje na stole na podstawie centroidu rzeczywistego konturu
+                bx, by, bw, bh = matched_box
+                cx = bx + bw / 2.0
+                cy = by + bh / 2.0
+                contour_x = float((cx / frame_width * 2.0 - 1.0) * 13.0)
+                contour_y = float((1.0 - (cy / frame_height) * 2.0) * 7.8)
+
                 # Wstrzykujemy "tracking detection" do detected_this_frame
-                # uzywajac zapisanej pozycji (zamrozona przez LOCK),
-                # zeby debounce_state utrzymal stable_count
+                # uzywajac nowej pozycji konturu, aby umozliwic detekcje ruchu!
                 locked_tracked_this_frame[card_id] = {
                     "name": card_id,
-                    "x": debounce_state[card_id].get("locked_x", tracked_card.x),
-                    "y": debounce_state[card_id].get("locked_y", tracked_card.y),
+                    "x": contour_x,
+                    "y": contour_y,
                     "angle": debounce_state[card_id].get("locked_angle", tracked_card.angle),
                     # Syntetyczne wartosci — karta nie byla matchowana ORB
                     "count": 0,
                     "inlier_ratio": 1.0,
-                    "area": matched_box[2] * matched_box[3],
+                    "area": bw * bh,
                     "dst": None,  # Brak quada z ORB — uzywamy bbox
                     "tracked_by_contour": True,  # Flaga diagnostyczna
                 }
@@ -678,6 +684,9 @@ while True:
                     debounce_state[name]["last_y"] = new_y
                     debounce_state[name]["last_angle"] = new_angle
                     boost_frames_remaining = max(boost_frames_remaining, BOOST_AFTER_LAYOUT_CHANGE_FRAMES)
+                    # Zgłaszamy ruch do table_state, aby karta została zweryfikowana przez ORB w nowym miejscu
+                    table_state.mark_needs_reverify(name, "motion_detected")
+                    log_event(f"[RUCH] Karta {name} przesunela sie (dx={dx:.2f}, dy={dy:.2f}). Odblokowanie i zgloszenie do ORB.")
                 else:
                     # Karta statyczna — uzywamy zamrozonej pozycji (ZERO jitteru)
                     debounce_state[name]["last_x"] = locked_x
@@ -712,6 +721,11 @@ while True:
             confidence=1.0,
             frame_index=frame_counter,
         )
+    # Usuwamy nieaktywne karty z table_state, które naprawde zniknely ze stolu (potwierdzone przez LOSS_FRAMES)
+    for name in list(table_state.cards.keys()):
+        if name in debounce_state and debounce_state[name]["loss_count"] >= LOSS_FRAMES:
+            table_state.remove_card(name)
+            log_event(f"[USUNIECIE] Karta {name} zniknela ze stolu. Usuniecie ze stanu i powrot do puli dostepnych.")
     for name, item in detected_this_frame.items():
         # Karty sledzone przez contour tracking maja dst=None — nie nadpisujemy ich bbox
         if item.get("dst") is not None:
