@@ -111,7 +111,7 @@ Profile strojenia zapisywane sa lokalnie w:
 logs/calibration_profiles/
 ```
 
-Probe parametrów kamery (`CAP_PROP_*`) pokazuje wartosc zadana i odczytana. Jesli sterownik kamery ignoruje dany parametr, UI ma traktowac go jako nieobslugiwany zamiast sugerowac, ze suwak dziala.
+Probe parametrów kamery (`CAP_PROP_*`) jest teraz bezpiecznym odczytem-only: pokazuje wartosc odczytana, ale nie ustawia focusem, ekspozycja ani kontrastem. Dlaczego: samo wywolanie `cap.set()` dla focus/exposure potrafi przelaczyc niektóre kamery w tryb manualny i rozjechac ostrosc.
 
 **Manualnie:**
 ```bash

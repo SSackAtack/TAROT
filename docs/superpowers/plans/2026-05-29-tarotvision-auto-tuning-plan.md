@@ -686,47 +686,55 @@ Expected: `2 tests ... OK`.
 - Create: `app_cv/tests/test_camera_controls.py`
 - Modify: `app_cv/main.py`
 
-- [ ] **Step 1: Write fake-capture tests**
+- [x] **Step 1: Write fake-capture tests**
 
 ```python
 import unittest
 
-from tarotvision.camera_controls import probe_camera_control
+from tarotvision.camera_controls import read_camera_control
 
 
 class FakeCapture:
-    def __init__(self, supported=True):
-        self.supported = supported
-        self.value = 0.0
+    def __init__(self, value=0.0):
+        self.value = value
+        self.set_calls = []
 
     def get(self, prop):
-        return self.value if self.supported else -1.0
+        return self.value
 
     def set(self, prop, value):
-        if not self.supported:
-            return False
-        self.value = value
+        self.set_calls.append((prop, value))
         return True
 
 
 class CameraControlsTest(unittest.TestCase):
-    def test_probe_reports_supported_when_readback_changes(self):
-        result = probe_camera_control(FakeCapture(True), prop_id=1, test_value=12.0)
+    def test_read_camera_control_does_not_mutate_capture(self):
+        capture = FakeCapture(value=42.0)
 
-        self.assertTrue(result.supported)
-        self.assertEqual(result.readback_value, 12.0)
-
-    def test_probe_reports_unsupported_when_set_fails(self):
-        result = probe_camera_control(FakeCapture(False), prop_id=1, test_value=12.0)
+        result = read_camera_control(capture, prop_id=1)
 
         self.assertFalse(result.supported)
+        self.assertEqual(result.readback_value, 42.0)
+        self.assertEqual(capture.set_calls, [])
+
+    def test_read_camera_control_reports_invalid_readback_as_unsupported(self):
+        result = read_camera_control(FakeCapture(value=-1.0), prop_id=1)
+
+        self.assertFalse(result.supported)
+        self.assertEqual(result.readback_value, -1.0)
+
+    def test_read_camera_control_reports_current_value_when_zero(self):
+        result = read_camera_control(FakeCapture(value=0.0), prop_id=1)
+
+        self.assertFalse(result.supported)
+        self.assertEqual(result.readback_value, 0.0)
 
 
 if __name__ == "__main__":
     unittest.main()
 ```
 
-- [ ] **Step 2: Implement camera probe**
+- [x] **Step 2: Implement read-only camera probe**
 
 ```python
 from dataclasses import dataclass
@@ -735,35 +743,32 @@ from dataclasses import dataclass
 @dataclass(frozen=True)
 class CameraControlProbe:
     supported: bool
-    requested_value: float
     readback_value: float
 
 
-def probe_camera_control(capture, prop_id, test_value):
-    before = float(capture.get(prop_id))
-    set_ok = bool(capture.set(prop_id, float(test_value)))
+def read_camera_control(capture, prop_id):
     readback = float(capture.get(prop_id))
-    supported = set_ok and readback != before
     return CameraControlProbe(
-        supported=supported,
-        requested_value=float(test_value),
+        supported=False,
         readback_value=readback,
     )
 ```
 
-- [ ] **Step 3: Expose probe result**
+- [x] **Step 3: Expose read-only result**
 
-On `camera_probe`, backend tests focus/exposure/contrast/autofocus and publishes:
+On `camera_probe`, backend reads focus/exposure/contrast/autofocus without calling `cap.set()` and publishes:
 
 ```json
 "supported_camera_controls": {
-  "CAP_PROP_FOCUS": {"supported": true, "requested_value": 120.0, "readback_value": 120.0}
+  "CAP_PROP_FOCUS": {"supported": false, "readback_value": 42.0}
 }
 ```
 
 - [ ] **Step 4: Do not expose unsupported sliders as active**
 
 Frontend may show unsupported camera parameters, but controls must be disabled and labeled `unsupported`.
+
+**Hotfix note (2026-05-29):** Mutating probe with `cap.set()` was removed after it could disturb AnkerWork C310 focus. Camera controls must stay read-only until a separate, explicit camera-control workflow is designed and verified.
 
 ---
 

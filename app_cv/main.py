@@ -21,7 +21,7 @@ from tarotvision.contour_tracking import assign_boxes_to_cards
 from tarotvision.runtime_config import RuntimeConfigSession, ParameterValidationError
 from tarotvision.tuning_protocol import parse_control_message, ControlMessageError
 from tarotvision.profile_store import ProfileStore
-from tarotvision.camera_controls import probe_camera_control
+from tarotvision.camera_controls import read_camera_control
 from tarotvision.calibration_session import choose_best_candidate
 
 # Konfiguracja
@@ -121,17 +121,16 @@ def add_operator_warning(message):
 
 def probe_camera_controls(capture):
     probes = {
-        "CAP_PROP_FOCUS": (cv2.CAP_PROP_FOCUS, 120.0),
-        "CAP_PROP_EXPOSURE": (cv2.CAP_PROP_EXPOSURE, -6.0),
-        "CAP_PROP_CONTRAST": (cv2.CAP_PROP_CONTRAST, 120.0),
-        "CAP_PROP_AUTOFOCUS": (cv2.CAP_PROP_AUTOFOCUS, 0.0),
+        "CAP_PROP_FOCUS": cv2.CAP_PROP_FOCUS,
+        "CAP_PROP_EXPOSURE": cv2.CAP_PROP_EXPOSURE,
+        "CAP_PROP_CONTRAST": cv2.CAP_PROP_CONTRAST,
+        "CAP_PROP_AUTOFOCUS": cv2.CAP_PROP_AUTOFOCUS,
     }
     results = {}
-    for name, (prop_id, test_value) in probes.items():
-        probe = probe_camera_control(capture, prop_id, test_value)
+    for name, prop_id in probes.items():
+        probe = read_camera_control(capture, prop_id)
         results[name] = {
             "supported": probe.supported,
-            "requested_value": probe.requested_value,
             "readback_value": probe.readback_value,
         }
     return results
@@ -177,7 +176,7 @@ def handle_control_message(message, capture):
 
     if message.type == "camera_probe":
         supported_camera_controls = probe_camera_controls(capture)
-        add_operator_warning("Zakonczono probe obslugi parametrów kamery")
+        add_operator_warning("Odczytano parametry kamery bez zmiany focus/exposure")
         return
 
     if message.type == "calibration_start":
