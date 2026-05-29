@@ -125,6 +125,14 @@ html, body {
   text-align: right;
 }
 
+.operator-control small {
+  grid-column: 1 / -1;
+  margin-top: -4px;
+  color: #94a3b8;
+  font-size: 10px;
+  line-height: 1.35;
+}
+
 .operator-control input[data-unsafe="1"] {
   opacity: 0.62;
 }
@@ -138,6 +146,12 @@ html, body {
   display: grid;
   grid-template-columns: 1fr 70px 70px;
   gap: 8px;
+}
+
+.operator-help {
+  margin-bottom: 8px;
+  color: #94a3b8;
+  line-height: 1.35;
 }
 
 .operator-profile-name {
@@ -162,4 +176,13 @@ html, body {
 
 .operator-actions button:hover {
   background: rgba(51, 65, 85, 0.98);
+}
+
+.operator-advanced {
+  color: inherit;
+}
+
+.operator-advanced summary {
+  cursor: pointer;
+  list-style-position: inside;
 }

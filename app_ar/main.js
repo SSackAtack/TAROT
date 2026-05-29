@@ -144,6 +144,40 @@ const operatorMetricNames = [
     'tracked_card_count'
 ]
 
+const metricLabels = {
+    fps: 'FPS',
+    matching_ms: 'Czas rozpoznawania',
+    cards_checked: 'Sprawdzane karty',
+    orb_skipped_locked: 'Pominiete ORB',
+    locked_tracked_count: 'Sledzone konturem',
+    available_card_count: 'Karty w puli',
+    tracked_card_count: 'Karty na stole'
+}
+
+const parameterLabels = {
+    LOCK_DEAD_ZONE_POS: 'Czulosc ruchu',
+    LOCK_DEAD_ZONE_ANGLE: 'Czulosc obrotu',
+    TRACKING_IOU_THRESHOLD: 'Prog sledzenia',
+    REVERIFY_INTERVAL_FRAMES: 'Interwal kontroli',
+    BOOST_AFTER_LAYOUT_CHANGE_FRAMES: 'Dlugosc boostu',
+    EMA_ALPHA: 'Wygladzanie pozycji',
+    MIN_MATCH_COUNT: 'Min. punkty ORB',
+    RATIO_THRESH: 'Prog ratio ORB',
+    MIN_INLIER_RATIO: 'Min. inliery'
+}
+
+const parameterHints = {
+    LOCK_DEAD_ZONE_POS: 'Wyzej = mniej falszywych ruchow, ale wolniejsza reakcja.',
+    LOCK_DEAD_ZONE_ANGLE: 'Wyzej = ignoruje drobne obroty i szum.',
+    TRACKING_IOU_THRESHOLD: 'Nizej = latwiej utrzymac karte konturem.',
+    REVERIFY_INTERVAL_FRAMES: 'Co ile klatek sprawdzac zablokowane karty.',
+    BOOST_AFTER_LAYOUT_CHANGE_FRAMES: 'Ile klatek szybciej szukac po zmianie ukladu.',
+    EMA_ALPHA: 'Zaawansowane wygladzanie pozycji po stronie CV.',
+    MIN_MATCH_COUNT: 'Zaawansowany prog liczby dopasowan ORB.',
+    RATIO_THRESH: 'Zaawansowana czystosc dopasowan ORB.',
+    MIN_INLIER_RATIO: 'Zaawansowana walidacja homografii.'
+}
+
 function formatMetricValue(value) {
     if (typeof value !== 'number' || !Number.isFinite(value)) return '-'
     if (Math.abs(value) >= 100) return value.toFixed(0)
@@ -157,34 +191,39 @@ function createOperatorPanel() {
     panel.className = 'operator-panel'
     panel.innerHTML = `
         <div class="operator-panel__header">
-            <span class="operator-panel__title">TarotVision Operator</span>
+            <span class="operator-panel__title">Panel Operatora</span>
             <span class="operator-panel__status" data-role="connection">offline</span>
         </div>
         <div class="operator-panel__section">
-            <div class="operator-panel__section-title">Runtime</div>
+            <div class="operator-panel__section-title">Stan systemu</div>
             <div class="operator-grid" data-role="runtime"></div>
         </div>
         <div class="operator-panel__section">
-            <div class="operator-panel__section-title">Metrics</div>
+            <div class="operator-panel__section-title">Metryki</div>
             <div class="operator-grid" data-role="metrics"></div>
         </div>
         <div class="operator-panel__section">
-            <div class="operator-panel__section-title">Parameters</div>
-            <div class="operator-controls" data-role="parameters"></div>
+            <div class="operator-panel__section-title">Parametry bezpieczne</div>
+            <div class="operator-controls" data-role="safe-parameters"></div>
         </div>
+        <details class="operator-panel__section operator-advanced">
+            <summary class="operator-panel__section-title">Zaawansowane</summary>
+            <div class="operator-controls" data-role="advanced-parameters"></div>
+        </details>
         <div class="operator-panel__section">
-            <div class="operator-panel__section-title">Actions</div>
+            <div class="operator-panel__section-title">Akcje</div>
+            <div class="operator-help">Odczyt kamery niczego nie ustawia. To bezpieczny odczyt-only.</div>
             <div class="operator-actions">
-                <input class="operator-profile-name" data-role="profile-name" value="studio_day" aria-label="Profile name" />
-                <button type="button" data-action="profile_save">Save</button>
-                <button type="button" data-action="profile_apply">Load</button>
-                <button type="button" data-action="tuning_rollback">Rollback</button>
-                <button type="button" data-action="camera_probe">Probe Cam</button>
-                <button type="button" data-action="calibration_start">Calibrate</button>
+                <input class="operator-profile-name" data-role="profile-name" value="studio_day" aria-label="Nazwa profilu" />
+                <button type="button" data-action="profile_save">Zapisz</button>
+                <button type="button" data-action="profile_apply">Wczytaj</button>
+                <button type="button" data-action="tuning_rollback">Cofnij</button>
+                <button type="button" data-action="camera_probe">Odczyt kamery</button>
+                <button type="button" data-action="calibration_start">Kalibracja</button>
             </div>
         </div>
         <div class="operator-panel__section">
-            <div class="operator-panel__section-title">Warnings</div>
+            <div class="operator-panel__section-title">Komunikaty</div>
             <div class="operator-warnings" data-role="warnings">-</div>
         </div>
     `
@@ -209,23 +248,27 @@ function updateOperatorGrid(container, entries) {
 
 function updateOperatorParameters(operator) {
     if (!operatorPanel) return
-    const container = operatorPanel.querySelector('[data-role="parameters"]')
-    if (!container) return
+    const safeContainer = operatorPanel.querySelector('[data-role="safe-parameters"]')
+    const advancedContainer = operatorPanel.querySelector('[data-role="advanced-parameters"]')
+    if (!safeContainer || !advancedContainer) return
 
     const parameters = operator?.parameters || {}
     const metadata = operator?.parameter_metadata || {}
     const names = Object.keys(metadata)
     if (names.length === 0) {
-        container.textContent = '-'
+        safeContainer.textContent = '-'
+        advancedContainer.textContent = '-'
         return
     }
 
-    container.innerHTML = names.map((name) => {
+    const renderControls = (filteredNames) => {
+        if (filteredNames.length === 0) return '-'
+        return filteredNames.map((name) => {
         const meta = metadata[name]
         const value = parameters[name] ?? meta.default
         return `
             <label class="operator-control">
-                <span>${name}</span>
+                <span title="${name}">${parameterLabels[name] || name}</span>
                 <input
                     type="range"
                     min="${meta.minimum}"
@@ -236,9 +279,14 @@ function updateOperatorParameters(operator) {
                     ${meta.live_safe ? '' : 'data-unsafe="1"'}
                 />
                 <output>${formatMetricValue(Number(value))}</output>
+                <small>${parameterHints[name] || name}</small>
             </label>
         `
-    }).join('')
+        }).join('')
+    }
+
+    safeContainer.innerHTML = renderControls(names.filter((name) => metadata[name].live_safe))
+    advancedContainer.innerHTML = renderControls(names.filter((name) => !metadata[name].live_safe))
 }
 
 function updateOperatorPanel(data) {
@@ -253,17 +301,17 @@ function updateOperatorPanel(data) {
     const operator = data.operator || {}
 
     updateOperatorGrid(operatorPanel.querySelector('[data-role="runtime"]'), [
-        ['runtime', runtime.profile || '-'],
-        ['tuning', operator.active_profile || '-'],
-        ['schedule', runtime.schedule_mode || '-'],
-        ['boost', runtime.boost_frames_remaining ?? '-'],
-        ['camera', runtime.camera_index ?? '-'],
-        ['capture', runtime.capture_width && runtime.capture_height ? `${runtime.capture_width}x${runtime.capture_height}` : '-']
+        ['Tryb CV', runtime.profile || '-'],
+        ['Profil strojenia', operator.active_profile || '-'],
+        ['Harmonogram', runtime.schedule_mode || '-'],
+        ['Boost', runtime.boost_frames_remaining ?? '-'],
+        ['Kamera', runtime.camera_index ?? '-'],
+        ['Obraz', runtime.capture_width && runtime.capture_height ? `${runtime.capture_width}x${runtime.capture_height}` : '-']
     ])
 
     updateOperatorGrid(
         operatorPanel.querySelector('[data-role="metrics"]'),
-        operatorMetricNames.map((name) => [name, formatMetricValue(metrics[name] ?? runtime[name])])
+        operatorMetricNames.map((name) => [metricLabels[name] || name, formatMetricValue(metrics[name] ?? runtime[name])])
     )
 
     updateOperatorParameters(operator)
