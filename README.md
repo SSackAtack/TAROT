@@ -95,6 +95,19 @@ Przy starcie przez launcher `cv_metrics.jsonl`, `cv_runtime.log` i `ar_vite.log`
 W `runtime` widac tez `schedule_mode` (`empty_scan`, `boost_scan`, `steady_scan`), `boost_frames_remaining`, `available_card_count`, `tracked_card_count`, `reverify_interval_frames` oraz `tracking_iou_threshold`.
 W metrykach pomocniczych dla state-first CV dochodza `motion_changed_ratio`, `reverify_due_count`, `tracked_assignments`, `unoccupied_observed_boxes` i `tracking_reverify_count`.
 
+### Tryb snapshot-first CV
+
+Eksperymentalny tryb snapshot-first uruchamia lekki watcher ruchu, czeka na stabilny uklad kart i analizuje pojedyncza dobra klatke zamiast stale rozpoznawac tozsamosc kart w kazdej klatce.
+
+```powershell
+$env:TAROTVISION_SNAPSHOT_FIRST="1"
+python app_cv/main.py
+```
+
+Startowe parametry sa konserwatywne: okolo 3 sekund stabilnosci, 3 snapshoty kontrolne i publikacja tylko zatwierdzonego ukladu. Overlay w przegladarce trzyma ostatni dobry wynik podczas ruchu lub odrzucenia snapshotu.
+
+Metryki tego trybu obejmuja m.in. `stable_for_ms`, `snapshot_quality_score`, `snapshot_analysis_ms`, `snapshot_rejected_count`, `layout_publish_count` oraz `time_from_motion_to_publish_ms`.
+
 ### Konsola operatorska
 
 Domyslny adres `http://localhost:5173/` pozostaje czystym overlayem do OBS. Panel diagnostyczno-strojeniowy jest dostepny tylko pod:

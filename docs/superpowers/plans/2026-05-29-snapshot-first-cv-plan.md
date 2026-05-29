@@ -934,3 +934,26 @@ Test with 3-5 cards:
 - Spec coverage: gate, quality scoring, one-frame analysis, payload, sticky frontend, metrics, docs and live verification are covered.
 - Filler scan: no unresolved filler entries remain; code snippets define concrete APIs.
 - Type consistency: plan uses `SnapshotGateConfig`, `SnapshotGateDecision`, `SnapshotQuality`, `SelectedSnapshot`, and `SnapshotAnalyzer` consistently across tasks.
+
+## Session Status (2026-05-29, Codex — snapshot-first implementation)
+
+Wykonano:
+
+- Task 1: dodano `snapshot_gate.py` i testy automatycznej stabilizacji ukladu.
+- Task 2: dodano `snapshot_quality.py` i testy scoringu/wyboru snapshotu.
+- Task 3: rozszerzono payload WebSocket o metadata `layout`.
+- Task 4: dodano `snapshot_analyzer.py` jako wrapper analizy jednej klatki.
+- Task 5: zintegrowano eksperymentalny tryb backendu za flaga `TAROTVISION_SNAPSHOT_FIRST=1`.
+- Task 6: frontend utrzymuje ostatni zatwierdzony layout w stanach watchera i pokazuje metryki snapshotu.
+- Task 7: zaktualizowano README o sposob uruchomienia trybu snapshot-first.
+
+Weryfikacja:
+
+- `python -m unittest discover -s app_cv\tests -v` z `PYTHONPATH=C:\tmp\tarot_pydeps;app_cv` -> 93 testy, OK.
+- `python -m py_compile app_cv\main.py` oraz petla `for %f in (app_cv\tarotvision\*.py) do python -m py_compile %f` -> OK.
+- `npm --prefix app_ar run build` -> OK, z dotychczasowym ostrzezeniem Vite o chunku >500 kB.
+
+Pozostalo:
+
+- Live test z kamera i ukladem 3-5 kart w trybie `TAROTVISION_SNAPSHOT_FIRST=1`.
+- Strojenie `settle_seconds`, progow jakosci i odrzucen snapshotow na prawdziwym obrazie.
