@@ -615,11 +615,25 @@ while True:
 
         if gate_decision.should_sample and ret:
             samples = [frame.copy()]
-            for _ in range(SNAPSHOT_SAMPLE_COUNT - 1):
-                time.sleep(SNAPSHOT_SAMPLE_INTERVAL_MS / 1000.0)
-                ok, sample_frame = cap.read()
-                if ok:
-                    samples.append(sample_frame.copy())
+            # Drenujemy bufor kamery i pobieramy kolejne próbki bez blokowania wątku głównego.
+            # Zapewnia to odświeżanie okna podglądu OpenCV, dzięki czemu Windows nie oznacza okna jako "Brak odpowiedzi".
+            for i in range(SNAPSHOT_SAMPLE_COUNT - 1):
+                start_wait = time.perf_counter()
+                target_wait = SNAPSHOT_SAMPLE_INTERVAL_MS / 1000.0
+                last_read_frame = None
+                while time.perf_counter() - start_wait < target_wait:
+                    ok, temp_frame = cap.read()
+                    if ok:
+                        last_read_frame = temp_frame.copy()
+                        display_temp = temp_frame.copy()
+                        cv2.putText(display_temp, f"FPS: {fps:.1f}", (20, 40),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 255), 2, cv2.LINE_AA)
+                        cv2.putText(display_temp, f"ZBIERANIE SNAPSHOTA ({i+2}/{SNAPSHOT_SAMPLE_COUNT})...",
+                                    (20, 75), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2, cv2.LINE_AA)
+                        cv2.imshow('TarotVision - AI Detection (Wcisnij Q by wyjsc)', display_temp)
+                    cv2.waitKey(1)
+                if last_read_frame is not None:
+                    samples.append(last_read_frame)
 
             runtime_metrics.add("snapshot_samples_taken", len(samples))
             selected = choose_best_snapshot(samples)
@@ -630,6 +644,16 @@ while True:
                 runtime_metrics.add("snapshot_rejected_count", 1)
             else:
                 snapshot_gate.mark_analyzing()
+                
+                # Szybki podgląd stanu analizy przed uruchomieniem ciężkich obliczeń ORB
+                display_analysis = selected.frame.copy()
+                cv2.putText(display_analysis, f"FPS: {fps:.1f}", (20, 40),
+                            cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 255), 2, cv2.LINE_AA)
+                cv2.putText(display_analysis, "ANALIZOWANIE SNAPSHOTA...",
+                            (20, 75), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 2, cv2.LINE_AA)
+                cv2.imshow('TarotVision - AI Detection (Wcisnij Q by wyjsc)', display_analysis)
+                cv2.waitKey(1)
+                
                 analysis_start = time.perf_counter()
                 result = snapshot_analyzer.analyze(selected.frame)
                 analysis_ms = (time.perf_counter() - analysis_start) * 1000.0
