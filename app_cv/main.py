@@ -57,7 +57,7 @@ TRACKING_REVERIFY_GAP_FRAMES = 24
 USE_TABLE_CARD_DETECTION = False  # Feature flag: True = uruchom detekcje prostokatow kart (Task 3 roadmapy CV)
 USE_SNAPSHOT_FIRST_CV = os.environ.get("TAROTVISION_SNAPSHOT_FIRST", "0") == "1"
 SNAPSHOT_SETTLE_SECONDS = 0.5
-SNAPSHOT_SAMPLE_COUNT = 3
+SNAPSHOT_SAMPLE_COUNT = 1
 SNAPSHOT_SAMPLE_INTERVAL_MS = 250
 
 # System dwufazowy "Zlap i Zamroz" — eliminuje mikro-jitter statycznych kart
@@ -439,8 +439,10 @@ for file_path in file_paths:
     # Stosujemy CLAHE takze na wzorcach — zapewnia spojnosc z klatkami kamery
     img = clahe.apply(img)
         
-    # Wyliczamy od razu kluczowe cechy dla karty (upright)
     kp, des = orb.detectAndCompute(img, None)
+    if des is not None:
+        kp = kp[:500]
+        des = des[:500]
 
     # Obrocona o 180 stopni — karta postawiona do gory nogami (reversed)
     img_reversed = cv2.rotate(img, cv2.ROTATE_180)
