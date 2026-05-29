@@ -4,6 +4,9 @@ import * as THREE from 'three'
 // 1. Inicjalizacja sceny (z pelna przezroczystoscia pod nakladke OBS)
 const container = document.getElementById('app')
 const scene = new THREE.Scene()
+const operatorMode = new URLSearchParams(window.location.search).get('operator') === '1'
+let controlSocket = null
+let latestStatus = null
 
 // Ustawienia kamery — widok z gory (90 stopni, prostopadle do stolu)
 const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000)
@@ -131,6 +134,145 @@ function getSharedGeometry(aspect) {
 // 6. Zarzadzanie instancjami kart 3D
 const activeCards = {}
 
+const operatorMetricNames = [
+    'fps',
+    'matching_ms',
+    'cards_checked',
+    'orb_skipped_locked',
+    'locked_tracked_count',
+    'available_card_count',
+    'tracked_card_count'
+]
+
+function formatMetricValue(value) {
+    if (typeof value !== 'number' || !Number.isFinite(value)) return '-'
+    if (Math.abs(value) >= 100) return value.toFixed(0)
+    return value.toFixed(2)
+}
+
+function createOperatorPanel() {
+    if (!operatorMode) return null
+
+    const panel = document.createElement('aside')
+    panel.className = 'operator-panel'
+    panel.innerHTML = `
+        <div class="operator-panel__header">
+            <span class="operator-panel__title">TarotVision Operator</span>
+            <span class="operator-panel__status" data-role="connection">offline</span>
+        </div>
+        <div class="operator-panel__section">
+            <div class="operator-panel__section-title">Runtime</div>
+            <div class="operator-grid" data-role="runtime"></div>
+        </div>
+        <div class="operator-panel__section">
+            <div class="operator-panel__section-title">Metrics</div>
+            <div class="operator-grid" data-role="metrics"></div>
+        </div>
+        <div class="operator-panel__section">
+            <div class="operator-panel__section-title">Parameters</div>
+            <div class="operator-controls" data-role="parameters"></div>
+        </div>
+        <div class="operator-panel__section">
+            <div class="operator-panel__section-title">Actions</div>
+            <div class="operator-actions">
+                <input class="operator-profile-name" data-role="profile-name" value="studio_day" aria-label="Profile name" />
+                <button type="button" data-action="profile_save">Save</button>
+                <button type="button" data-action="profile_apply">Load</button>
+                <button type="button" data-action="tuning_rollback">Rollback</button>
+                <button type="button" data-action="camera_probe">Probe Cam</button>
+                <button type="button" data-action="calibration_start">Calibrate</button>
+            </div>
+        </div>
+        <div class="operator-panel__section">
+            <div class="operator-panel__section-title">Warnings</div>
+            <div class="operator-warnings" data-role="warnings">-</div>
+        </div>
+    `
+    document.body.appendChild(panel)
+    return panel
+}
+
+const operatorPanel = createOperatorPanel()
+
+function sendControlMessage(payload) {
+    if (!controlSocket || controlSocket.readyState !== WebSocket.OPEN) return
+    controlSocket.send(JSON.stringify(payload))
+}
+
+function updateOperatorGrid(container, entries) {
+    if (!container) return
+    container.innerHTML = entries.map(([label, value]) => `
+        <div class="operator-grid__label">${label}</div>
+        <div class="operator-grid__value">${value}</div>
+    `).join('')
+}
+
+function updateOperatorParameters(operator) {
+    if (!operatorPanel) return
+    const container = operatorPanel.querySelector('[data-role="parameters"]')
+    if (!container) return
+
+    const parameters = operator?.parameters || {}
+    const metadata = operator?.parameter_metadata || {}
+    const names = Object.keys(metadata)
+    if (names.length === 0) {
+        container.textContent = '-'
+        return
+    }
+
+    container.innerHTML = names.map((name) => {
+        const meta = metadata[name]
+        const value = parameters[name] ?? meta.default
+        return `
+            <label class="operator-control">
+                <span>${name}</span>
+                <input
+                    type="range"
+                    min="${meta.minimum}"
+                    max="${meta.maximum}"
+                    step="${name.includes('FRAMES') || name === 'MIN_MATCH_COUNT' ? '1' : '0.01'}"
+                    value="${value}"
+                    data-param="${name}"
+                    ${meta.live_safe ? '' : 'data-unsafe="1"'}
+                />
+                <output>${formatMetricValue(Number(value))}</output>
+            </label>
+        `
+    }).join('')
+}
+
+function updateOperatorPanel(data) {
+    if (!operatorPanel) return
+    latestStatus = data
+
+    const connection = operatorPanel.querySelector('[data-role="connection"]')
+    if (connection) connection.textContent = controlSocket?.readyState === WebSocket.OPEN ? 'online' : 'offline'
+
+    const metrics = data.metrics || {}
+    const runtime = data.runtime || {}
+    const operator = data.operator || {}
+
+    updateOperatorGrid(operatorPanel.querySelector('[data-role="runtime"]'), [
+        ['runtime', runtime.profile || '-'],
+        ['tuning', operator.active_profile || '-'],
+        ['schedule', runtime.schedule_mode || '-'],
+        ['boost', runtime.boost_frames_remaining ?? '-'],
+        ['camera', runtime.camera_index ?? '-'],
+        ['capture', runtime.capture_width && runtime.capture_height ? `${runtime.capture_width}x${runtime.capture_height}` : '-']
+    ])
+
+    updateOperatorGrid(
+        operatorPanel.querySelector('[data-role="metrics"]'),
+        operatorMetricNames.map((name) => [name, formatMetricValue(metrics[name] ?? runtime[name])])
+    )
+
+    updateOperatorParameters(operator)
+
+    const warnings = operatorPanel.querySelector('[data-role="warnings"]')
+    const warningItems = operator.warnings || []
+    if (warnings) warnings.textContent = warningItems.length ? warningItems.join(' | ') : '-'
+}
+
 // Wspoldzielony material zlotych krawedzi — identyczny dla wszystkich kart (audit: tworzony byl od nowa per karta)
 const sharedEdgeMaterial = new THREE.MeshStandardMaterial({
     color: 0xd4af37,
@@ -254,6 +396,8 @@ function connectWebSocket() {
 
     ws.onopen = () => {
         console.log("[WEBSOCKET] Polaczono! Oczekiwanie na rozklady kart...")
+        controlSocket = ws
+        updateOperatorPanel(latestStatus || { metrics: {}, runtime: {}, operator: {} })
         wsReconnectDelay = 1000 // Reset delay po udanym polaczeniu
     }
 
@@ -261,6 +405,7 @@ function connectWebSocket() {
         try {
             const data = JSON.parse(event.data)
             const detectedCards = data.cards || []
+            updateOperatorPanel(data)
             handleCardData(detectedCards)
         } catch (e) {
             console.error("[WEBSOCKET ERROR] Blad przetwarzania danych:", e)
@@ -272,6 +417,8 @@ function connectWebSocket() {
         Object.keys(activeCards).forEach((name) => {
             activeCards[name].targetOpacity = 0.0
         })
+        if (controlSocket === ws) controlSocket = null
+        updateOperatorPanel(latestStatus || { metrics: {}, runtime: {}, operator: {} })
         setTimeout(connectWebSocket, wsReconnectDelay)
         // Exponential backoff — kazda nieudana proba podwaja delay (max 15s)
         wsReconnectDelay = Math.min(wsReconnectDelay * 2, WS_MAX_DELAY)
@@ -283,6 +430,42 @@ function connectWebSocket() {
 }
 
 connectWebSocket()
+
+if (operatorPanel) {
+    operatorPanel.addEventListener('input', (event) => {
+        const input = event.target
+        if (!(input instanceof HTMLInputElement)) return
+        const param = input.dataset.param
+        if (!param) return
+        const output = input.parentElement?.querySelector('output')
+        if (output) output.textContent = formatMetricValue(Number(input.value))
+    })
+
+    operatorPanel.addEventListener('change', (event) => {
+        const input = event.target
+        if (!(input instanceof HTMLInputElement)) return
+        const param = input.dataset.param
+        if (!param) return
+        sendControlMessage({
+            type: 'tuning_update',
+            param,
+            value: Number(input.value)
+        })
+    })
+
+    operatorPanel.addEventListener('click', (event) => {
+        const button = event.target
+        if (!(button instanceof HTMLButtonElement)) return
+        const action = button.dataset.action
+        if (!action) return
+        const profileName = operatorPanel.querySelector('[data-role="profile-name"]')?.value || 'studio_day'
+        if (action === 'profile_save' || action === 'profile_apply') {
+            sendControlMessage({ type: action, name: profileName })
+            return
+        }
+        sendControlMessage({ type: action })
+    })
+}
 
 // 9. Główna pętla renderowania (bez zbędnego zegara THREE.Clock)
 function animate() {

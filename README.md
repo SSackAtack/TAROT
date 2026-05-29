@@ -95,6 +95,24 @@ Przy starcie przez launcher `cv_metrics.jsonl`, `cv_runtime.log` i `ar_vite.log`
 W `runtime` widac tez `schedule_mode` (`empty_scan`, `boost_scan`, `steady_scan`), `boost_frames_remaining`, `available_card_count`, `tracked_card_count`, `reverify_interval_frames` oraz `tracking_iou_threshold`.
 W metrykach pomocniczych dla state-first CV dochodza `motion_changed_ratio`, `reverify_due_count`, `tracked_assignments`, `unoccupied_observed_boxes` i `tracking_reverify_count`.
 
+### Konsola operatorska
+
+Domyslny adres `http://localhost:5173/` pozostaje czystym overlayem do OBS. Panel diagnostyczno-strojeniowy jest dostepny tylko pod:
+
+```text
+http://localhost:5173/?operator=1
+```
+
+Konsola pokazuje metryki runtime, aktualne parametry strojenia, ostrzezenia operatora i status profili. Bezpieczne parametry state-first CV, takie jak `LOCK_DEAD_ZONE_POS`, `LOCK_DEAD_ZONE_ANGLE`, `TRACKING_IOU_THRESHOLD`, `REVERIFY_INTERVAL_FRAMES` i `BOOST_AFTER_LAYOUT_CHANGE_FRAMES`, moga byc zmieniane przez WebSocket bez restartu. Zmiany bardziej ryzykowne sa oznaczane jako wymagajace kroku kalibracji/apply.
+
+Profile strojenia zapisywane sa lokalnie w:
+
+```text
+logs/calibration_profiles/
+```
+
+Probe parametrów kamery (`CAP_PROP_*`) pokazuje wartosc zadana i odczytana. Jesli sterownik kamery ignoruje dany parametr, UI ma traktowac go jako nieobslugiwany zamiast sugerowac, ze suwak dziala.
+
 **Manualnie:**
 ```bash
 # Terminal 1: Serwer CV

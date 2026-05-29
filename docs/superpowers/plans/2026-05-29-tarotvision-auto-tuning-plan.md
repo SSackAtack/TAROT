@@ -930,6 +930,32 @@ Przeredagowano plan po analizie realnych zysków i ryzyk:
 - doprecyzowano podzial parametrów wedlug ryzyka,
 - dodano modulowa architekture, testy i kryteria akceptacji.
 
+## Session Status (2026-05-29, Codex — implementacja konsoli operatorskiej)
+
+Wykonano pierwsze wdrozenie planu:
+
+- Task 1: dodano `runtime_config.py` z walidacja zakresów, snapshotem, rollbackiem i metadanymi parametrów.
+- Task 2: dodano `tuning_protocol.py` i odbiór control messages w WebSocket backendu.
+- Task 3: dodano tryb operatorski frontendu aktywowany przez `?operator=1`; domyslny overlay OBS pozostaje bez panelu.
+- Task 4: backend stosuje live-safe parametry w petli CV, obsluguje rollback i oznacza non-live-safe parametry jako pending.
+- Task 5: dodano `profile_store.py` z zapisem/odczytem profili w `logs/calibration_profiles/` oraz walidacja nazw i parametrów.
+- Task 6: dodano `camera_controls.py` z probe/readback dla opcjonalnych parametrów kamery.
+- Task 7: dodano minimalny `calibration_session.py` do scoringu i wyboru rekomendacji; rekomendacja nie jest auto-aplikowana.
+- Zaktualizowano README o konsoli operatorskiej, profile i zasady probe kamery.
+
+Weryfikacja:
+
+- `python -m unittest discover -s app_cv/tests -v` -> 38 testów, OK, 3 skipped dla `motion` z powodu braku `numpy/cv2` w tym interpreterze testowym.
+- `python -m py_compile app_cv/main.py app_cv/tarotvision/*.py` -> OK.
+- `npm --prefix app_ar run build` -> OK, z dotychczasowym ostrzezeniem Vite o chunku >500 kB.
+- Browser smoke: `http://127.0.0.1:5173/` nie pokazuje `.operator-panel`; `http://127.0.0.1:5173/?operator=1` pokazuje panel operatorski i canvas. Bledy konsoli w smoke tescie dotyczyly braku uruchomionego backendu `ws://localhost:8765`, co jest oczekiwane przy samodzielnym tescie Vite.
+
+Pozostalo:
+
+- Task 8 live verification z prawdziwym backendem CV, kamera i scenariuszem kart.
+- Realna walidacja `CAP_PROP_*` na AnkerWork C310.
+- Doprecyzowanie przyszlej auto-rekomendacji na podstawie prawdziwych metryk z `cv_metrics.jsonl`.
+
 ## Immediate Next Action
 
-Zaczac od Task 1 i Task 3: `runtime_config.py` oraz read-only operator console. To daje wartosc diagnostyczna natychmiast, bez ryzyka destabilizacji obecnego PoC.
+Uruchomic `start_tarotvision.bat`, otworzyc `http://localhost:5173/?operator=1`, wykonac scenariusz live z 1-3 kartami i zapisac porównanie metryk przed recznym strojeniem oraz po zmianie parametrów live-safe.

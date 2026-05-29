@@ -18,6 +18,11 @@ from tarotvision.audit_policy import should_reverify
 from tarotvision.table_state import TableState, PHASE_LOCKED, PHASE_NEEDS_REVERIFY
 from tarotvision.roi_map import filter_boxes_outside_occupied
 from tarotvision.contour_tracking import assign_boxes_to_cards
+from tarotvision.runtime_config import RuntimeConfig, PARAMETERS, ParameterValidationError
+from tarotvision.tuning_protocol import parse_control_message, ControlMessageError
+from tarotvision.profile_store import ProfileStore
+from tarotvision.camera_controls import probe_camera_control
+from tarotvision.calibration_session import choose_best_candidate
 
 # Konfiguracja
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -55,11 +60,30 @@ current_status = {
     "detected": False,
     "cards": [],
     "metrics": {},
-    "runtime": {}
+    "runtime": {},
+    "operator": {
+        "enabled": True,
+        "active_profile": "default",
+        "parameters": {},
+        "parameter_metadata": {},
+        "pending_changes": {},
+        "supported_camera_controls": {},
+        "calibration": {"state": "idle", "last_score": None},
+        "warnings": [],
+    },
 }
 
 # Zestaw polaczonych klientow
 connected_clients = set()
+control_messages = []
+runtime_config = RuntimeConfig()
+stable_config_snapshot = runtime_config.snapshot()
+pending_config_changes = {}
+operator_warnings = []
+supported_camera_controls = {}
+calibration_state = {"state": "idle", "last_score": None}
+profile_store = ProfileStore(os.path.join(LOG_DIR, "calibration_profiles"))
+active_tuning_profile = "default"
 
 os.makedirs(LOG_DIR, exist_ok=True)
 diagnostics_path = os.path.join(LOG_DIR, "cv_metrics.jsonl")
@@ -76,6 +100,124 @@ logging.basicConfig(
 def log_event(message):
     logging.info(message)
     print(message)
+
+
+def build_operator_snapshot():
+    return {
+        "enabled": True,
+        "active_profile": active_tuning_profile,
+        "parameters": copy.deepcopy(runtime_config.values),
+        "parameter_metadata": runtime_config.metadata(),
+        "pending_changes": copy.deepcopy(pending_config_changes),
+        "supported_camera_controls": copy.deepcopy(supported_camera_controls),
+        "calibration": copy.deepcopy(calibration_state),
+        "warnings": list(operator_warnings[-8:]),
+    }
+
+
+def add_operator_warning(message):
+    operator_warnings.append(message)
+    log_event(f"[OPERATOR] {message}")
+
+
+def probe_camera_controls(capture):
+    probes = {
+        "CAP_PROP_FOCUS": (cv2.CAP_PROP_FOCUS, 120.0),
+        "CAP_PROP_EXPOSURE": (cv2.CAP_PROP_EXPOSURE, -6.0),
+        "CAP_PROP_CONTRAST": (cv2.CAP_PROP_CONTRAST, 120.0),
+        "CAP_PROP_AUTOFOCUS": (cv2.CAP_PROP_AUTOFOCUS, 0.0),
+    }
+    results = {}
+    for name, (prop_id, test_value) in probes.items():
+        probe = probe_camera_control(capture, prop_id, test_value)
+        results[name] = {
+            "supported": probe.supported,
+            "requested_value": probe.requested_value,
+            "readback_value": probe.readback_value,
+        }
+    return results
+
+
+def handle_control_message(message, capture):
+    global stable_config_snapshot
+    global supported_camera_controls
+    global calibration_state
+    global active_tuning_profile
+
+    if message.type == "tuning_update":
+        try:
+            runtime_config.update(message.param, message.value)
+        except ParameterValidationError as exc:
+            add_operator_warning(str(exc))
+            return
+
+        if PARAMETERS[message.param].live_safe:
+            stable_config_snapshot = runtime_config.snapshot()
+            pending_config_changes.pop(message.param, None)
+            log_event(f"[OPERATOR] Zastosowano {message.param}={runtime_config.values[message.param]}")
+        else:
+            pending_config_changes[message.param] = runtime_config.values[message.param]
+            add_operator_warning(f"{message.param} wymaga kroku kalibracji/apply")
+        return
+
+    if message.type == "tuning_rollback":
+        runtime_config.rollback(stable_config_snapshot)
+        pending_config_changes.clear()
+        add_operator_warning("Przywrocono ostatni stabilny snapshot parametrów")
+        return
+
+    if message.type == "profile_save":
+        profile_store.save(message.name, runtime_config.values)
+        active_tuning_profile = message.name
+        add_operator_warning(f"Zapisano profil {message.name}")
+        return
+
+    if message.type == "profile_apply":
+        values = profile_store.load(message.name)
+        for param_name, value in values.items():
+            runtime_config.update(param_name, value)
+        stable_config_snapshot = runtime_config.snapshot()
+        pending_config_changes.clear()
+        active_tuning_profile = message.name
+        add_operator_warning(f"Wczytano profil {message.name}")
+        return
+
+    if message.type == "camera_probe":
+        supported_camera_controls = probe_camera_controls(capture)
+        add_operator_warning("Zakonczono probe obslugi parametrów kamery")
+        return
+
+    if message.type == "calibration_start":
+        candidates = [
+            {"name": "current", "score": 0.0},
+            {"name": "stable_tracking_bias", "score": 1.0},
+        ]
+        best = choose_best_candidate(candidates)
+        calibration_state = {
+            "state": "recommendation_ready",
+            "last_score": best["score"] if best else None,
+            "recommended_profile": best["name"] if best else None,
+            "score_before": 0.0,
+            "score_after": best["score"] if best else None,
+        }
+        add_operator_warning("Przygotowano wstepna rekomendacje profilu bez auto-apply")
+        return
+
+    if message.type == "calibration_cancel":
+        calibration_state = {"state": "idle", "last_score": None}
+        add_operator_warning("Anulowano kalibracje")
+
+
+def drain_control_messages(capture):
+    with status_lock:
+        queued_messages = list(control_messages)
+        control_messages.clear()
+    for message in queued_messages:
+        try:
+            handle_control_message(message, capture)
+        except Exception as exc:
+            add_operator_warning(f"Blad obslugi {message.type}: {exc}")
+
 
 def append_diagnostics(metrics_snapshot, runtime_snapshot, active_cards):
     payload = {
@@ -98,9 +240,14 @@ async def handler(websocket):
             state = copy.deepcopy(current_status)
         await websocket.send(json.dumps(state))
         
-        # Utrzymujemy polaczenie otwarte
         async for message in websocket:
-            pass
+            try:
+                control_message = parse_control_message(message)
+            except ControlMessageError as exc:
+                log_event(f"[WEBSOCKET] Odrzucono control message: {exc}")
+                continue
+            with status_lock:
+                control_messages.append(control_message)
     except websockets.exceptions.ConnectionClosed:
         pass
     finally:
@@ -333,6 +480,17 @@ tracked_boxes_by_name = {}
 # Petla glowna (Live feed)
 while True:
     frame_counter += 1
+    drain_control_messages(cap)
+    config_values = runtime_config.values
+    min_match_count = int(config_values["MIN_MATCH_COUNT"])
+    ratio_thresh = config_values["RATIO_THRESH"]
+    min_inlier_ratio = config_values["MIN_INLIER_RATIO"]
+    ema_alpha = config_values["EMA_ALPHA"]
+    boost_after_layout_change_frames = int(config_values["BOOST_AFTER_LAYOUT_CHANGE_FRAMES"])
+    reverify_interval_frames = int(config_values["REVERIFY_INTERVAL_FRAMES"])
+    tracking_iou_threshold = config_values["TRACKING_IOU_THRESHOLD"]
+    lock_dead_zone_pos = config_values["LOCK_DEAD_ZONE_POS"]
+    lock_dead_zone_angle = config_values["LOCK_DEAD_ZONE_ANGLE"]
     frame_loop_start = time.perf_counter()
     camera_read_start = time.perf_counter()
     ret, frame = cap.read()
@@ -370,7 +528,7 @@ while True:
         motion_result = motion_detector.update(np.zeros((8, 8), dtype=np.uint8))
     runtime_metrics.add("motion_changed_ratio", motion_result.changed_ratio)
     if motion_result.scene_settled:
-        boost_frames_remaining = max(boost_frames_remaining, BOOST_AFTER_LAYOUT_CHANGE_FRAMES)
+        boost_frames_remaining = max(boost_frames_remaining, boost_after_layout_change_frames)
     
     # ==========================================================================
     # STATE-FIRST OPTIMIZATION (Task 10, Opus 2026-05-29)
@@ -416,7 +574,7 @@ while True:
         assigned_tracked = assign_boxes_to_cards(
             tracked_boxes,
             contour_boxes,
-            min_iou=TRACKING_IOU_THRESHOLD,
+            min_iou=tracking_iou_threshold,
         )
         runtime_metrics.add("tracked_assignments", len(assigned_tracked))
         
@@ -483,7 +641,7 @@ while True:
         or should_reverify(
             frame_index=frame_counter,
             last_verified_frame=tracked_card.last_seen_frame,
-            interval_frames=REVERIFY_INTERVAL_FRAMES,
+            interval_frames=reverify_interval_frames,
             suspicious=False,
         )
     ]
@@ -523,7 +681,7 @@ while True:
 
     # --- KROK 3: Matching ORB/FLANN — tylko dla wybranych kart ---
     matching_start = time.perf_counter()
-    if des_frame is not None and len(des_frame) > MIN_MATCH_COUNT:
+    if des_frame is not None and len(des_frame) > min_match_count:
         # Iterujemy TYLKO po kartach wymagajacych pelnego rozpoznawania
         for name in cards_to_check:
             ref_data = reference_cards.get(name)
@@ -543,10 +701,10 @@ while True:
             for match_pair in matches:
                 if len(match_pair) == 2:
                     m, n = match_pair
-                    if m.distance < RATIO_THRESH * n.distance:
+                    if m.distance < ratio_thresh * n.distance:
                         good_matches.append(m)
                     
-            if len(good_matches) >= MIN_MATCH_COUNT:
+            if len(good_matches) >= min_match_count:
                 # Karta ma duzo punktow! Liczymy homografie i sprawdzamy geometrie
                 ref_kp = ref_data["keypoints"]
                 src_pts = np.float32([ref_kp[m.queryIdx].pt for m in good_matches]).reshape(-1, 1, 2)
@@ -557,7 +715,7 @@ while True:
                 if M is not None and mask is not None:
                     # Sprawdzamy proporcje inlierow (czy homografia jest stabilna)
                     inlier_ratio = np.sum(mask) / len(mask)
-                    if inlier_ratio < MIN_INLIER_RATIO:
+                    if inlier_ratio < min_inlier_ratio:
                         continue
                     
                     h, w = ref_data["image"].shape
@@ -654,9 +812,9 @@ while True:
                 old_y = debounce_state[name].get("last_y", new_y)
                 old_angle = debounce_state[name].get("last_angle", new_angle)
                 
-                debounce_state[name]["last_x"] = EMA_ALPHA * new_x + (1 - EMA_ALPHA) * old_x
-                debounce_state[name]["last_y"] = EMA_ALPHA * new_y + (1 - EMA_ALPHA) * old_y
-                debounce_state[name]["last_angle"] = EMA_ALPHA * new_angle + (1 - EMA_ALPHA) * old_angle
+                debounce_state[name]["last_x"] = ema_alpha * new_x + (1 - ema_alpha) * old_x
+                debounce_state[name]["last_y"] = ema_alpha * new_y + (1 - ema_alpha) * old_y
+                debounce_state[name]["last_angle"] = ema_alpha * new_angle + (1 - ema_alpha) * old_angle
                 
                 # Po LOCK_AFTER_FRAMES stabilnych klatkach — zamrazamy pozycje
                 if debounce_state[name]["stable_count"] >= LOCK_AFTER_FRAMES:
@@ -676,14 +834,14 @@ while True:
                 dy = abs(new_y - locked_y)
                 d_angle = abs(new_angle - locked_angle)
                 
-                if dx > LOCK_DEAD_ZONE_POS or dy > LOCK_DEAD_ZONE_POS or d_angle > LOCK_DEAD_ZONE_ANGLE:
+                if dx > lock_dead_zone_pos or dy > lock_dead_zone_pos or d_angle > lock_dead_zone_angle:
                     # Karta sie ruszyla! Odblokowujemy i wracamy do fazy wykrywania
                     debounce_state[name]["phase"] = "DETECTING"
                     debounce_state[name]["stable_count"] = 0
                     debounce_state[name]["last_x"] = new_x
                     debounce_state[name]["last_y"] = new_y
                     debounce_state[name]["last_angle"] = new_angle
-                    boost_frames_remaining = max(boost_frames_remaining, BOOST_AFTER_LAYOUT_CHANGE_FRAMES)
+                    boost_frames_remaining = max(boost_frames_remaining, boost_after_layout_change_frames)
                     # Zgłaszamy ruch do table_state, aby karta została zweryfikowana przez ORB w nowym miejscu
                     table_state.mark_needs_reverify(name, "motion_detected")
                     log_event(f"[RUCH] Karta {name} przesunela sie (dx={dx:.2f}, dy={dy:.2f}). Odblokowanie i zgloszenie do ORB.")
@@ -732,7 +890,7 @@ while True:
             tracked_boxes_by_name[name] = quad_to_box(item["dst"])
     newly_active_cards = active_card_names - previous_active_card_names
     if newly_active_cards:
-        boost_frames_remaining = max(boost_frames_remaining, BOOST_AFTER_LAYOUT_CHANGE_FRAMES)
+        boost_frames_remaining = max(boost_frames_remaining, boost_after_layout_change_frames)
         previous_active_card_names = active_card_names
     elif active_card_names != previous_active_card_names:
         previous_active_card_names = active_card_names
@@ -753,14 +911,15 @@ while True:
     runtime_snapshot["boost_frames_remaining"] = boost_frames_remaining
     runtime_snapshot["available_card_count"] = len(table_state.available_card_ids)
     runtime_snapshot["tracked_card_count"] = len(table_state.cards)
-    runtime_snapshot["reverify_interval_frames"] = REVERIFY_INTERVAL_FRAMES
-    runtime_snapshot["tracking_iou_threshold"] = TRACKING_IOU_THRESHOLD
+    runtime_snapshot["reverify_interval_frames"] = reverify_interval_frames
+    runtime_snapshot["tracking_iou_threshold"] = tracking_iou_threshold
     status_update_start = time.perf_counter()
     with status_lock:
         current_status["detected"] = len(active_detected_cards) > 0
         current_status["cards"] = active_detected_cards
         current_status["metrics"] = metrics_snapshot
         current_status["runtime"] = runtime_snapshot
+        current_status["operator"] = build_operator_snapshot()
     runtime_metrics.add("status_update_ms", (time.perf_counter() - status_update_start) * 1000.0)
 
     diagnostics_time = time.time()
