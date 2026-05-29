@@ -1031,3 +1031,20 @@ Z powodzeniem wdrożono ostateczne usprawnienia wydajnościowe na bazie rzeczywi
 
 Kolejne kroki dla zespołu:
 - Moduł Computer Vision w trybie snapshot-first działa perfekcyjnie i błyskawicznie. Wszelkie cele wydajnościowe i dokładnościowe zostały z nawiązką zrealizowane! Ready for release!
+
+## Przyszła Roadmapa: ROI Tracking dla Układów 30+ Kart
+
+W przypadku rozbudowy systemu TarotVision o wielkie układy (np. Wielkie Tablice na 30+ kart z taliami dopowiadającymi), wdrożony zostanie mechanizm **ROI Tracking (Region of Interest)**. Zapobiegnie to liniowemu wzrostowi czasu dopasowywania i zachowa stałą wydajność analizy na poziomie ok. 20 ms.
+
+### Założenia Architektoniczne:
+
+1. **Śledzenie oparte na klatkach referencyjnych (State-First Cache):**
+   * Zamiast odejmowania surowych pikseli obrazu (które jest wrażliwe na cienie i drgania), system zapamiętuje ostatnio wykryte pozycje prostokątów kart (Bounding Boxes / ROI) w pamięci.
+   * Każdy kontur z nowego snapshotu jest porównywany pod kątem IoU (Intersection over Union) z konturami z poprzedniego stanu.
+
+2. **Warunki aktualizacji (Tabela Prawdy ROI):**
+   * **Brak przesunięcia (Wysoki IoU):** Jeśli kontur nowo wykrytej karty nakłada się z dokładnością do 1-2 mm z istniejącą kartą w pamięci, karta jest natychmiast oznaczana jako stabilna. **Pomijamy dopasowanie ORB** i przepisujemy tożsamość z pamięci cache (koszt obliczeniowy: 0 ms!).
+   * **Wykrycie nowej pozycji (Niski IoU / Nowy kontur):** Jeśli na stole pojawi się kontur w obszarze, który wcześniej był pusty, system uruchamia dopasowanie ORB (BFMatcher) **tylko i wyłącznie dla tego nowego obszaru** (koszt: 20 ms).
+   * **Usunięcie karty:** Jeśli w danym obszarze leżała karta, a nowy snapshot nie wykazuje tam konturu, system bezpiecznie usuwa kartę z pamięci cache.
+
+Dzięki tej architekturze TarotVision będzie w stanie obsłużyć nawet całą rozłożoną talię (78 kart) bez najmniejszego spadku płynności działania!
