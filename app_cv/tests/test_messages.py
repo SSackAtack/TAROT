@@ -1,0 +1,45 @@
+import unittest
+
+from tarotvision.messages import build_status_payload
+
+
+class StatusPayloadTest(unittest.TestCase):
+    def test_payload_contains_required_sections(self):
+        payload = build_status_payload(
+            cards=[], metrics={"fps": 30.0}, warnings=["low_confidence"]
+        )
+
+        self.assertFalse(payload["detected"])
+        self.assertEqual(payload["cards"], [])
+        self.assertEqual(payload["metrics"]["fps"], 30.0)
+        self.assertEqual(payload["warnings"], ["low_confidence"])
+
+    def test_detected_true_with_cards(self):
+        cards = [{"name": "17_star", "x": 0.5, "y": -1.0, "angle": 0.1}]
+        payload = build_status_payload(cards=cards)
+
+        self.assertTrue(payload["detected"])
+        self.assertEqual(len(payload["cards"]), 1)
+
+    def test_defaults_for_optional_fields(self):
+        payload = build_status_payload(cards=[])
+
+        self.assertEqual(payload["metrics"], {})
+        self.assertEqual(payload["warnings"], [])
+        self.assertEqual(payload["debug"], {})
+
+    def test_debug_section_preserved(self):
+        debug = {"candidates": [{"name": "00_fool", "confidence": 0.6}]}
+        payload = build_status_payload(cards=[], debug=debug)
+
+        self.assertEqual(payload["debug"]["candidates"][0]["name"], "00_fool")
+
+    def test_runtime_section_included(self):
+        runtime = {"profile": "cpu_baseline", "capture_width": 1280}
+        payload = build_status_payload(cards=[], runtime=runtime)
+
+        self.assertEqual(payload["runtime"]["profile"], "cpu_baseline")
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -22,9 +22,9 @@ PARAMETERS = {
     "REVERIFY_INTERVAL_FRAMES": TunableParameter("REVERIFY_INTERVAL_FRAMES", 180.0, 30.0, 600.0, True),
     "BOOST_AFTER_LAYOUT_CHANGE_FRAMES": TunableParameter("BOOST_AFTER_LAYOUT_CHANGE_FRAMES", 12.0, 0.0, 60.0, True),
     "EMA_ALPHA": TunableParameter("EMA_ALPHA", 0.4, 0.05, 1.0, False),
-    "MIN_MATCH_COUNT": TunableParameter("MIN_MATCH_COUNT", 18.0, 8.0, 60.0, False),
+    "MIN_MATCH_COUNT": TunableParameter("MIN_MATCH_COUNT", 14.0, 8.0, 60.0, False),
     "RATIO_THRESH": TunableParameter("RATIO_THRESH", 0.79, 0.6, 0.95, False),
-    "MIN_INLIER_RATIO": TunableParameter("MIN_INLIER_RATIO", 0.3, 0.1, 0.8, False),
+    "MIN_INLIER_RATIO": TunableParameter("MIN_INLIER_RATIO", 0.18, 0.1, 0.8, False),
 }
 
 

@@ -23,6 +23,8 @@ from tarotvision.tuning_protocol import parse_control_message, ControlMessageErr
 from tarotvision.profile_store import ProfileStore
 from tarotvision.camera_controls import read_camera_control
 from tarotvision.calibration_session import choose_best_candidate
+from tarotvision.table_calibration import TableCalibration
+from tarotvision.card_detection import find_card_quads
 
 # Konfiguracja
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -42,12 +44,13 @@ CAMERA_FOCUS_LOCKED = True      # Ustawienie operatorskie: AnkerWork C310 ma pra
 CAMERA_EXPOSURE_LOCKED = True   # Ustawienie operatorskie: blokada ekspozycji zmniejsza flicker i false positives
 LOCKED_REFRESH_INTERVAL = 10    # Karty LOCKED sprawdzamy okresowo, nie w kazdej klatce
 INACTIVE_PER_FRAME_EMPTY = 4     # Gdy nie ma aktywnych kart, szybciej skanujemy talie
-INACTIVE_PER_FRAME_ACTIVE = 1    # Gdy sa aktywne karty, chronimy FPS i szukamy nowych wolniej
+INACTIVE_PER_FRAME_ACTIVE = 2    # Gdy sa aktywne karty, skanujemy 2 nieaktywne/klatke (ArUco cache daje budzet)
 INACTIVE_PER_FRAME_BOOST = 3     # Po zmianie ukladu chwilowo skanujemy szybciej, ale bez powrotu do pelnego kosztu
 BOOST_AFTER_LAYOUT_CHANGE_FRAMES = 12
 REVERIFY_INTERVAL_FRAMES = 180
 TRACKING_IOU_THRESHOLD = 0.35
 TRACKING_REVERIFY_GAP_FRAMES = 24
+USE_TABLE_CARD_DETECTION = False  # Feature flag: True = uruchom detekcje prostokatow kart (Task 3 roadmapy CV)
 
 # System dwufazowy "Zlap i Zamroz" — eliminuje mikro-jitter statycznych kart
 LOCK_AFTER_FRAMES = 8      # Klatki stabilnej detekcji zanim pozycja zostanie zamrozona
@@ -92,7 +95,7 @@ if os.environ.get("TAROTVISION_RESET_LOGS") == "1" and os.path.exists(diagnostic
 logging.basicConfig(
     filename=os.path.join(LOG_DIR, "cv_runtime.log"),
     filemode="w",
-    level=logging.INFO,
+    level=logging.DEBUG,
     format="%(asctime)s %(levelname)s %(message)s"
 )
 
@@ -428,18 +431,27 @@ for file_path in file_paths:
     # Stosujemy CLAHE takze na wzorcach — zapewnia spojnosc z klatkami kamery
     img = clahe.apply(img)
         
-    # Wyliczamy od razu kluczowe cechy dla karty
+    # Wyliczamy od razu kluczowe cechy dla karty (upright)
     kp, des = orb.detectAndCompute(img, None)
+
+    # Obrocona o 180 stopni — karta postawiona do gory nogami (reversed)
+    img_reversed = cv2.rotate(img, cv2.ROTATE_180)
+    kp_rev, des_rev = orb.detectAndCompute(img_reversed, None)
     
     # Zapisujemy do pamieci referencyjnej
     reference_cards[card_name] = {
         "image": img,
         "keypoints": kp,
-        "descriptors": des
+        "descriptors": des,
+        "reversed_image": img_reversed,
+        "reversed_keypoints": kp_rev,
+        "reversed_descriptors": des_rev,
     }
 
-log_event(f"[OK] Zaladowano {len(reference_cards)} wzorcow do pamieci!")
+log_event(f"[OK] Zaladowano {len(reference_cards)} wzorcow do pamieci (upright + reversed)!")
 table_state = TableState(reference_cards.keys())
+table_calibration = TableCalibration(table_width=CAMERA_WIDTH, table_height=CAMERA_HEIGHT)
+log_event("[ARUCO] Modul kalibracji stolu zainicjalizowany (markery ID 10-13, DICT_4X4_50)")
 
 # 3. Inicjalizacja Kamery — jawnie ustawiamy 720p (1280x720) dla wiecej cech ORB z wiekszej odleglosci
 log_event("[KAMERA] Uruchamianie kamery... (Wcisnij 'q' by zamknac, cyfry '0'-'9' by przelaczac kamery w locie!)")
@@ -505,6 +517,26 @@ while True:
         # Zastosowanie CLAHE — obiekt tworzony RAZ na poczatku, nie w kazdej klatce
         gray_frame = clahe.apply(gray_frame)
     runtime_metrics.add("preprocess_ms", (time.perf_counter() - preprocess_start) * 1000.0)
+
+    # Kalibracja stolu ArUco — szukamy 4 markerow co klatke
+    aruco_start = time.perf_counter()
+    if gray_frame is not None:
+        table_calibration.update(gray_frame)
+    runtime_metrics.add("aruco_ms", (time.perf_counter() - aruco_start) * 1000.0)
+
+    # Detekcja prostokatow kart (Task 3) — uruchamiana za feature flag
+    detected_card_quads = []
+    if USE_TABLE_CARD_DETECTION and gray_frame is not None:
+        card_detect_start = time.perf_counter()
+        # Preferujemy sprostowany obraz ArUco, fallback na surowa klatke
+        if table_calibration.calibrated:
+            detection_input = table_calibration.warp_frame(frame)
+        else:
+            detection_input = frame
+        if detection_input is not None:
+            detected_card_quads = find_card_quads(detection_input)
+        runtime_metrics.add("card_detect_ms", (time.perf_counter() - card_detect_start) * 1000.0)
+        runtime_metrics.add("card_quads_found", len(detected_card_quads))
     
     # 4. Wykrywamy punkty kluczowe w obecnej klatce
     feature_start = time.perf_counter()
@@ -672,6 +704,8 @@ while True:
     runtime_metrics.add("cards_checked", len(cards_to_check))
 
     # --- KROK 3: Matching ORB/FLANN — tylko dla wybranych kart ---
+    # Strategia: probuj upright NAJPIERW. Jesli przejdzie — pomijaj reversed.
+    # Reversed jest fallbackiem, nie defaultem. To oszczedza ~50% czasu matchingu.
     matching_start = time.perf_counter()
     if des_frame is not None and len(des_frame) > min_match_count:
         # Iterujemy TYLKO po kartach wymagajacych pelnego rozpoznawania
@@ -679,68 +713,83 @@ while True:
             ref_data = reference_cards.get(name)
             if ref_data is None:
                 continue
-            des_ref = ref_data["descriptors"]
-            if des_ref is None: continue
-                
-            # FLANN-LSH knnMatch — 2-5x szybszy niz BruteForce
-            try:
-                matches = flann.knnMatch(des_ref, des_frame, k=2)
-            except cv2.error:
-                continue
-            
-            good_matches = []
-            # Lowe's ratio test (odrzuca niepewne i bledne dopasowania szumu)
-            for match_pair in matches:
-                if len(match_pair) == 2:
-                    m, n = match_pair
-                    if m.distance < ratio_thresh * n.distance:
-                        good_matches.append(m)
-                    
-            if len(good_matches) >= min_match_count:
+
+            # Upright najpierw, reversed tylko jako fallback
+            best_orientation_result = None
+
+            for orientation, des_key, kp_key, img_key in [
+                ("upright", "descriptors", "keypoints", "image"),
+                ("reversed", "reversed_descriptors", "reversed_keypoints", "reversed_image"),
+            ]:
+                des_ref = ref_data.get(des_key)
+                if des_ref is None:
+                    continue
+
+                # FLANN-LSH knnMatch — 2-5x szybszy niz BruteForce
+                try:
+                    matches = flann.knnMatch(des_ref, des_frame, k=2)
+                except cv2.error:
+                    continue
+
+                good_matches = []
+                # Lowe's ratio test (odrzuca niepewne i bledne dopasowania szumu)
+                for match_pair in matches:
+                    if len(match_pair) == 2:
+                        m, n = match_pair
+                        if m.distance < ratio_thresh * n.distance:
+                            good_matches.append(m)
+
+                if len(good_matches) < min_match_count:
+                    if frame_counter % 60 == 0:
+                        logging.debug(
+                            "MATCH_REJECT %s[%s]: good_matches=%d < min=%d (total_raw=%d)",
+                            name, orientation, len(good_matches), min_match_count, len(matches)
+                        )
+                    continue
+
                 # Karta ma duzo punktow! Liczymy homografie i sprawdzamy geometrie
-                ref_kp = ref_data["keypoints"]
+                ref_kp = ref_data[kp_key]
                 src_pts = np.float32([ref_kp[m.queryIdx].pt for m in good_matches]).reshape(-1, 1, 2)
                 dst_pts = np.float32([kp_frame[m.trainIdx].pt for m in good_matches]).reshape(-1, 1, 2)
-                
+
                 M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
-                
-                if M is not None and mask is not None:
-                    # Sprawdzamy proporcje inlierow (czy homografia jest stabilna)
-                    inlier_ratio = np.sum(mask) / len(mask)
-                    if inlier_ratio < min_inlier_ratio:
-                        continue
-                    
-                    h, w = ref_data["image"].shape
-                    pts = np.float32([[0, 0], [0, h-1], [w-1, h-1], [w-1, 0]]).reshape(-1, 1, 2)
-                    dst = cv2.perspectiveTransform(pts, M)
-                    
-                    # A. Sprawdzamy wypuklosc
-                    is_convex = cv2.isContourConvex(np.int32(dst))
-                    
-                    # B. Sprawdzamy pole powierzchni czworokata
-                    area = cv2.contourArea(dst)
-                    
-                    # C. Rozsadny rozmiar karty (dynamicznie skalowany do rozdzielczosci kamery)
-                    max_area = frame_width * frame_height * 0.9
-                    min_area = frame_width * frame_height * 0.008
-                    is_reasonable_size = (min_area <= area <= max_area)
-                    
-                    if is_convex and is_reasonable_size and validate_quadrilateral(dst):
-                        # 1. Obliczamy geometryczny srodek (centroid) karty
+
+                if M is None or mask is None:
+                    continue
+
+                inlier_ratio = np.sum(mask) / len(mask)
+                if inlier_ratio < min_inlier_ratio:
+                    if frame_counter % 60 == 0:
+                        logging.debug(
+                            "INLIER_REJECT %s[%s]: inlier_ratio=%.3f < min=%.3f (matches=%d)",
+                            name, orientation, inlier_ratio, min_inlier_ratio, len(good_matches)
+                        )
+                    continue
+
+                ref_img = ref_data[img_key]
+                h, w = ref_img.shape
+                pts = np.float32([[0, 0], [0, h-1], [w-1, h-1], [w-1, 0]]).reshape(-1, 1, 2)
+                dst = cv2.perspectiveTransform(pts, M)
+
+                is_convex = cv2.isContourConvex(np.int32(dst))
+                area = cv2.contourArea(dst)
+                max_area = frame_width * frame_height * 0.9
+                min_area = frame_width * frame_height * 0.008
+                is_reasonable_size = (min_area <= area <= max_area)
+
+                if is_convex and is_reasonable_size and validate_quadrilateral(dst):
+                    # Ten orientation przeszedl — porownaj z dotychczasowym najlepszym
+                    score = len(good_matches) * inlier_ratio
+                    if best_orientation_result is None or score > best_orientation_result["score"]:
                         cx = float(np.mean(dst[:, 0, 0]))
                         cy = float(np.mean(dst[:, 0, 1]))
-                        
-                        # 2. Przeliczamy wspolrzedne — skalowanie dopasowane do pelnego pola widzenia kamery
                         pos_x = float((cx / frame_width * 2.0 - 1.0) * 13.0)
                         pos_y = float((1.0 - (cy / frame_height) * 2.0) * 7.8)
-                        
-                        # 3. Obliczamy kat obrotu karty na biurku
                         x0, y0 = dst[0][0][0], dst[0][0][1]
                         x3, y3 = dst[3][0][0], dst[3][0][1]
                         angle = -float(math.atan2(y3 - y0, x3 - x0))
 
-                        # Karta przeszla wszystkie filtry! Zapisujemy kandydata detekcji
-                        detection_candidates.append({
+                        best_orientation_result = {
                             "name": name,
                             "count": len(good_matches),
                             "inlier_ratio": float(inlier_ratio),
@@ -748,8 +797,24 @@ while True:
                             "dst": dst,
                             "x": pos_x,
                             "y": pos_y,
-                            "angle": angle
-                        })
+                            "angle": angle,
+                            "orientation": orientation,
+                            "score": score,
+                        }
+                    # Jesli upright przeszedl — nie sprawdzaj reversed (oszczednosc ~50ms/karte)
+                    if orientation == "upright":
+                        break
+                else:
+                    if frame_counter % 60 == 0:
+                        logging.debug(
+                            "GEOM_REJECT %s[%s]: convex=%s size=%s area=%.0f (matches=%d inlier=%.3f)",
+                            name, orientation, is_convex, is_reasonable_size, area,
+                            len(good_matches), inlier_ratio
+                        )
+
+            # Najlepsza orientacja wygrywa
+            if best_orientation_result is not None:
+                detection_candidates.append(best_orientation_result)
         
         detected_this_frame = deduplicate_detections(detection_candidates)
 
@@ -905,6 +970,7 @@ while True:
     runtime_snapshot["tracked_card_count"] = len(table_state.cards)
     runtime_snapshot["reverify_interval_frames"] = reverify_interval_frames
     runtime_snapshot["tracking_iou_threshold"] = tracking_iou_threshold
+    runtime_snapshot["table"] = table_calibration.status()
     status_update_start = time.perf_counter()
     with status_lock:
         current_status["detected"] = len(active_detected_cards) > 0
@@ -968,7 +1034,9 @@ while True:
     
     cv2.putText(display_frame, f"FPS: {fps:.1f}", (20, 40), 
                 cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 255), 2, cv2.LINE_AA)
-    cv2.putText(display_frame, f"ORB: {len(cards_to_check)} | IoU: {orb_skipped_locked} | Pula: {len(inactive_names)}", 
+    aruco_label = "TAK" if table_calibration.calibrated else "NIE"
+    aruco_color = (0, 255, 0) if table_calibration.calibrated else (0, 0, 200)
+    cv2.putText(display_frame, f"ORB: {len(cards_to_check)} | IoU: {orb_skipped_locked} | Pula: {len(inactive_names)} | ArUco: {aruco_label}", 
                 (20, 75), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (200, 200, 200), 1, cv2.LINE_AA)
     runtime_metrics.add("frame_loop_ms", (time.perf_counter() - frame_loop_start) * 1000.0)
 

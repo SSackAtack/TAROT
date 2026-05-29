@@ -111,6 +111,34 @@ AnkerWork C310 frame
 
 ---
 
+## Session Status (2026-05-29, Gemini)
+
+Wszystkie 8 taskow zrealizowane i zweryfikowane (81 testow OK).
+
+### Zrealizowane:
+- [x] Task 1: Runtime Metrics (wczesniej Opus)
+- [x] Task 2: ArUco Table Calibration
+- [x] Task 3: Card Rectangle Detection
+- [x] Task 4: Crop and Deskew Recognition
+- [x] Task 5: Confidence State Machine
+- [x] Task 6: Messages Payload
+- [x] Task 7: Offline Benchmark
+- [x] Task 8: YOLO Evaluation
+
+### Live tuning (na podstawie logow diagnostycznych):
+- ArUco cache: 33ms/klatke -> 1ms/klatke (detekcja co 30 klatek)
+- MIN_INLIER_RATIO: 0.30 -> 0.18
+- MIN_MATCH_COUNT: 18 -> 14
+- INACTIVE_PER_FRAME_ACTIVE: 1 -> 2
+- Dual-orientation matching (upright + reversed) z early-exit
+- Diagnostyka MATCH_REJECT/INLIER_REJECT/GEOM_REJECT w cv_runtime.log
+
+### Wyniki live testu:
+- 5/5 kart wykrytych stabilnie, FPS ~5, ArUco TAK
+- Odwrocone karty: wykrywane z fallback na reversed descriptors
+
+---
+
 ### Task 1: Add Runtime Metrics
 
 **Files:**
