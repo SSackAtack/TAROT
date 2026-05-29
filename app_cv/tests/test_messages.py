@@ -40,6 +40,21 @@ class StatusPayloadTest(unittest.TestCase):
 
         self.assertEqual(payload["runtime"]["profile"], "cpu_baseline")
 
+    def test_snapshot_layout_metadata_preserved(self):
+        layout = {
+            "layout_id": 7,
+            "source": "snapshot",
+            "state": "holding_last_good",
+            "stable_for_ms": 3040,
+            "quality_score": 0.82,
+        }
+
+        payload = build_status_payload(cards=[], layout=layout)
+
+        self.assertEqual(payload["layout"]["layout_id"], 7)
+        self.assertEqual(payload["layout"]["source"], "snapshot")
+        self.assertEqual(payload["layout"]["state"], "holding_last_good")
+
 
 if __name__ == "__main__":
     unittest.main()
