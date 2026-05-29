@@ -838,3 +838,20 @@ Wykonano poprawki i przeanalizowano test z 6 kartami:
 
 - Przeprowadzić test weryfikacyjny z 6 kartami po zmianie siatki w przeglądarce i sprawdzić, czy wszystkie 6 kart wyświetla się bez nakładania.
 - Dalsza optymalizacja parametrów IoU / thresholdów contour trackingu pod kątem eliminacji drobnych zakłóceń oświetlenia.
+
+---
+
+## 💡 Koncepcja Przyszłego Usprawnienia: Dynamiczna Siatka Relatywna & Dynamiczne ROI
+
+> [!IMPORTANT]
+> Poniższy pomysł stanowi propozycję przyszłego ulepszenia (Milestone 3). **Wymaga on jeszcze dokładnego przemyślenia, analizy zagrożeń (threat modeling) i weryfikacji przed przystąpieniem do jakiegokolwiek kodowania.**
+
+### 1. Pozycjonowanie: Siatka Relatywna z Kartą-Kotwicą
+*   **Idea:** Zamiast sztywnej siatki zakotwiczonej na środku ekranu `(0, 0)`, pierwsza wyłożona karta na stole staje się fizyczną "kotwicą" rozkładu. Kolejne karty są automatycznie wyrównywane w przeglądarce 3D relatywnie do niej (blok z zerowymi szparami).
+*   **Zaleta:** Gwarantuje idealnie spójny blok wizualny w przeglądarce, eliminując nakładanie się wirtualnych modeli, nawet gdy fizyczne karty leżą nieco krzywo.
+*   **Wymóg przemyślenia:** Co w sytuacji, gdy karta-kotwica zostanie zabrana jako pierwsza? System musi płynnie przekazać rolę kotwicy innej karcie (np. wyliczając środek ciężkości rozkładu - *barycenter*), aby uniknąć gwałtownego skoku (szarpnięcia) całego układu na ekranie. Należy też zbadać, czy jitter (drgania) kotwicy nie przełoży się na drgania całego bloku.
+
+### 2. Algorytm CV: Dynamiczne Region of Interest (ROI)
+*   **Idea:** Skoro wiemy, że w tarocie kolejne karty są dokładane blisko już istniejących, silnik wizyjny (CV) może dynamicznie zawęzić obszar poszukiwań (ROI) tylko do obrzeży aktualnie wykrytych kart.
+*   **Zaleta:** Gigantyczna optymalizacja wydajności. Przetwarzanie małego fragmentu klatki zamiast pełnego $1920 \times 1080$ dałoby ogromny skok FPS (potencjalnie do 20-30 klatek/s).
+*   **Wymóg przemyślenia:** Co jeśli użytkownik ułoży karty w niestandardowym rozkładzie o dużej rozpiętości (np. Krzyż Celtycki, rozkład partnerski)? Musimy zaprojektować hybrydowy mechanizm: np. szybkie ROI w 9 na 10 klatkach, a co 10 klatek pełny skan tła, by nie oślepnąć na karty położone w większej odległości.
