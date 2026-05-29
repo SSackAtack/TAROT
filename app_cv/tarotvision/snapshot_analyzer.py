@@ -13,23 +13,35 @@ class SnapshotAnalysisResult:
 
 
 class SnapshotAnalyzer:
-    def __init__(self, find_quads=None, crop_card=None, recognize_crop=None):
+    def __init__(self, find_quads=None, crop_card=None, recognize_crop=None,
+                 scene_width=26.0, scene_height=15.6):
         self.find_quads = find_quads or find_card_quads
         self.crop_card = crop_card or deskew_card_crop
         self.recognize_crop = recognize_crop
+        self.scene_width = scene_width
+        self.scene_height = scene_height
 
     def analyze(self, frame):
         cards = []
+        frame_height, frame_width = frame.shape[:2]
         for quad in self.find_quads(frame):
             crop = self.crop_card(frame, quad)
             recognition = self.recognize_crop(crop) if self.recognize_crop else None
             if not recognition:
                 continue
             center_x, center_y = _quad_center(quad)
+            scene_x, scene_y = _frame_to_scene(
+                center_x,
+                center_y,
+                frame_width,
+                frame_height,
+                self.scene_width,
+                self.scene_height,
+            )
             cards.append({
                 "name": recognition["name"],
-                "x": center_x,
-                "y": center_y,
+                "x": scene_x,
+                "y": scene_y,
                 "angle": _quad_angle(quad),
                 "confidence": recognition.get("confidence", 0.0),
                 "orientation": recognition.get("orientation", "unknown"),
@@ -51,3 +63,10 @@ def _quad_angle(quad):
     points = _quad_points(quad)
     vector = points[3] - points[0]
     return float(np.arctan2(vector[1], vector[0]))
+
+
+def _frame_to_scene(center_x, center_y, frame_width, frame_height,
+                    scene_width, scene_height):
+    scene_x = (center_x / frame_width * 2.0 - 1.0) * (scene_width / 2.0)
+    scene_y = (1.0 - center_y / frame_height * 2.0) * (scene_height / 2.0)
+    return float(scene_x), float(scene_y)

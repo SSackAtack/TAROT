@@ -35,9 +35,23 @@ class SnapshotAnalyzerTest(unittest.TestCase):
 
         self.assertEqual(result.card_count, 1)
         self.assertEqual(result.cards[0]["name"], "17_star")
-        self.assertAlmostEqual(result.cards[0]["x"], 15.0)
-        self.assertAlmostEqual(result.cards[0]["y"], 20.0)
+        self.assertAlmostEqual(result.cards[0]["x"], -3.25)
+        self.assertAlmostEqual(result.cards[0]["y"], 0.0)
         self.assertEqual(result.cards[0]["confidence"], 0.91)
+
+    def test_maps_frame_center_to_scene_origin(self):
+        quad = np.array([[[18, 18]], [[18, 22]], [[22, 22]], [[22, 18]]],
+                        dtype=np.float32)
+        analyzer = SnapshotAnalyzer(
+            find_quads=lambda frame: [quad],
+            crop_card=lambda frame, quad: "crop",
+            recognize_crop=lambda crop: {"name": "17_star"},
+        )
+
+        result = analyzer.analyze(np.zeros((40, 40, 3), dtype=np.uint8))
+
+        self.assertAlmostEqual(result.cards[0]["x"], 0.0)
+        self.assertAlmostEqual(result.cards[0]["y"], 0.0)
 
 
 if __name__ == "__main__":
