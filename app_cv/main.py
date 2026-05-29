@@ -877,7 +877,18 @@ while True:
                 
                 debounce_state[name]["last_x"] = ema_alpha * new_x + (1 - ema_alpha) * old_x
                 debounce_state[name]["last_y"] = ema_alpha * new_y + (1 - ema_alpha) * old_y
-                debounce_state[name]["last_angle"] = ema_alpha * new_angle + (1 - ema_alpha) * old_angle
+                
+                # Zabezpieczenie przed dryfem kata przy skoku orientacji (np. upright <-> reversed):
+                # Obliczamy najkrotszy dystans katowy. Jesli zmiana jest duza (> 1.0 rad = ~57 stopni),
+                # natychmiast resetujemy EMA i przyjmujemy nowy kat, zapobiegajac "zawisaniu" karty bokiem (90 stopni).
+                diff_angle = abs(new_angle - old_angle)
+                if diff_angle > math.pi:
+                    diff_angle = 2 * math.pi - diff_angle
+                
+                if diff_angle > 1.0:
+                    debounce_state[name]["last_angle"] = new_angle
+                else:
+                    debounce_state[name]["last_angle"] = ema_alpha * new_angle + (1 - ema_alpha) * old_angle
                 
                 # Po LOCK_AFTER_FRAMES stabilnych klatkach — zamrazamy pozycje
                 if debounce_state[name]["stable_count"] >= LOCK_AFTER_FRAMES:
