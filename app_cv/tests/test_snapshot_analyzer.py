@@ -1,4 +1,5 @@
 import unittest
+import math
 
 import numpy as np
 
@@ -65,6 +66,23 @@ class SnapshotAnalyzerTest(unittest.TestCase):
         result = analyzer.analyze(np.zeros((40, 40, 3), dtype=np.uint8))
 
         self.assertAlmostEqual(result.cards[0]["angle"], 0.0)
+
+    def test_reversed_recognition_rotates_layout_card_by_half_turn(self):
+        quad = np.array([[[10, 10]], [[20, 10]], [[20, 30]], [[10, 30]]],
+                        dtype=np.float32)
+        analyzer = SnapshotAnalyzer(
+            find_quads=lambda frame: [quad],
+            crop_card=lambda frame, quad: "crop",
+            recognize_crop=lambda crop: {
+                "name": "15_devil",
+                "orientation": "reversed",
+            },
+        )
+
+        result = analyzer.analyze(np.zeros((40, 40, 3), dtype=np.uint8))
+
+        self.assertAlmostEqual(result.cards[0]["angle"], math.pi)
+        self.assertEqual(result.cards[0]["orientation"], "reversed")
 
 
 if __name__ == "__main__":

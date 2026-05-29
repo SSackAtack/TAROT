@@ -957,3 +957,21 @@ Pozostalo:
 
 - Live test z kamera i ukladem 3-5 kart w trybie `TAROTVISION_SNAPSHOT_FIRST=1`.
 - Strojenie `settle_seconds`, progow jakosci i odrzucen snapshotow na prawdziwym obrazie.
+
+## Session Status (2026-05-29, Codex — live test orientacji kart)
+
+Wykonano:
+
+- Sprawdzono `logs/cv_metrics.jsonl` po live tescie z 5 kartami: `15_devil`, `18_moon`, `16_tower`, `17_star`, `00_fool`.
+- Potwierdzono, ze backend poprawnie rozpoznal komplet 5 nazw, ale ostatni snapshot opisal fizycznie odwroconego `15_devil` jako `upright`.
+- Dodano regresje w `test_snapshot_analyzer.py`: jesli rozpoznawacz zwroci `orientation: reversed`, layout AR musi dostac obrot o `math.pi`.
+- Poprawiono `SnapshotAnalyzer`, zeby tryb snapshot-first publikowal pol obrotu dla kart rozpoznanych jako odwrócone.
+
+Weryfikacja:
+
+- `python -m unittest app_cv.tests.test_snapshot_analyzer -v` z `PYTHONPATH=C:\tmp\tarot_pydeps;app_cv` -> 5 testow, OK.
+- `python -m unittest discover -s app_cv\tests -v` z `PYTHONPATH=C:\tmp\tarot_pydeps;app_cv` -> 99 testow, OK.
+
+Pozostalo:
+
+- Po restarcie `.bat` powtorzyc live test z odwroconym `15_devil`; jesli log nadal pokazuje `orientation: upright`, nastepny krok to dopisanie diagnostyki score'ow `upright/reversed` w `recognize_card_crop` i strojenie progu `ORIENTATION_MARGIN_RATIO` na realnych snapshotach.

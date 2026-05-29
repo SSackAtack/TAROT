@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import math
 
 import numpy as np
 
@@ -42,7 +43,10 @@ class SnapshotAnalyzer:
                 "name": recognition["name"],
                 "x": scene_x,
                 "y": scene_y,
-                "angle": _quad_angle(quad),
+                "angle": _layout_angle(
+                    quad,
+                    recognition.get("orientation", "unknown"),
+                ),
                 "confidence": recognition.get("confidence", 0.0),
                 "orientation": recognition.get("orientation", "unknown"),
             })
@@ -65,6 +69,13 @@ def _quad_angle(quad):
     top_right = points[1]
     vector = top_right - top_left
     return -float(np.arctan2(vector[1], vector[0]))
+
+
+def _layout_angle(quad, orientation):
+    angle = _quad_angle(quad)
+    if orientation == "reversed":
+        angle += math.pi
+    return angle
 
 
 def _order_quad_points(quad):
