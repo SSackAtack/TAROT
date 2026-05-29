@@ -8,13 +8,17 @@ Kamera rozpoznaje fizycznie rozkladane karty tarota, a aplikacja generuje perfek
 
 ## Status
 
-**Proof of Concept ZREALIZOWANY** -- system dziala w czasie rzeczywistym z detekcja wielu kart, sledzeniem przestrzennym AR i wizualizacja 3D.
+**Proof of Concept ZREALIZOWANY** -- system dziala w czasie rzeczywistym z detekcja wielu kart, WebSocket i wizualizacja 3D.
+
+Aktualny PoC rozpoznaje 22 karty Wielkich Arkanow Rider-Waite-Smith przez ORB/FLANN. Domyslna wizualizacja AR uzywa uporzadkowanego snap-to-layout, bo jest to lepsze dla czytelnego kadru YouTube. Dokladne odwzorowanie fizycznych pozycji kart pozostaje opcja na pozniejszy etap.
+
+Nastepny kierunek rozwoju CV: architektura state-first, czyli `identify once -> track cheaply -> reverify when needed`. System ma rozpoznawac nowa karte raz, usuwac ja z puli dostepnych kart, sledzic zablokowane karty tanio po konturze/ROI i uruchamiac pelna rewalidacje tylko przy podejrzeniu zmiany albo w interwale kontrolnym. Mata z markerami ArUco, korekcja perspektywy stolu, detekcja prostokatow kart, crop/deskew i rozpoznawanie cropow pozostaja docelowym pipeline. YOLO/ONNX/OpenVINO/CUDA traktujemy jako wariant benchmarkowy i mozliwy silnik produkcyjny, jesli testy na realnych nagraniach pokaza przewage nad klasycznym CV.
 
 ## Kluczowe cechy (zaimplementowane)
 
 - **Rozpoznawanie kart** -- ORB feature matching z FLANN-LSH, CLAHE i walidacja geometryczna
 - **Wizualizacja AR** -- Three.js z zaokraglonymi kartami 3D o zlotych brzegach (ExtrudeGeometry)
-- **Sledzenie przestrzenne** -- wirtualne karty plynnie podazaja za pozycja i rotacja fizycznych kart
+- **Snap-to-layout** -- wirtualne karty sa porzadkowane do czytelnej siatki produkcyjnej
 - **Preloading GPU** -- 22 tekstury wczytywane przy starcie, zero stutteringu w OBS
 - **WebSocket real-time** -- komunikacja Python <-> przegladarka z debouncing i EMA smoothing
 - **Biblioteka talii** -- Rider-Waite-Smith, 22 karty Wielkie Arkana
@@ -24,6 +28,20 @@ Kamera rozpoznaje fizycznie rozkladane karty tarota, a aplikacja generuje perfek
 ```
 [Kamera USB] -> [Python: OpenCV + ORB + FLANN] -> [WebSocket :8765] -> [Vite + Three.js :5173] -> [OBS] -> [YouTube]
 ```
+
+### Docelowy pipeline CV
+
+```
+[Kamera C310] -> [ArUco mata + korekcja perspektywy] -> [detekcja prostokatow kart] -> [crop + deskew] -> [rozpoznawanie cropow] -> [confidence FSM] -> [WebSocket] -> [snap-to-layout AR]
+```
+
+### Docelowa logika stanu
+
+```
+UNSEEN -> CANDIDATE_NEW -> IDENTIFIED -> LOCKED_TRACKING -> NEEDS_REVERIFY -> LOST / REMOVED
+```
+
+Karty w stanie `LOCKED_TRACKING` nie powinny byc stale rozpoznawane od zera. Sa sledzone przez kontur/ROI, a pelne rozpoznawanie wraca tylko dla nowych, podejrzanych albo okresowo audytowanych kart.
 
 ## Stos technologiczny
 
@@ -59,6 +77,23 @@ cd ..
 
 **Najprosciej** -- kliknij dwukrotnie `start_tarotvision.bat`
 
+Launcher uruchamia:
+
+- frontend AR/Vite pod `http://localhost:5173/`,
+- modul CV/Python z oknem OpenCV,
+- WebSocket pod `ws://localhost:8765/`,
+- zapis diagnostyki w katalogu `logs/`.
+
+Najwazniejsze pliki diagnostyczne:
+
+- `logs/cv_metrics.jsonl` -- probki metryk CV co okolo 1 sekunde,
+- `logs/cv_runtime.log` -- zdarzenia CV/WebSocket,
+- `logs/ar_vite.log` -- log terminala Vite,
+- `logs/launcher.log` -- start launchera.
+
+Przy starcie przez launcher `cv_metrics.jsonl`, `cv_runtime.log` i `ar_vite.log` opisuja biezacy przebieg testowy, zeby nowe pomiary nie mieszaly sie ze starymi.
+W `runtime` widac tez `schedule_mode` (`empty_scan`, `boost_scan`, `steady_scan`) oraz `boost_frames_remaining`, co pomaga ocenic reakcje systemu po dolozeniu lub poruszeniu karty.
+
 **Manualnie:**
 ```bash
 # Terminal 1: Serwer CV
@@ -90,6 +125,7 @@ TAROT/
 │       ├── produkcja/wzorce_cv/  # Wzorce dla CV (.jpg)
 │       └── produkcja/miniatury/  # Miniatury (.webp)
 ├── docs/                # Dokumentacja
+├── logs/                # Logi runtime generowane lokalnie przez launcher/CV
 ├── scripts/             # Skrypty pomocnicze
 ├── requirements.txt     # Zaleznosci Pythona
 └── start_tarotvision.bat # Launcher (Windows)
@@ -98,13 +134,25 @@ TAROT/
 ## Dokumentacja
 
 - [Plan koncepcyjny (FINAL)](docs/plan_koncepcyjny_v4.md)
+- [Roadmapa wdrozenia CV](docs/superpowers/plans/2026-05-29-tarotvision-cv-roadmap.md)
+- [Plan fazy state-first CV](docs/superpowers/plans/2026-05-29-tarotvision-state-first-cv-plan.md)
 - [Synteza analiz AI](analizy/synteza/synteza_glowna.md)
 - [Raporty poszczegolnych agentow](analizy/raporty/)
 
 ## Sprzet
 
-- Kamera: Anker Work C310 (4K, autofokus AI)
+- Kamera: Anker Work C310 (4K, autofokus AI; mozliwe blokowanie autofocusa i autoekspozycji)
+- Laptop docelowy: HP EliteBook 830 G6
+- PC developerski / alternatywny do nagran: AMD Ryzen 7 3700X, 16 GB RAM, RTX 3070
 - Skaner: Epson Perfection V39II (4800 DPI)
+
+## Zalozenia Wydajnosciowe
+
+Projekt jest rozwijany na mocniejszym PC, ale powinien miec skalowalna sciezke uruchamiania:
+
+- **Tryb baseline** -- klasyczne OpenCV na CPU, docelowo dzialajace rowniez na HP EliteBook 830 G6.
+- **Tryb performance** -- ONNX/OpenVINO/CUDA lub YOLO jako opcja dla PC z RTX 3070, jesli benchmarki potwierdza lepsza skutecznosc albo stabilnosc.
+- **Tryb produkcyjny kamery** -- podczas nagran blokujemy autofocus i autoekspozycje, zeby ograniczyc zmiany ostrosci, jasnosci i liczby punktow cech miedzy klatkami.
 
 ---
 

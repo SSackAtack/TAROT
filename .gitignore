@@ -48,4 +48,4 @@ models/*.tflite
 
 # === Debugging / CV Temp ===
 app_cv/*.jpg
-
+logs/

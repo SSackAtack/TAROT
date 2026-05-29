@@ -9,8 +9,14 @@ import copy
 import websockets
 import math
 import time
+import logging
+
+from tarotvision.metrics import RuntimeMetrics
+from tarotvision.matching_schedule import choose_cards_to_match, get_schedule_mode
 
 # Konfiguracja
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+LOG_DIR = os.environ.get("TAROTVISION_LOG_DIR", os.path.join(PROJECT_ROOT, "logs"))
 CV_ASSETS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "biblioteka_talii", "rider-waite-smith", "produkcja", "wzorce_cv"))
 MIN_MATCH_COUNT = 18   # Obnizony do 18 — filtry geometryczne (homografia + validate_quad + aspect ratio + inlier ratio) skutecznie eliminuja szum
 RATIO_THRESH = 0.79    # Zaostrzone z 0.83 do 0.79 dla czystosci dopasowan cech ORB
@@ -18,6 +24,17 @@ MIN_INLIER_RATIO = 0.3 # Minimalna proporcja inlierow w homografii RANSAC (odrzu
 CARD_ASPECT_RATIO = 1.72  # Standardowy stosunek wysokosc/szerokosc kart tarota RWS (~1.72)
 CARD_ASPECT_TOLERANCE = 0.65  # Tolerancja odchylenia aspect ratio (poluzowana — perspektywa kamery silnie znieksztalca proporcje)
 EMA_ALPHA = 0.4        # Wspolczynnik wygladzania Exponential Moving Average dla pozycji (0 = pelne wygladzanie, 1 = brak)
+CAMERA_WIDTH = 1280
+CAMERA_HEIGHT = 720
+DETECTION_IOU_THRESHOLD = 0.35  # Maksymalne dopuszczalne nalozenie dwoch kandydatow kart
+RUNTIME_PROFILE = "cpu_baseline"
+CAMERA_FOCUS_LOCKED = True      # Ustawienie operatorskie: AnkerWork C310 ma pracowac z blokada AF
+CAMERA_EXPOSURE_LOCKED = True   # Ustawienie operatorskie: blokada ekspozycji zmniejsza flicker i false positives
+LOCKED_REFRESH_INTERVAL = 10    # Karty LOCKED sprawdzamy okresowo, nie w kazdej klatce
+INACTIVE_PER_FRAME_EMPTY = 4     # Gdy nie ma aktywnych kart, szybciej skanujemy talie
+INACTIVE_PER_FRAME_ACTIVE = 1    # Gdy sa aktywne karty, chronimy FPS i szukamy nowych wolniej
+INACTIVE_PER_FRAME_BOOST = 3     # Po zmianie ukladu chwilowo skanujemy szybciej, ale bez powrotu do pelnego kosztu
+BOOST_AFTER_LAYOUT_CHANGE_FRAMES = 12
 
 # System dwufazowy "Zlap i Zamroz" — eliminuje mikro-jitter statycznych kart
 LOCK_AFTER_FRAMES = 8      # Klatki stabilnej detekcji zanim pozycja zostanie zamrozona
@@ -28,14 +45,44 @@ LOCK_DEAD_ZONE_ANGLE = 0.3 # Minimalny ruch kata (w radianach, ~17 stopni) zeby 
 status_lock = threading.Lock()
 current_status = {
     "detected": False,
-    "cards": []
+    "cards": [],
+    "metrics": {},
+    "runtime": {}
 }
 
 # Zestaw polaczonych klientow
 connected_clients = set()
 
+os.makedirs(LOG_DIR, exist_ok=True)
+diagnostics_path = os.path.join(LOG_DIR, "cv_metrics.jsonl")
+if os.environ.get("TAROTVISION_RESET_LOGS") == "1" and os.path.exists(diagnostics_path):
+    os.remove(diagnostics_path)
+
+logging.basicConfig(
+    filename=os.path.join(LOG_DIR, "cv_runtime.log"),
+    filemode="w",
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(message)s"
+)
+
+def log_event(message):
+    logging.info(message)
+    print(message)
+
+def append_diagnostics(metrics_snapshot, runtime_snapshot, active_cards):
+    payload = {
+        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+        "detected": len(active_cards) > 0,
+        "card_count": len(active_cards),
+        "cards": active_cards,
+        "metrics": metrics_snapshot,
+        "runtime": runtime_snapshot
+    }
+    with open(diagnostics_path, "a", encoding="utf-8") as log_file:
+        log_file.write(json.dumps(payload, ensure_ascii=False) + "\n")
+
 async def handler(websocket):
-    print(f"[WEBSOCKET] Polaczono klienta: {websocket.remote_address}")
+    log_event(f"[WEBSOCKET] Polaczono klienta: {websocket.remote_address}")
     connected_clients.add(websocket)
     try:
         # Wyslij natychmiast obecny stan (bezpieczna gleboka kopia)
@@ -50,7 +97,7 @@ async def handler(websocket):
         pass
     finally:
         connected_clients.remove(websocket)
-        print(f"[WEBSOCKET] Rozlaczono klienta: {websocket.remote_address}")
+        log_event(f"[WEBSOCKET] Rozlaczono klienta: {websocket.remote_address}")
 
 async def broadcast_status():
     last_sent_json = None
@@ -71,7 +118,7 @@ async def broadcast_status():
 
 async def main_ws():
     async with websockets.serve(handler, "localhost", 8765):
-        print("[WEBSOCKET] Serwer WebSocket dziala pod adresem ws://localhost:8765")
+        log_event("[WEBSOCKET] Serwer WebSocket dziala pod adresem ws://localhost:8765")
         await broadcast_status()
 
 def start_websocket_server():
@@ -137,9 +184,57 @@ def validate_quadrilateral(dst):
         
     return True
 
-print("========================================")
-print("[TAROT VISION] Computer Vision Module v2.0 (Audited)")
-print("========================================")
+def configure_camera_capture(capture):
+    """Wymusza docelowa rozdzielczosc kamery i zwraca faktycznie ustawiony rozmiar."""
+    capture.set(cv2.CAP_PROP_FRAME_WIDTH, CAMERA_WIDTH)
+    capture.set(cv2.CAP_PROP_FRAME_HEIGHT, CAMERA_HEIGHT)
+    width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH)) or CAMERA_WIDTH
+    height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT)) or CAMERA_HEIGHT
+    return width, height
+
+def polygon_iou(poly_a, poly_b):
+    """Liczy IoU dwoch wypuklych czworokatow OpenCV w formacie (4, 1, 2)."""
+    area_a = cv2.contourArea(poly_a)
+    area_b = cv2.contourArea(poly_b)
+    if area_a <= 0 or area_b <= 0:
+        return 0.0
+    
+    try:
+        intersection_area, _ = cv2.intersectConvexConvex(
+            np.float32(poly_a).reshape(-1, 2),
+            np.float32(poly_b).reshape(-1, 2)
+        )
+    except cv2.error:
+        return 0.0
+    
+    union_area = area_a + area_b - intersection_area
+    if union_area <= 0:
+        return 0.0
+    return float(intersection_area / union_area)
+
+def deduplicate_detections(candidates):
+    """Zostawia najlepsze dopasowanie dla nakladajacych sie detekcji tej samej fizycznej karty."""
+    selected = []
+    sorted_candidates = sorted(
+        candidates,
+        key=lambda item: (item["count"], item["inlier_ratio"], item["area"]),
+        reverse=True
+    )
+    
+    for candidate in sorted_candidates:
+        overlaps_existing = any(
+            polygon_iou(candidate["dst"], accepted["dst"]) > DETECTION_IOU_THRESHOLD
+            for accepted in selected
+        )
+        if not overlaps_existing:
+            selected.append(candidate)
+    
+    return {candidate["name"]: candidate for candidate in selected}
+
+log_event("========================================")
+log_event("[TAROT VISION] Computer Vision Module v2.0 (Audited)")
+log_event("========================================")
+log_event(f"[LOG] Katalog logow: {LOG_DIR}")
 
 # 1. Inicjalizacja detektora ORB (szybki i darmowy detektor cech)
 # 2000 features przy 720p — zoptymalizowane pod kątem wydajności (3x szybsze dopasowanie!)
@@ -156,12 +251,12 @@ flann = cv2.FlannBasedMatcher(index_params, search_params)
 clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
 
 # 2. Ladowanie szablonow (naszych wygenerowanych kart JPG)
-print(f"[INFO] Ladowanie cyfrowych wzorcow z {CV_ASSETS_DIR}")
+log_event(f"[INFO] Ladowanie cyfrowych wzorcow z {CV_ASSETS_DIR}")
 reference_cards = {}
 file_paths = glob.glob(os.path.join(CV_ASSETS_DIR, "*.jpg"))
 
 if not file_paths:
-    print("[BLAD] Nie znaleziono zadnych plikow wzorcow .jpg w katalogu!")
+    log_event("[BLAD] Nie znaleziono zadnych plikow wzorcow .jpg w katalogu!")
     exit(1)
 
 for file_path in file_paths:
@@ -186,23 +281,18 @@ for file_path in file_paths:
         "descriptors": des
     }
 
-print(f"[OK] Zaladowano {len(reference_cards)} wzorcow do pamieci!")
+log_event(f"[OK] Zaladowano {len(reference_cards)} wzorcow do pamieci!")
 
 # 3. Inicjalizacja Kamery — jawnie ustawiamy 720p (1280x720) dla wiecej cech ORB z wiekszej odleglosci
-print("[KAMERA] Uruchamianie kamery... (Wcisnij 'q' by zamknac, cyfry '0'-'9' by przelaczac kamery w locie!)")
+log_event("[KAMERA] Uruchamianie kamery... (Wcisnij 'q' by zamknac, cyfry '0'-'9' by przelaczac kamery w locie!)")
 camera_index = 0
 cap = cv2.VideoCapture(camera_index)
 
 if not cap.isOpened():
-    print("[OSTRZEZENIE] Brak kamery pod indeksem 0. Wcisnij np. 1 lub 2 by zmienic.")
+    log_event("[OSTRZEZENIE] Brak kamery pod indeksem 0. Wcisnij np. 1 lub 2 by zmienic.")
 
-# Wymuszamy 720p — wiecej pikseli per karta = wiecej cech ORB = lepsza detekcja z dystansu
-cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
-
-frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) or 1280
-frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) or 720
-print(f"[KAMERA] Rozdzielczosc: {frame_width}x{frame_height}")
+frame_width, frame_height = configure_camera_capture(cap)
+log_event(f"[KAMERA] Rozdzielczosc: {frame_width}x{frame_height}")
 
 # Parametry stabilizacji detekcji (debouncing) dla wielu kart
 debounce_state = {}
@@ -212,10 +302,22 @@ LOSS_FRAMES = 8      # Karta musi zniknac na 8 klatek z rzedu, aby zostala schow
 # Zoptymalizowana kolejka round-robin do sprawdzania nieaktywnych kart
 inactive_index = 0
 prev_time = time.time()  # Do pomiaru FPS
+runtime_metrics = RuntimeMetrics(maxlen=60)
+last_diagnostics_time = 0.0
+frame_counter = 0
+boost_frames_remaining = 0
+previous_active_card_names = set()
+schedule_mode_name = "empty_scan"
 
 # Petla glowna (Live feed)
 while True:
+    frame_counter += 1
+    frame_loop_start = time.perf_counter()
+    camera_read_start = time.perf_counter()
     ret, frame = cap.read()
+    runtime_metrics.add("camera_read_ms", (time.perf_counter() - camera_read_start) * 1000.0)
+
+    preprocess_start = time.perf_counter()
     if not ret:
         # Zastepcze okno ostrzegawcze
         display_frame = np.zeros((480, 640, 3), dtype=np.uint8)
@@ -231,42 +333,53 @@ while True:
         
         # Zastosowanie CLAHE — obiekt tworzony RAZ na poczatku, nie w kazdej klatce
         gray_frame = clahe.apply(gray_frame)
+    runtime_metrics.add("preprocess_ms", (time.perf_counter() - preprocess_start) * 1000.0)
     
     # 4. Wykrywamy punkty kluczowe w obecnej klatce
+    feature_start = time.perf_counter()
     if gray_frame is not None:
         kp_frame, des_frame = orb.detectAndCompute(gray_frame, None)
     else:
         des_frame = None
+    runtime_metrics.add("feature_detect_ms", (time.perf_counter() - feature_start) * 1000.0)
     
-    # Slownik przechowujacy wykryte w tej klatce karty i ich dane
+    # Lista kandydatow wykrytych w tej klatce; po petli usuwamy duplikaty przestrzenne
+    detection_candidates = []
     detected_this_frame = {}
     
-    # Określamy aktywne karty w tym momencie (faza DETECTING lub LOCKED)
-    active_names = []
-    for name, state in debounce_state.items():
-        if state.get("stable_count", 0) > 0:
-            active_names.append(name)
-            
-    # Pozostałe, nieaktywne karty
     all_card_names = list(reference_cards.keys())
-    inactive_names = [n for n in all_card_names if n not in active_names]
+    active_count = sum(
+        1
+        for state in debounce_state.values()
+        if state.get("stable_count", 0) > 0
+    )
+    schedule_mode = get_schedule_mode(
+        active_count=active_count,
+        boost_frames_remaining=boost_frames_remaining,
+        inactive_per_frame_empty=INACTIVE_PER_FRAME_EMPTY,
+        inactive_per_frame_active=INACTIVE_PER_FRAME_ACTIVE,
+        inactive_per_frame_boost=INACTIVE_PER_FRAME_BOOST,
+    )
+    schedule_mode_name = schedule_mode.name
+    inactive_per_frame = schedule_mode.inactive_per_frame
+    matching_selection = choose_cards_to_match(
+        all_card_names=all_card_names,
+        debounce_state=debounce_state,
+        inactive_index=inactive_index,
+        frame_counter=frame_counter,
+        locked_refresh_interval=LOCKED_REFRESH_INTERVAL,
+        inactive_per_frame=inactive_per_frame,
+    )
+    active_names = matching_selection.active_names
+    inactive_names = matching_selection.inactive_names
+    inactive_index = matching_selection.next_inactive_index
+    cards_to_check = matching_selection.names
+    runtime_metrics.add("cards_checked", len(cards_to_check))
+    runtime_metrics.add("boost_frames_remaining", boost_frames_remaining)
     
     # Sprawdzamy czy w ogole cokolwiek na kamerze ma ostre krawedzie
+    matching_start = time.perf_counter()
     if des_frame is not None and len(des_frame) > MIN_MATCH_COUNT:
-        # Zoptymalizowany round-robin dla kart nieaktywnych (sprawdzamy tylko podzbiór 4 kart per frame)
-        NUM_INACTIVE_PER_FRAME = 4
-        inactive_to_check = []
-        if inactive_names:
-            if inactive_index >= len(inactive_names):
-                inactive_index = 0
-            for i in range(min(NUM_INACTIVE_PER_FRAME, len(inactive_names))):
-                idx = (inactive_index + i) % len(inactive_names)
-                inactive_to_check.append(inactive_names[idx])
-            inactive_index = (inactive_index + len(inactive_to_check)) % len(inactive_names)
-            
-        # Łączymy zbiory: zawsze sprawdzamy wszystkie aktywne + rotujący podzbiór nieaktywnych
-        cards_to_check = list(set(active_names + inactive_to_check))
-        
         # 5. Iterujemy po wybranych kartach i szukamy spelniajacych prog
         for name in cards_to_check:
             ref_data = reference_cards[name]
@@ -330,14 +443,20 @@ while True:
                         x3, y3 = dst[3][0][0], dst[3][0][1]
                         angle = -float(math.atan2(y3 - y0, x3 - x0))
 
-                        # Karta przeszla wszystkie filtry! Zapisujemy dane detekcji
-                        detected_this_frame[name] = {
+                        # Karta przeszla wszystkie filtry! Zapisujemy kandydata detekcji
+                        detection_candidates.append({
+                            "name": name,
                             "count": len(good_matches),
+                            "inlier_ratio": float(inlier_ratio),
+                            "area": float(area),
                             "dst": dst,
                             "x": pos_x,
                             "y": pos_y,
                             "angle": angle
-                        }
+                        })
+        
+        detected_this_frame = deduplicate_detections(detection_candidates)
+    runtime_metrics.add("matching_ms", (time.perf_counter() - matching_start) * 1000.0)
                 
     # 6. Dwufazowa stabilizacja: DETECTING -> LOCKED ("Zlap i Zamroz")
     # Faza DETECTING: pelna moc ORB, szybka identyfikacja, EMA wygladzanie
@@ -397,16 +516,21 @@ while True:
                     debounce_state[name]["last_x"] = new_x
                     debounce_state[name]["last_y"] = new_y
                     debounce_state[name]["last_angle"] = new_angle
+                    boost_frames_remaining = max(boost_frames_remaining, BOOST_AFTER_LAYOUT_CHANGE_FRAMES)
                 else:
                     # Karta statyczna — uzywamy zamrozonej pozycji (ZERO jitteru)
                     debounce_state[name]["last_x"] = locked_x
                     debounce_state[name]["last_y"] = locked_y
                     debounce_state[name]["last_angle"] = locked_angle
-        else:
+        elif name in cards_to_check:
             debounce_state[name]["loss_count"] += 1
             if debounce_state[name]["loss_count"] >= LOSS_FRAMES:
                 debounce_state[name]["stable_count"] = 0
                 debounce_state[name]["phase"] = "DETECTING"  # Reset do fazy wykrywania
+        else:
+            # Karta nie byla matchowana w tej klatce (np. LOCKED czeka na okresowy refresh),
+            # wiec nie traktujemy braku detekcji jako realnej utraty.
+            pass
                 
         # Karta jest uznana za aktywnie wykryta, jesli osiagnela prog stabilnosci
         if debounce_state[name]["stable_count"] >= DEBOUNCE_FRAMES:
@@ -416,11 +540,41 @@ while True:
                 "y": round(debounce_state[name].get("last_y", 0.0), 4),
                 "angle": round(debounce_state[name].get("last_angle", 0.0), 4)
             })
+
+    active_card_names = {card["name"] for card in active_detected_cards}
+    newly_active_cards = active_card_names - previous_active_card_names
+    if newly_active_cards:
+        boost_frames_remaining = max(boost_frames_remaining, BOOST_AFTER_LAYOUT_CHANGE_FRAMES)
+        previous_active_card_names = active_card_names
+    elif active_card_names != previous_active_card_names:
+        previous_active_card_names = active_card_names
+    elif boost_frames_remaining > 0:
+        boost_frames_remaining -= 1
             
     # Aktualizujemy wspoldzielony stan (bezpieczna gleboka kopia wewnatrz locka)
+    metrics_snapshot = runtime_metrics.snapshot()
+    runtime_snapshot = {
+        "profile": RUNTIME_PROFILE,
+        "camera_index": camera_index,
+        "capture_width": frame_width,
+        "capture_height": frame_height,
+        "camera_focus_locked": CAMERA_FOCUS_LOCKED,
+        "camera_exposure_locked": CAMERA_EXPOSURE_LOCKED
+    }
+    runtime_snapshot["schedule_mode"] = schedule_mode_name
+    runtime_snapshot["boost_frames_remaining"] = boost_frames_remaining
+    status_update_start = time.perf_counter()
     with status_lock:
         current_status["detected"] = len(active_detected_cards) > 0
         current_status["cards"] = active_detected_cards
+        current_status["metrics"] = metrics_snapshot
+        current_status["runtime"] = runtime_snapshot
+    runtime_metrics.add("status_update_ms", (time.perf_counter() - status_update_start) * 1000.0)
+
+    diagnostics_time = time.time()
+    if diagnostics_time - last_diagnostics_time >= 1.0:
+        append_diagnostics(metrics_snapshot, runtime_snapshot, active_detected_cards)
+        last_diagnostics_time = diagnostics_time
 
     # 7. Rysowanie ramek — kolor zalezy od fazy: ZIELONA = DETECTING, NIEBIESKA = LOCKED
     for name, data in detected_this_frame.items():
@@ -453,11 +607,13 @@ while True:
     time_diff = current_time - prev_time
     fps = 1.0 / time_diff if time_diff > 0 else 0.0
     prev_time = current_time
+    runtime_metrics.add("fps", fps)
     
     cv2.putText(display_frame, f"FPS: {fps:.1f}", (20, 40), 
                 cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 255), 2, cv2.LINE_AA)
     cv2.putText(display_frame, f"Sledzone: {len(active_names)} | Pula: {len(inactive_names)}", 
                 (20, 75), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (200, 200, 200), 1, cv2.LINE_AA)
+    runtime_metrics.add("frame_loop_ms", (time.perf_counter() - frame_loop_start) * 1000.0)
 
     cv2.imshow('TarotVision - AI Detection (Wcisnij Q by wyjsc)', display_frame)
     
@@ -466,14 +622,12 @@ while True:
         break
     elif ord('0') <= key <= ord('5'):
         new_index = key - ord('0')
-        print(f"Zmiana kamery na indeks: {new_index}")
+        log_event(f"Zmiana kamery na indeks: {new_index}")
         cap.release()
         cap = cv2.VideoCapture(new_index)
         camera_index = new_index
-        # Aktualizacja rozdzielczosci po zmianie kamery
-        frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) or 640
-        frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) or 480
-        print(f"[KAMERA] Nowa rozdzielczosc: {frame_width}x{frame_height}")
+        frame_width, frame_height = configure_camera_capture(cap)
+        log_event(f"[KAMERA] Nowa rozdzielczosc: {frame_width}x{frame_height}")
 
 cap.release()
 cv2.destroyAllWindows()
