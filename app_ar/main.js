@@ -36,7 +36,7 @@ let texturesReady = false  // Flaga blokujaca tworzenie kart przed zakonczeniem 
 let latestFrameData = null // Bufor na dane z WebSocketu przed zakonczeniem preloadu
 
 // Opcje wirtualnej siatki pozycjonującej (Grid Snapping)
-const GRID_SNAP_ENABLED = true
+const GRID_SNAP_ENABLED = false
 const GRID_SIZE_X = 3.8  // Odstęp między kolumnami (szerokość karty ~3.2 + przerwa ~0.6)
 const GRID_SIZE_Y = 6.0  // Odstęp między rzędami (wysokość karty ~5.5 + przerwa ~0.5)
 
@@ -426,10 +426,13 @@ function handleCardData(detectedCards) {
                 activeCards[name].targetY = rawY
             }
 
-            // Przyciąganie kąta (Angle Snapping) do najbliższej wielokrotności 90 stopni (Math.PI / 2)
-            // Dzięki temu wirtualne karty trzymają zawsze idealny pion (0°, 180°) lub poziom (90°, 270°)
+            // Przyciąganie kąta (Angle Snapping) — wyłączone w trybie swobodnym dla naturalnego obrotu
             const rawAngle = cardData.angle || 0
-            activeCards[name].targetAngle = Math.round(rawAngle / (Math.PI / 2)) * (Math.PI / 2)
+            if (GRID_SNAP_ENABLED) {
+                activeCards[name].targetAngle = Math.round(rawAngle / (Math.PI / 2)) * (Math.PI / 2)
+            } else {
+                activeCards[name].targetAngle = rawAngle
+            }
         }
     })
 }

@@ -31,7 +31,7 @@ PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 LOG_DIR = os.environ.get("TAROTVISION_LOG_DIR", os.path.join(PROJECT_ROOT, "logs"))
 CV_ASSETS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "biblioteka_talii", "rider-waite-smith", "produkcja", "wzorce_cv"))
 MIN_MATCH_COUNT = 18   # Obnizony do 18 — filtry geometryczne (homografia + validate_quad + aspect ratio + inlier ratio) skutecznie eliminuja szum
-RATIO_THRESH = 0.79    # Zaostrzone z 0.83 do 0.79 dla czystosci dopasowan cech ORB
+RATIO_THRESH = 0.75    # Zaostrzone z 0.79 do 0.75 dla wyeliminowania dopasowan krzyzowych i poprawy homografii podobnych kart (np. Star i Moon)
 MIN_INLIER_RATIO = 0.3 # Minimalna proporcja inlierow w homografii RANSAC (odrzuca niestabilne dopasowania)
 CARD_ASPECT_RATIO = 1.72  # Standardowy stosunek wysokosc/szerokosc kart tarota RWS (~1.72)
 CARD_ASPECT_TOLERANCE = 0.65  # Tolerancja odchylenia aspect ratio (poluzowana — perspektywa kamery silnie znieksztalca proporcje)
@@ -788,6 +788,12 @@ while True:
                         x0, y0 = dst[0][0][0], dst[0][0][1]
                         x3, y3 = dst[3][0][0], dst[3][0][1]
                         angle = -float(math.atan2(y3 - y0, x3 - x0))
+
+                        # Jesli karta jest odwrocona do gory nogami (reversed), dodajemy 180 stopni (pi) do kata
+                        if orientation == "reversed":
+                            angle += math.pi
+                            if angle > math.pi:
+                                angle -= 2 * math.pi
 
                         best_orientation_result = {
                             "name": name,
