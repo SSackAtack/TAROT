@@ -25,6 +25,10 @@ from tarotvision.camera_controls import read_camera_control
 from tarotvision.calibration_session import choose_best_candidate
 from tarotvision.table_calibration import TableCalibration
 from tarotvision.card_detection import find_card_quads
+from tarotvision.card_recognition import recognize_card_crop
+from tarotvision.snapshot_gate import SnapshotGate, SnapshotGateConfig
+from tarotvision.snapshot_quality import choose_best_snapshot
+from tarotvision.snapshot_analyzer import SnapshotAnalyzer
 
 # Konfiguracja
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -51,6 +55,10 @@ REVERIFY_INTERVAL_FRAMES = 180
 TRACKING_IOU_THRESHOLD = 0.35
 TRACKING_REVERIFY_GAP_FRAMES = 24
 USE_TABLE_CARD_DETECTION = False  # Feature flag: True = uruchom detekcje prostokatow kart (Task 3 roadmapy CV)
+USE_SNAPSHOT_FIRST_CV = os.environ.get("TAROTVISION_SNAPSHOT_FIRST", "0") == "1"
+SNAPSHOT_SETTLE_SECONDS = 3.0
+SNAPSHOT_SAMPLE_COUNT = 3
+SNAPSHOT_SAMPLE_INTERVAL_MS = 250
 
 # System dwufazowy "Zlap i Zamroz" — eliminuje mikro-jitter statycznych kart
 LOCK_AFTER_FRAMES = 8      # Klatki stabilnej detekcji zanim pozycja zostanie zamrozona
@@ -453,6 +461,29 @@ table_state = TableState(reference_cards.keys())
 table_calibration = TableCalibration(table_width=CAMERA_WIDTH, table_height=CAMERA_HEIGHT)
 log_event("[ARUCO] Modul kalibracji stolu zainicjalizowany (markery ID 10-13, DICT_4X4_50)")
 
+
+def recognize_snapshot_crop(gray_crop):
+    crop_for_matching = clahe.apply(gray_crop)
+    result = recognize_card_crop(crop_for_matching, reference_cards, orb, flann)
+    if result is None:
+        return None
+    return {
+        "name": result["name"],
+        "confidence": result.get("confidence", 0.0),
+        "orientation": result.get("orientation", "unknown"),
+    }
+
+
+snapshot_gate = SnapshotGate(SnapshotGateConfig(
+    settle_seconds=SNAPSHOT_SETTLE_SECONDS,
+    sample_count=SNAPSHOT_SAMPLE_COUNT,
+    sample_interval_ms=SNAPSHOT_SAMPLE_INTERVAL_MS,
+))
+snapshot_analyzer = SnapshotAnalyzer(recognize_crop=recognize_snapshot_crop)
+last_snapshot_cards = []
+snapshot_layout_id = 0
+last_motion_started_ms = None
+
 # 3. Inicjalizacja Kamery — jawnie ustawiamy 720p (1280x720) dla wiecej cech ORB z wiekszej odleglosci
 log_event("[KAMERA] Uruchamianie kamery... (Wcisnij 'q' by zamknac, cyfry '0'-'9' by przelaczac kamery w locie!)")
 camera_index = 0
@@ -553,6 +584,127 @@ while True:
     runtime_metrics.add("motion_changed_ratio", motion_result.changed_ratio)
     if motion_result.scene_settled:
         boost_frames_remaining = max(boost_frames_remaining, boost_after_layout_change_frames)
+
+    if USE_SNAPSHOT_FIRST_CV:
+        now_ms = int(time.time() * 1000)
+        if motion_result.motion_detected:
+            last_motion_started_ms = now_ms
+
+        gate_decision = snapshot_gate.update(
+            now_ms=now_ms,
+            motion_detected=motion_result.motion_detected,
+            changed_ratio=motion_result.changed_ratio,
+        )
+        layout_snapshot = {
+            "layout_id": snapshot_layout_id,
+            "source": "snapshot",
+            "state": gate_decision.state,
+            "stable_for_ms": gate_decision.stable_for_ms,
+        }
+        runtime_metrics.add("stable_for_ms", gate_decision.stable_for_ms)
+
+        if gate_decision.should_sample and ret:
+            samples = [frame.copy()]
+            for _ in range(SNAPSHOT_SAMPLE_COUNT - 1):
+                time.sleep(SNAPSHOT_SAMPLE_INTERVAL_MS / 1000.0)
+                ok, sample_frame = cap.read()
+                if ok:
+                    samples.append(sample_frame.copy())
+
+            runtime_metrics.add("snapshot_samples_taken", len(samples))
+            selected = choose_best_snapshot(samples)
+            if selected is None:
+                snapshot_gate.mark_rejected()
+                layout_snapshot["state"] = snapshot_gate.state
+                layout_snapshot["snapshot_reject_reason"] = "all_samples_rejected"
+                runtime_metrics.add("snapshot_rejected_count", 1)
+            else:
+                snapshot_gate.mark_analyzing()
+                analysis_start = time.perf_counter()
+                result = snapshot_analyzer.analyze(selected.frame)
+                analysis_ms = (time.perf_counter() - analysis_start) * 1000.0
+                runtime_metrics.add("snapshot_analysis_ms", analysis_ms)
+                runtime_metrics.add("snapshot_quality_score", selected.quality.quality_score)
+
+                if result.card_count > 0:
+                    snapshot_layout_id += 1
+                    last_snapshot_cards = result.cards
+                    snapshot_gate.mark_published(
+                        layout_id=snapshot_layout_id,
+                        now_ms=int(time.time() * 1000),
+                    )
+                    runtime_metrics.add("layout_publish_count", 1)
+                    runtime_metrics.add("layout_changed", 1)
+                    if last_motion_started_ms is not None:
+                        runtime_metrics.add(
+                            "time_from_motion_to_publish_ms",
+                            int(time.time() * 1000) - last_motion_started_ms,
+                        )
+                else:
+                    snapshot_gate.mark_rejected()
+                    layout_snapshot["snapshot_reject_reason"] = "no_cards"
+                    runtime_metrics.add("snapshot_rejected_count", 1)
+
+                layout_snapshot.update({
+                    "layout_id": snapshot_layout_id,
+                    "state": snapshot_gate.state,
+                    "analysis_ms": analysis_ms,
+                    "quality_score": selected.quality.quality_score,
+                    "card_count": result.card_count,
+                })
+
+        metrics_snapshot = runtime_metrics.snapshot()
+        runtime_snapshot = {
+            "profile": RUNTIME_PROFILE,
+            "camera_index": camera_index,
+            "capture_width": frame_width,
+            "capture_height": frame_height,
+            "camera_focus_locked": CAMERA_FOCUS_LOCKED,
+            "camera_exposure_locked": CAMERA_EXPOSURE_LOCKED,
+            "schedule_mode": "snapshot_first",
+            "table": table_calibration.status(),
+        }
+        status_update_start = time.perf_counter()
+        with status_lock:
+            current_status["detected"] = len(last_snapshot_cards) > 0
+            current_status["cards"] = last_snapshot_cards
+            current_status["metrics"] = metrics_snapshot
+            current_status["runtime"] = runtime_snapshot
+            current_status["operator"] = build_operator_snapshot()
+            current_status["warnings"] = list(operator_warnings[-8:])
+            current_status["layout"] = layout_snapshot
+        runtime_metrics.add("status_update_ms", (time.perf_counter() - status_update_start) * 1000.0)
+
+        diagnostics_time = time.time()
+        if diagnostics_time - last_diagnostics_time >= 1.0:
+            append_diagnostics(metrics_snapshot, runtime_snapshot, last_snapshot_cards)
+            last_diagnostics_time = diagnostics_time
+
+        current_time = time.time()
+        time_diff = current_time - prev_time
+        fps = 1.0 / time_diff if time_diff > 0 else 0.0
+        prev_time = current_time
+        runtime_metrics.add("fps", fps)
+        runtime_metrics.add("frame_loop_ms", (time.perf_counter() - frame_loop_start) * 1000.0)
+
+        cv2.putText(display_frame, f"FPS: {fps:.1f}", (20, 40),
+                    cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 255), 2, cv2.LINE_AA)
+        cv2.putText(display_frame, f"SNAPSHOT: {layout_snapshot['state']} | stable {gate_decision.stable_for_ms} ms | cards {len(last_snapshot_cards)}",
+                    (20, 75), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (200, 200, 200), 1, cv2.LINE_AA)
+        cv2.imshow('TarotVision - AI Detection (Wcisnij Q by wyjsc)', display_frame)
+
+        key = cv2.waitKey(1) & 0xFF
+        if key == ord('q'):
+            break
+        elif ord('0') <= key <= ord('5'):
+            new_index = key - ord('0')
+            log_event(f"Zmiana kamery na indeks: {new_index}")
+            cap.release()
+            cap = cv2.VideoCapture(new_index)
+            camera_index = new_index
+            frame_width, frame_height = configure_camera_capture(cap)
+            log_event(f"[KAMERA] Nowa rozdzielczosc: {frame_width}x{frame_height}")
+        continue
     
     # ==========================================================================
     # STATE-FIRST OPTIMIZATION (Task 10, Opus 2026-05-29)
