@@ -961,6 +961,31 @@ Pozostalo:
 - Realna walidacja `CAP_PROP_*` na AnkerWork C310.
 - Doprecyzowanie przyszlej auto-rekomendacji na podstawie prawdziwych metryk z `cv_metrics.jsonl`.
 
+## Session Status (2026-05-29, Codex — hotfixy konsoli i polski UI)
+
+Wykonano poprawki po tescie operatorskim Michala:
+
+- Naprawiono rollback: live-safe zmiany suwaków nie przesuwaja juz stabilnego snapshotu. `Rollback` wraca do ostatniego zatwierdzonego stanu, a snapshot jest przesuwany dopiero po swiadomym `Load` profilu / `commit_stable`.
+- Usunieto mutujacy probe kamery: `camera_probe` nie wywoluje juz `cap.set()` na `CAP_PROP_FOCUS`, `CAP_PROP_EXPOSURE`, `CAP_PROP_CONTRAST` ani `CAP_PROP_AUTOFOCUS`. To bylo konieczne, bo test `Probe Cam` mogl rozjechac ostrosc AnkerWork C310.
+- Zmieniono probe na bezpieczny odczyt-only i opisano to w README.
+- Spolonizowano UI konsoli operatorskiej:
+  - `Panel Operatora`,
+  - `Stan systemu`,
+  - `Metryki`,
+  - `Parametry bezpieczne`,
+  - `Zaawansowane`,
+  - `Akcje`,
+  - `Komunikaty`.
+- Zmieniono nazwe przycisku `Probe Cam` na `Odczyt kamery`.
+- Rozdzielono suwaki na bezpieczne i zaawansowane; parametry zaawansowane sa schowane w sekcji `Zaawansowane`.
+
+Weryfikacja:
+
+- `python -m unittest discover -s app_cv/tests -v` -> 41 testów, OK, 3 skipped dla `motion` w tym interpreterze testowym.
+- `python -m py_compile app_cv/main.py app_cv/tarotvision/camera_controls.py app_cv/tarotvision/runtime_config.py` -> OK.
+- `npm --prefix app_ar run build` -> OK, z dotychczasowym ostrzezeniem Vite o chunku >500 kB.
+- Browser smoke z backendem online: `http://127.0.0.1:<port>/?operator=1` pokazuje polskie etykiety, status `ONLINE`, sekcje bezpieczne/zaawansowane oraz przycisk `Odczyt kamery`; `http://127.0.0.1:<port>/` nadal nie pokazuje panelu.
+
 ## Immediate Next Action
 
-Uruchomic `start_tarotvision.bat`, otworzyc `http://localhost:5173/?operator=1`, wykonac scenariusz live z 1-3 kartami i zapisac porównanie metryk przed recznym strojeniem oraz po zmianie parametrów live-safe.
+Uruchomic `start_tarotvision.bat`, otworzyc `http://localhost:5173/?operator=1`, pracowac tylko na `Parametrach bezpiecznych`, zapisac profil `stable_5_cards` i porównac `fps`, `matching_ms`, `Sledzone konturem`, `Karty w puli` oraz stabilnosc wykrywania dla ukladu 3-5 kart.
