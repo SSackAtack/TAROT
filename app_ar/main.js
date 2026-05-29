@@ -229,6 +229,12 @@ function createOperatorPanel() {
             <summary class="operator-panel__section-title">Zaawansowane</summary>
             <div class="operator-controls" data-role="advanced-parameters"></div>
         </details>
+        <details class="operator-panel__section" data-role="camera-controls-section">
+            <summary class="operator-panel__section-title">Kamera sprzętowo (Focus/Exposure)</summary>
+            <div class="operator-controls" data-role="camera-controls">
+                Brak danych z kamery (kliknij "Odczyt kamery")
+            </div>
+        </details>
         <details class="operator-panel__section">
             <summary class="operator-panel__section-title">Wizualia i rozstaw (AR)</summary>
             <div class="operator-controls">
@@ -338,6 +344,59 @@ function updateOperatorParameters(operator) {
     advancedContainer.innerHTML = renderControls(names.filter((name) => !metadata[name].live_safe))
 }
 
+function updateCameraControlsUI(supportedControls) {
+    if (!operatorPanel) return
+    const container = operatorPanel.querySelector('[data-role="camera-controls"]')
+    if (!container) return
+
+    if (!supportedControls || Object.keys(supportedControls).length === 0) {
+        container.textContent = 'Brak danych z kamery (kliknij "Odczyt kamery")'
+        return
+    }
+
+    const labels = {
+        CAP_PROP_FOCUS: 'Ostrość (Focus)',
+        CAP_PROP_AUTOFOCUS: 'Autofokus (0=Wył, 1=Wł)',
+        CAP_PROP_EXPOSURE: 'Ekspozycja (Exposure)',
+        CAP_PROP_AUTO_EXPOSURE: 'Auto Ekspozycja',
+        CAP_PROP_BRIGHTNESS: 'Jasność (Brightness)',
+        CAP_PROP_CONTRAST: 'Kontrast (Contrast)'
+    }
+
+    const ranges = {
+        CAP_PROP_FOCUS: { min: 0, max: 1023, step: 5 },
+        CAP_PROP_AUTOFOCUS: { min: 0, max: 1, step: 1 },
+        CAP_PROP_EXPOSURE: { min: -13, max: 1000, step: 1 },
+        CAP_PROP_AUTO_EXPOSURE: { min: 0, max: 3, step: 1 },
+        CAP_PROP_BRIGHTNESS: { min: 0, max: 255, step: 1 },
+        CAP_PROP_CONTRAST: { min: 0, max: 255, step: 1 }
+    }
+
+    const html = Object.entries(supportedControls)
+        .map(([name, data]) => {
+            if (data.readback_value === -1.0) return ''
+            const range = ranges[name] || { min: 0, max: 255, step: 1 }
+            const label = labels[name] || name
+            return `
+                <label class="operator-control">
+                    <span title="${name}">${label}</span>
+                    <input
+                        type="range"
+                        min="${range.min}"
+                        max="${range.max}"
+                        step="${range.step}"
+                        value="${data.readback_value}"
+                        data-camera-param="${name}"
+                    />
+                    <output>${data.readback_value}</output>
+                </label>
+            `
+        })
+        .join('')
+
+    container.innerHTML = html || 'Brak aktywnych sprzętowych funkcji kamery w tym systemie.'
+}
+
 function updateOperatorPanel(data) {
     if (!operatorPanel) return
     latestStatus = data
@@ -367,6 +426,7 @@ function updateOperatorPanel(data) {
     )
 
     updateOperatorParameters(operator)
+    updateCameraControlsUI(operator.supported_camera_controls)
 
     const warnings = operatorPanel.querySelector('[data-role="warnings"]')
     const warningItems = operator.warnings || []
@@ -555,6 +615,15 @@ if (operatorPanel) {
             return
         }
 
+        const cameraParam = input.dataset.cameraParam
+        if (cameraParam) {
+            const output = input.parentElement?.querySelector('output')
+            if (output) {
+                output.textContent = input.value
+            }
+            return
+        }
+
         const param = input.dataset.param
         if (!param) return
         const output = input.parentElement?.querySelector('output')
@@ -564,6 +633,17 @@ if (operatorPanel) {
     operatorPanel.addEventListener('change', (event) => {
         const input = event.target
         if (!(input instanceof HTMLInputElement)) return
+        
+        const cameraParam = input.dataset.cameraParam
+        if (cameraParam) {
+            sendControlMessage({
+                type: 'camera_set',
+                param: cameraParam,
+                value: Number(input.value)
+            })
+            return
+        }
+
         const param = input.dataset.param
         if (!param) return
         sendControlMessage({

@@ -189,9 +189,11 @@ def restore_camera_settings(capture):
 def probe_camera_controls(capture):
     probes = {
         "CAP_PROP_FOCUS": cv2.CAP_PROP_FOCUS,
-        "CAP_PROP_EXPOSURE": cv2.CAP_PROP_EXPOSURE,
-        "CAP_PROP_CONTRAST": cv2.CAP_PROP_CONTRAST,
         "CAP_PROP_AUTOFOCUS": cv2.CAP_PROP_AUTOFOCUS,
+        "CAP_PROP_EXPOSURE": cv2.CAP_PROP_EXPOSURE,
+        "CAP_PROP_AUTO_EXPOSURE": cv2.CAP_PROP_AUTO_EXPOSURE,
+        "CAP_PROP_BRIGHTNESS": cv2.CAP_PROP_BRIGHTNESS,
+        "CAP_PROP_CONTRAST": cv2.CAP_PROP_CONTRAST,
     }
     results = {}
     for name, prop_id in probes.items():
