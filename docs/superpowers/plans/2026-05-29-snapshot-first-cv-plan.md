@@ -975,3 +975,29 @@ Weryfikacja:
 Pozostalo:
 
 - Po restarcie `.bat` powtorzyc live test z odwroconym `15_devil`; jesli log nadal pokazuje `orientation: upright`, nastepny krok to dopisanie diagnostyki score'ow `upright/reversed` w `recognize_card_crop` i strojenie progu `ORIENTATION_MARGIN_RATIO` na realnych snapshotach.
+
+## Session Status (2026-05-29, Codex — otwarty problem: odwrócony Devil)
+
+Stan koncowy sesji:
+
+- Michal powtorzyl live test: fizyczny `15_devil` byl odwrocony do gory nogami, ale wirtualna karta w przegladarce pozostala pokazana poprawnie/upright.
+- To oznacza, ze poprawka `SnapshotAnalyzer` z poprzedniego commita nie wystarcza dla realnego przypadku, bo ona tylko stosuje obrot `math.pi`, gdy rozpoznawacz juz zwroci `orientation: reversed`.
+- W obserwowanym przypadku problem najpewniej powstaje wczesniej: `recognize_card_crop()` / `resolve_orientation_with_margin()` nadal klasyfikuje odwroconego Devila jako `upright`, wiec frontend nigdy nie dostaje informacji o odwróceniu.
+
+Co juz wiadomo:
+
+- Nazwa karty `15_devil` jest rozpoznawana poprawnie.
+- Problem dotyczy orientacji, nie identyfikacji karty ani mapowania pozycji.
+- Poprzedni live log dla ukladu 5 kart pokazywal `15_devil:upright` mimo fizycznie odwroconej karty.
+- Obecny system ma konserwatywny prog `ORIENTATION_MARGIN_RATIO = 0.10`, dodany po falszywych odwróceniach Moon/Star; nie nalezy go obnizac w ciemno bez diagnostyki, bo moze wrocic poprzedni blad.
+
+Rekomendacja dla nastepnego Agenta:
+
+- Nie zaczynac od kolejnej zmiany progu.
+- Najpierw dopisac diagnostyke score'ow orientacji do wyniku `recognize_card_crop()` albo do logow snapshotu: `orientation_scores.upright`, `orientation_scores.reversed`, finalna `orientation`, `name`, `match_count`, `inlier_ratio`.
+- Powtorzyc live test z `15_devil` upright i reversed oraz przynajmniej z `18_moon` / `17_star`, bo te karty byly wczesniej wrazliwe na falszywe odwrócenie.
+- Dopiero po zebraniu score'ow zdecydowac, czy stroic `ORIENTATION_MARGIN_RATIO`, dodac per-card margin, czy zmienic metode ustalania orientacji dla cropa.
+
+Weryfikacja w tej notatce:
+
+- Nie wprowadzono zmian w kodzie po ostatnim live tescie; dodano tylko opis problemu dla kontynuacji pracy.
