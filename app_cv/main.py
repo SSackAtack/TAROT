@@ -130,6 +130,62 @@ def add_operator_warning(message):
     log_event(f"[OPERATOR] {message}")
 
 
+CAMERA_SETTINGS_FILE = os.path.join(LOG_DIR, "camera_settings.json")
+
+
+def save_camera_settings(capture):
+    try:
+        settings = {}
+        probes = {
+            "CAP_PROP_FOCUS": cv2.CAP_PROP_FOCUS,
+            "CAP_PROP_AUTOFOCUS": cv2.CAP_PROP_AUTOFOCUS,
+            "CAP_PROP_EXPOSURE": cv2.CAP_PROP_EXPOSURE,
+            "CAP_PROP_AUTO_EXPOSURE": cv2.CAP_PROP_AUTO_EXPOSURE,
+            "CAP_PROP_BRIGHTNESS": cv2.CAP_PROP_BRIGHTNESS,
+            "CAP_PROP_CONTRAST": cv2.CAP_PROP_CONTRAST,
+        }
+        for name, prop_id in probes.items():
+            val = capture.get(prop_id)
+            if val is not None and val != -1.0:
+                settings[name] = float(val)
+        
+        with open(CAMERA_SETTINGS_FILE, "w", encoding="utf-8") as f:
+            json.dump(settings, f, indent=2)
+        log_event("[KAMERA] Zapisano sprzętowe ustawienia kamery.")
+    except Exception as exc:
+        log_event(f"[OSTRZEZENIE] Nie udalo sie zapisac ustawien kamery: {exc}")
+
+
+def restore_camera_settings(capture):
+    if not os.path.exists(CAMERA_SETTINGS_FILE):
+        return
+    try:
+        with open(CAMERA_SETTINGS_FILE, "r", encoding="utf-8") as f:
+            settings = json.load(f)
+        
+        probes = {
+            "CAP_PROP_FOCUS": cv2.CAP_PROP_FOCUS,
+            "CAP_PROP_AUTOFOCUS": cv2.CAP_PROP_AUTOFOCUS,
+            "CAP_PROP_EXPOSURE": cv2.CAP_PROP_EXPOSURE,
+            "CAP_PROP_AUTO_EXPOSURE": cv2.CAP_PROP_AUTO_EXPOSURE,
+            "CAP_PROP_BRIGHTNESS": cv2.CAP_PROP_BRIGHTNESS,
+            "CAP_PROP_CONTRAST": cv2.CAP_PROP_CONTRAST,
+        }
+        
+        # Wyłączamy automaty najpierw
+        for name in ["CAP_PROP_AUTOFOCUS", "CAP_PROP_AUTO_EXPOSURE"]:
+            if name in settings and name in probes:
+                capture.set(probes[name], settings[name])
+                
+        for name, val in settings.items():
+            if name not in ["CAP_PROP_AUTOFOCUS", "CAP_PROP_AUTO_EXPOSURE"] and name in probes:
+                capture.set(probes[name], val)
+                
+        log_event("[KAMERA] Przywrocono sprzetowe ustawienia kamery z ostatniej sesji.")
+    except Exception as exc:
+        log_event(f"[OSTRZEZENIE] Nie udalo sie przywrocic ustawien kamery: {exc}")
+
+
 def probe_camera_controls(capture):
     probes = {
         "CAP_PROP_FOCUS": cv2.CAP_PROP_FOCUS,
@@ -188,6 +244,31 @@ def handle_control_message(message, capture):
     if message.type == "camera_probe":
         supported_camera_controls = probe_camera_controls(capture)
         add_operator_warning("Odczytano parametry kamery bez zmiany focus/exposure")
+        return
+
+    if message.type == "camera_set":
+        CAMERA_PROP_IDS = {
+            "CAP_PROP_FOCUS": cv2.CAP_PROP_FOCUS,
+            "CAP_PROP_AUTOFOCUS": cv2.CAP_PROP_AUTOFOCUS,
+            "CAP_PROP_EXPOSURE": cv2.CAP_PROP_EXPOSURE,
+            "CAP_PROP_AUTO_EXPOSURE": cv2.CAP_PROP_AUTO_EXPOSURE,
+            "CAP_PROP_BRIGHTNESS": cv2.CAP_PROP_BRIGHTNESS,
+            "CAP_PROP_CONTRAST": cv2.CAP_PROP_CONTRAST,
+        }
+        if message.param in CAMERA_PROP_IDS:
+            prop_id = CAMERA_PROP_IDS[message.param]
+            val = float(message.value)
+            capture.set(prop_id, val)
+            log_event(f"[OPERATOR] Ustawiono parametr kamery {message.param} = {val}")
+            add_operator_warning(f"Ustawiono {message.param} = {val}")
+            
+            # Automatyczny zapis po zmianie
+            save_camera_settings(capture)
+            
+            # Aktualizacja odczytu w UI operatora
+            supported_camera_controls = probe_camera_controls(capture)
+        else:
+            add_operator_warning(f"Nieznany parametr sprzetowy kamery: {message.param}")
         return
 
     if message.type == "calibration_start":
@@ -477,7 +558,17 @@ log_event("[ARUCO] Modul kalibracji stolu zainicjalizowany (markery ID 10-13, DI
 
 def recognize_snapshot_crop(gray_crop):
     crop_for_matching = clahe.apply(gray_crop)
-    result = recognize_card_crop(crop_for_matching, reference_cards, orb, flann)
+    config_values = runtime_config.values
+    min_match_count = int(config_values.get("MIN_MATCH_COUNT", 12.0))
+    ratio_thresh = config_values.get("RATIO_THRESH", 0.79)
+    min_inlier_ratio = config_values.get("MIN_INLIER_RATIO", 0.25)
+    
+    result = recognize_card_crop(
+        crop_for_matching, reference_cards, orb, flann,
+        min_good_matches=min_match_count,
+        lowe_ratio=ratio_thresh,
+        min_inlier_ratio=min_inlier_ratio
+    )
     if result is None:
         return None
     
@@ -518,6 +609,10 @@ if not cap.isOpened():
 frame_width, frame_height = configure_camera_capture(cap)
 log_event(f"[KAMERA] Rozdzielczosc: {frame_width}x{frame_height}")
 
+# Przywrócenie i próbkowanie ustawień kamery z poprzedniej sesji
+restore_camera_settings(cap)
+supported_camera_controls = probe_camera_controls(cap)
+
 # Parametry stabilizacji detekcji (debouncing) dla wielu kart
 debounce_state = {}
 DEBOUNCE_FRAMES = 3  # Karta musi byc stabilnie wykryta przez 3 klatki z rzedu
@@ -540,15 +635,30 @@ while True:
     frame_counter += 1
     drain_control_messages(cap)
     config_values = runtime_config.values
-    min_match_count = int(config_values["MIN_MATCH_COUNT"])
-    ratio_thresh = config_values["RATIO_THRESH"]
-    min_inlier_ratio = config_values["MIN_INLIER_RATIO"]
-    ema_alpha = config_values["EMA_ALPHA"]
-    boost_after_layout_change_frames = int(config_values["BOOST_AFTER_LAYOUT_CHANGE_FRAMES"])
-    reverify_interval_frames = int(config_values["REVERIFY_INTERVAL_FRAMES"])
-    tracking_iou_threshold = config_values["TRACKING_IOU_THRESHOLD"]
-    lock_dead_zone_pos = config_values["LOCK_DEAD_ZONE_POS"]
-    lock_dead_zone_angle = config_values["LOCK_DEAD_ZONE_ANGLE"]
+    
+    # Aktywne, dynamiczne parametry dla trybu snapshot-first (ORB i RANSAC)
+    min_match_count = int(config_values.get("MIN_MATCH_COUNT", 12.0))
+    ratio_thresh = config_values.get("RATIO_THRESH", 0.79)
+    min_inlier_ratio = config_values.get("MIN_INLIER_RATIO", 0.25)
+    
+    # Dynamiczna aktualizacja parametrów detektora ruchu i bramki snapshotu
+    motion_detector.min_changed_ratio = config_values.get("MOTION_CHANGED_RATIO", 0.02)
+    
+    settle_seconds = config_values.get("SNAPSHOT_SETTLE_SECONDS", 0.5)
+    if snapshot_gate.config.settle_seconds != settle_seconds:
+        snapshot_gate.config = SnapshotGateConfig(
+            settle_seconds=settle_seconds,
+            sample_count=snapshot_gate.config.sample_count,
+            sample_interval_ms=snapshot_gate.config.sample_interval_ms
+        )
+
+    # Archiwalne wartości dla starej pętli ciągłego śledzenia (backward compatibility)
+    ema_alpha = 0.4
+    boost_after_layout_change_frames = 12
+    reverify_interval_frames = 180
+    tracking_iou_threshold = 0.35
+    lock_dead_zone_pos = 3.0
+    lock_dead_zone_angle = 0.5
     frame_loop_start = time.perf_counter()
     camera_read_start = time.perf_counter()
     ret, frame = cap.read()
@@ -575,7 +685,8 @@ while True:
     # Kalibracja stolu ArUco — szukamy 4 markerow co klatke
     aruco_start = time.perf_counter()
     if gray_frame is not None:
-        table_calibration.update(gray_frame)
+        workspace_inflate_percent = config_values.get("WORKSPACE_INFLATE_PERCENT", 0.0)
+        table_calibration.update(gray_frame, workspace_inflate_percent=workspace_inflate_percent)
     runtime_metrics.add("aruco_ms", (time.perf_counter() - aruco_start) * 1000.0)
 
     # Detekcja prostokatow kart (Task 3) — uruchamiana za feature flag

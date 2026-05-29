@@ -20,6 +20,7 @@ ALLOWED_TYPES = {
     "profile_save",
     "profile_apply",
     "camera_probe",
+    "camera_set",
     "calibration_start",
     "calibration_cancel",
 }
@@ -35,9 +36,9 @@ def parse_control_message(raw_message):
     if message_type not in ALLOWED_TYPES:
         raise ControlMessageError(f"Unsupported message type: {message_type}")
 
-    if message_type == "tuning_update":
+    if message_type in {"tuning_update", "camera_set"}:
         if "param" not in payload or "value" not in payload:
-            raise ControlMessageError("tuning_update requires param and value")
+            raise ControlMessageError(f"{message_type} requires param and value")
         return ControlMessage(
             type=message_type,
             param=str(payload["param"]),

@@ -112,6 +112,40 @@ class ComputeTableHomographyTest(unittest.TestCase):
         identity = np.eye(3, dtype=np.float64)
         np.testing.assert_array_almost_equal(M, identity, decimal=3)
 
+    def test_workspace_inflation_offsets_corners_from_centroid(self):
+        try:
+            import cv2
+        except ImportError:
+            self.skipTest("cv2 not available")
+
+        workspace_corners = {
+            10: np.array([100, 100], dtype=np.float32),
+            11: np.array([900, 100], dtype=np.float32),
+            12: np.array([900, 600], dtype=np.float32),
+            13: np.array([100, 600], dtype=np.float32),
+        }
+
+        # Obliczamy homografię z poszerzeniem o 10%
+        M = compute_table_homography(workspace_corners, 1280, 720, workspace_inflate_percent=10.0)
+
+        # Nadmuchane rogi: [60, 75] -> [0, 0], [940, 75] -> [1280, 0], etc.
+        test_pts = np.array([
+            [60, 75],
+            [940, 75],
+            [940, 625],
+            [60, 625]
+        ], dtype=np.float32).reshape(-1, 1, 2)
+
+        warped_pts = cv2.perspectiveTransform(test_pts, M)
+        expected_pts = np.array([
+            [0, 0],
+            [1280, 0],
+            [1280, 720],
+            [0, 720]
+        ], dtype=np.float32).reshape(-1, 1, 2)
+
+        np.testing.assert_array_almost_equal(warped_pts, expected_pts, decimal=1)
+
 
 class TableCalibrationClassTest(unittest.TestCase):
     def test_not_calibrated_initially(self):

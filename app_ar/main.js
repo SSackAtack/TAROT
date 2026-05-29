@@ -40,6 +40,23 @@ const GRID_SNAP_ENABLED = false
 const GRID_SIZE_X = 3.8  // Odstęp między kolumnami (szerokość karty ~3.2 + przerwa ~0.6)
 const GRID_SIZE_Y = 6.0  // Odstęp między rzędami (wysokość karty ~5.5 + przerwa ~0.5)
 
+// Parametry pozycjonowania i skali wirtualnych kart (nakładki AR)
+const arSettings = {
+    cardScale: parseFloat(localStorage.getItem('ar_cardScale') || '1.0'),
+    spacingX: parseFloat(localStorage.getItem('ar_spacingX') || '1.0'),
+    spacingY: parseFloat(localStorage.getItem('ar_spacingY') || '1.0'),
+    offsetX: parseFloat(localStorage.getItem('ar_offsetX') || '0.0'),
+    offsetY: parseFloat(localStorage.getItem('ar_offsetY') || '0.0'),
+}
+
+function saveArSettings() {
+    localStorage.setItem('ar_cardScale', arSettings.cardScale.toString())
+    localStorage.setItem('ar_spacingX', arSettings.spacingX.toString())
+    localStorage.setItem('ar_spacingY', arSettings.spacingY.toString())
+    localStorage.setItem('ar_offsetX', arSettings.offsetX.toString())
+    localStorage.setItem('ar_offsetY', arSettings.offsetY.toString())
+}
+
 const cardNames = [
     "00_fool", "01_magician", "02_high_priestess", "03_empress", "04_emperor",
     "05_hierophant", "06_lovers", "07_chariot", "08_strength", "09_hermit",
@@ -163,27 +180,21 @@ const metricLabels = {
 }
 
 const parameterLabels = {
-    LOCK_DEAD_ZONE_POS: 'Czulosc ruchu',
-    LOCK_DEAD_ZONE_ANGLE: 'Czulosc obrotu',
-    TRACKING_IOU_THRESHOLD: 'Prog sledzenia',
-    REVERIFY_INTERVAL_FRAMES: 'Interwal kontroli',
-    BOOST_AFTER_LAYOUT_CHANGE_FRAMES: 'Dlugosc boostu',
-    EMA_ALPHA: 'Wygladzanie pozycji',
+    SNAPSHOT_SETTLE_SECONDS: 'Czas stabilizacji (s)',
+    MOTION_CHANGED_RATIO: 'Czułość ruchu (detektor)',
     MIN_MATCH_COUNT: 'Min. punkty ORB',
-    RATIO_THRESH: 'Prog ratio ORB',
-    MIN_INLIER_RATIO: 'Min. inliery'
+    RATIO_THRESH: 'Próg Ratio (Lowe)',
+    MIN_INLIER_RATIO: 'Zgodność RANSAC',
+    WORKSPACE_INFLATE_PERCENT: 'Poszerzenie obszaru (%)'
 }
 
 const parameterHints = {
-    LOCK_DEAD_ZONE_POS: 'Wyzej = mniej falszywych ruchow, ale wolniejsza reakcja.',
-    LOCK_DEAD_ZONE_ANGLE: 'Wyzej = ignoruje drobne obroty i szum.',
-    TRACKING_IOU_THRESHOLD: 'Nizej = latwiej utrzymac karte konturem.',
-    REVERIFY_INTERVAL_FRAMES: 'Co ile klatek sprawdzac zablokowane karty.',
-    BOOST_AFTER_LAYOUT_CHANGE_FRAMES: 'Ile klatek szybciej szukac po zmianie ukladu.',
-    EMA_ALPHA: 'Zaawansowane wygladzanie pozycji po stronie CV.',
-    MIN_MATCH_COUNT: 'Zaawansowany prog liczby dopasowan ORB.',
-    RATIO_THRESH: 'Zaawansowana czystosc dopasowan ORB.',
-    MIN_INLIER_RATIO: 'Zaawansowana walidacja homografii.'
+    SNAPSHOT_SETTLE_SECONDS: 'Czas stabilizacji stołu przed zrobieniem snapshotu.',
+    MOTION_CHANGED_RATIO: 'Próg procentowy pikseli decydujący o wykryciu ruchu.',
+    MIN_MATCH_COUNT: 'Minimalna wymagana liczba dopasowań cech ORB.',
+    RATIO_THRESH: 'Test Lowe\'a. Niższy = bardziej unikalne punkty.',
+    MIN_INLIER_RATIO: 'Poprawność ułożenia geometrycznego RANSAC.',
+    WORKSPACE_INFLATE_PERCENT: 'Poszerzenie wirtualnego obszaru stołu na zewnątrz od ArUco.'
 }
 
 function formatMetricValue(value) {
@@ -217,6 +228,36 @@ function createOperatorPanel() {
         <details class="operator-panel__section operator-advanced">
             <summary class="operator-panel__section-title">Zaawansowane</summary>
             <div class="operator-controls" data-role="advanced-parameters"></div>
+        </details>
+        <details class="operator-panel__section">
+            <summary class="operator-panel__section-title">Wizualia i rozstaw (AR)</summary>
+            <div class="operator-controls">
+                <label class="operator-control">
+                    <span>Skala kart wirtualnych</span>
+                    <input type="range" min="0.5" max="2.0" step="0.05" value="${arSettings.cardScale}" data-ar-param="cardScale" />
+                    <output>${arSettings.cardScale.toFixed(2)}</output>
+                </label>
+                <label class="operator-control">
+                    <span>Rozstaw poziomy (X)</span>
+                    <input type="range" min="0.5" max="2.0" step="0.05" value="${arSettings.spacingX}" data-ar-param="spacingX" />
+                    <output>${arSettings.spacingX.toFixed(2)}</output>
+                </label>
+                <label class="operator-control">
+                    <span>Rozstaw pionowy (Y)</span>
+                    <input type="range" min="0.5" max="2.0" step="0.05" value="${arSettings.spacingY}" data-ar-param="spacingY" />
+                    <output>${arSettings.spacingY.toFixed(2)}</output>
+                </label>
+                <label class="operator-control">
+                    <span>Przesunięcie poziome (X)</span>
+                    <input type="range" min="-10.0" max="10.0" step="0.1" value="${arSettings.offsetX}" data-ar-param="offsetX" />
+                    <output>${arSettings.offsetX.toFixed(1)}</output>
+                </label>
+                <label class="operator-control">
+                    <span>Przesunięcie pionowe (Y)</span>
+                    <input type="range" min="-10.0" max="10.0" step="0.1" value="${arSettings.offsetY}" data-ar-param="offsetY" />
+                    <output>${arSettings.offsetY.toFixed(1)}</output>
+                </label>
+            </div>
         </details>
         <div class="operator-panel__section">
             <div class="operator-panel__section-title">Akcje</div>
@@ -281,7 +322,7 @@ function updateOperatorParameters(operator) {
                     type="range"
                     min="${meta.minimum}"
                     max="${meta.maximum}"
-                    step="${name.includes('FRAMES') || name === 'MIN_MATCH_COUNT' ? '1' : '0.01'}"
+                    step="${name === 'MIN_MATCH_COUNT' || name === 'WORKSPACE_INFLATE_PERCENT' ? '1' : name === 'SNAPSHOT_SETTLE_SECONDS' ? '0.1' : name === 'MOTION_CHANGED_RATIO' || name === 'RATIO_THRESH' || name === 'MIN_INLIER_RATIO' ? '0.005' : '0.01'}"
                     value="${value}"
                     data-param="${name}"
                     ${meta.live_safe ? '' : 'data-unsafe="1"'}
@@ -502,6 +543,18 @@ if (operatorPanel) {
     operatorPanel.addEventListener('input', (event) => {
         const input = event.target
         if (!(input instanceof HTMLInputElement)) return
+        
+        const arParam = input.dataset.arParam
+        if (arParam) {
+            arSettings[arParam] = parseFloat(input.value)
+            saveArSettings()
+            const output = input.parentElement?.querySelector('output')
+            if (output) {
+                output.textContent = arSettings[arParam].toFixed(arParam.startsWith('offset') ? 1 : 2)
+            }
+            return
+        }
+
         const param = input.dataset.param
         if (!param) return
         const output = input.parentElement?.querySelector('output')
@@ -573,9 +626,12 @@ function animate() {
             return
         }
 
-        // BEZPOSREDNIE ustawianie pozycji (ZERO animacji, ZERO mikro-ruchow)
-        cardObj.group.position.x = cardObj.targetX
-        cardObj.group.position.z = -cardObj.targetY // Z bo kamera patrzy z gory (Y->Z mapping)
+        // Stosujemy lokalną skalę wirtualnej karty w Three.js
+        cardObj.group.scale.set(arSettings.cardScale, arSettings.cardScale, arSettings.cardScale)
+
+        // BEZPOSREDNIE ustawianie pozycji z uwzględnieniem lokalnego rozstawu i przesunięcia
+        cardObj.group.position.x = cardObj.targetX * arSettings.spacingX + arSettings.offsetX
+        cardObj.group.position.z = -(cardObj.targetY * arSettings.spacingY + arSettings.offsetY) // Z bo kamera patrzy z gory (Y->Z mapping)
 
         // Bezposrednie ustawienie kata obrotu
         cardObj.group.rotation.z = cardObj.targetAngle
