@@ -906,7 +906,11 @@ while True:
                 # Sprawdzamy czy karta NAPRAWDE sie ruszyla (duzy ruch)
                 dx = abs(new_x - locked_x)
                 dy = abs(new_y - locked_y)
+                
+                # Najkrotszy dystans katowy (uwzglednia okresowosc [-pi, pi])
                 d_angle = abs(new_angle - locked_angle)
+                if d_angle > math.pi:
+                    d_angle = 2 * math.pi - d_angle
                 
                 if dx > lock_dead_zone_pos or dy > lock_dead_zone_pos or d_angle > lock_dead_zone_angle:
                     # Karta sie ruszyla! Odblokowujemy i wracamy do fazy wykrywania
