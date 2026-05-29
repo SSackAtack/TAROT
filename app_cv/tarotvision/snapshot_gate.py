@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class SnapshotGateConfig:
-    settle_seconds: float = 3.0
+    settle_seconds: float = 0.5
     sample_count: int = 3
     sample_interval_ms: int = 250
 
