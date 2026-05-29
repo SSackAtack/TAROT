@@ -91,6 +91,7 @@ config_session = RuntimeConfigSession()
 runtime_config = config_session.config
 operator_warnings = []
 supported_camera_controls = {}
+camera_set_cache = {}
 calibration_state = {"state": "idle", "last_score": None}
 profile_store = ProfileStore(os.path.join(LOG_DIR, "calibration_profiles"))
 active_tuning_profile = "default"
@@ -157,11 +158,15 @@ def save_camera_settings(capture):
 
 
 def restore_camera_settings(capture):
+    global camera_set_cache
     if not os.path.exists(CAMERA_SETTINGS_FILE):
         return
     try:
         with open(CAMERA_SETTINGS_FILE, "r", encoding="utf-8") as f:
             settings = json.load(f)
+        
+        # Aktualizujemy lokalny cache wartościami z pliku
+        camera_set_cache.update(settings)
         
         probes = {
             "CAP_PROP_FOCUS": cv2.CAP_PROP_FOCUS,
@@ -187,6 +192,7 @@ def restore_camera_settings(capture):
 
 
 def probe_camera_controls(capture):
+    global camera_set_cache
     probes = {
         "CAP_PROP_FOCUS": cv2.CAP_PROP_FOCUS,
         "CAP_PROP_AUTOFOCUS": cv2.CAP_PROP_AUTOFOCUS,
@@ -197,10 +203,15 @@ def probe_camera_controls(capture):
     }
     results = {}
     for name, prop_id in probes.items():
-        probe = read_camera_control(capture, prop_id)
+        if name in camera_set_cache:
+            readback = camera_set_cache[name]
+        else:
+            probe = read_camera_control(capture, prop_id)
+            readback = probe.readback_value
+            
         results[name] = {
-            "supported": probe.supported,
-            "readback_value": probe.readback_value,
+            "supported": True if readback != -1.0 else False,
+            "readback_value": readback,
         }
     return results
 
@@ -263,6 +274,9 @@ def handle_control_message(message, capture):
             capture.set(prop_id, val)
             log_event(f"[OPERATOR] Ustawiono parametr kamery {message.param} = {val}")
             add_operator_warning(f"Ustawiono {message.param} = {val}")
+            
+            # Zapisujemy w cache naszą zadaną wartość
+            camera_set_cache[message.param] = val
             
             # Automatyczny zapis po zmianie
             save_camera_settings(capture)
