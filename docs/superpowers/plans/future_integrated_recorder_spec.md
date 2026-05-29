@@ -48,16 +48,35 @@ graph TD
 
 ---
 
-## 📂 Plik wyjściowy (Gotowy produkt)
-Po kliknięciu "Zatrzymaj nagrywanie", przeglądarka generuje jeden plik (np. `tarot_reading_2026-05-29.mp4`), który zawiera:
-*   Płynny obraz 1080p lub 4k z idealnie nałożonymi, stabilnymi kartami 3D.
-*   Idealnie zsynchronizowaną ścieżkę dźwiękową (Twój głos + klimatyczna muzyka w tle + efekty dźwiękowe pojawiania się wirtualnych kart).
+## 🎬 3. Automatyczny Montaż (Intro, Outro, Dżingle) i Publikacja YouTube
 
-Plik ten jest natychmiast gotowy do wrzucenia na YouTube, TikToka lub wysłania klientowi!
+Kombajn może automatycznie scalać materiał w spójny film bez jakiejkolwiek edycji w programach trzecich.
+
+### Automatyczny Montaż
+*   **Intro wejściowe:** Na początku nagrywania odtwarza się przygotowany plik wideo z animacją logotypu (np. z przezroczystością). Strumień wideo z płótna automatycznie nagrywa intro przed aktywacją widoku kamer.
+*   **Interaktywne dżingle:** System odtwarza mistyczny dźwięk (SFX) w słuchawkach i na nagraniu w precyzyjnych momentach (np. podczas wykrycia snapshotu lub odsłonięcia karty "Śmierć" czy "Diabeł").
+*   **Outro końcowe:** Po zatrzymaniu nagrywania system automatycznie dokleja planszę końcową (np. animowany ekran końcowy z linkami do mediów społecznościowych).
+
+### Publikacja jednym przyciskiem (YouTube API)
+Po wyrenderowaniu pliku na dysku (lub w chmurze), backend Pythona może zintegrować się z **YouTube Data API v3**:
+*   W panelu operatora pojawia się formularz: *Tytuł*, *Opis*, *Tagi* oraz *Widoczność* (Publiczne, Niepubliczne, Prywatne).
+*   Kliknięcie "Wyślij na YouTube" automatycznie przesyła plik bezpośrednio na Twój kanał (bardzo wygodne np. przy wysyłaniu dedykowanych rozkładów niepublicznym linkiem dla klientów prywatnych!).
 
 ---
 
-## 📝 Status Pomysłu Rozwojowego
-*   **Projekt:** Samodzielna aplikacja TarotVision Studio.
-*   **Priorytet:** Średni (Future Feature).
-*   **Złożoność:** Średnia (Wymaga przeniesienia pobierania strumienia kamery na frontend lub rozbudowania WebSocket o przesyłanie strumienia wideo).
+## 🎥 4. Tryb Multikamery i Reżysera (Director Mode)
+
+Zamiast jednego, statycznego kadru, możemy obsłużyć **dwie kamery fizyczne jednocześnie** oraz dynamiczne przejścia kinematograficzne.
+
+### Źródła obrazu (3 warstwy):
+1.  **Kamera A (Główna - Stół):** Widok z góry pokazujący fizycznie rozkładane karty i markery.
+2.  **Kamera B (Portret - Twarz):** Kamera skierowana na twarz lektora, budująca bezpośrednią relację z widzem.
+3.  **Warstwa C (Wirtualna AR):** Trójwymiarowa nakładka kart z Three.js.
+
+### Inteligentny Reżyser (Smart Switcher):
+Oba fizyczne strumienie z kamer są wczytywane jako dynamiczne tekstury w Three.js, co pozwala na tworzenie niesamowitych efektów przełączania w czasie rzeczywistym:
+*   **Picture-in-Picture (Obraz w obrazie):** Widok twarzy lektora w małym, eleganckim okręgu w rogu ekranu, nałożony na stół roboczy.
+*   **Przejścia kinowe:** Płynne przenikanie (crossfade) lub przesunięcie (slide) kadru z twarzy na stół w momencie, gdy system CV wykryje ruch ręki kładącej kartę.
+*   **Automatyczne przejścia:** System automatycznie pokazuje zbliżenie na twarz, gdy lektor mówi (brak ruchu na stole), i płynnie przełącza się na zbliżenie stołu z wirtualnymi kartami, gdy dochodzi do snapshotu.
+
+Dzięki temu wideo staje się niesamowicie dynamiczne i atrakcyjne dla oka, sprawiając wrażenie profesjonalnie zmontowanego materiału telewizyjnego realizowanego przez całą ekipę filmową!
