@@ -55,7 +55,7 @@ Conclusion: the bottleneck is not the camera, preprocessing, or ORB feature extr
 - Create: `app_cv/tarotvision/table_state.py`
 - Create: `app_cv/tests/test_table_state.py`
 
-- [ ] **Step 1: Write failing table state tests**
+- [x] **Step 1: Write failing table state tests**
 
 Create `app_cv/tests/test_table_state.py`:
 
@@ -112,7 +112,7 @@ if __name__ == "__main__":
     unittest.main()
 ```
 
-- [ ] **Step 2: Run tests and verify failure**
+- [x] **Step 2: Run tests and verify failure**
 
 Run:
 
@@ -123,7 +123,7 @@ python -m unittest E:\Antigravity\Projekty\TAROT\app_cv\tests\test_table_state.p
 
 Expected: import failure because `tarotvision.table_state` does not exist.
 
-- [ ] **Step 3: Implement table state**
+- [x] **Step 3: Implement table state**
 
 Create `app_cv/tarotvision/table_state.py`:
 
@@ -198,7 +198,7 @@ class TableState:
         )
 ```
 
-- [ ] **Step 4: Verify table state tests pass**
+- [x] **Step 4: Verify table state tests pass**
 
 Run:
 
@@ -216,7 +216,7 @@ Expected: `4 tests ... OK`.
 **Files:**
 - Modify: `app_cv/main.py`
 
-- [ ] **Step 1: Instantiate table state after references load**
+- [x] **Step 1: Instantiate table state after references load**
 
 In `app_cv/main.py`, after `reference_cards` is loaded, add:
 
@@ -226,7 +226,7 @@ from tarotvision.table_state import TableState
 table_state = TableState(reference_cards.keys())
 ```
 
-- [ ] **Step 2: Sync confirmed cards into table state**
+- [x] **Step 2: Sync confirmed cards into table state**
 
 After `active_detected_cards` is built, add:
 
@@ -244,7 +244,7 @@ for card in active_detected_cards:
 
 This is intentionally conservative: it mirrors the existing debounced output first, without replacing the current state machine yet.
 
-- [ ] **Step 3: Use available cards for new-card search**
+- [x] **Step 3: Use available cards for new-card search**
 
 Before calling `choose_cards_to_match`, compute:
 
@@ -259,7 +259,7 @@ Then keep current active-card refresh behavior, but use `candidate_card_names` f
 already confirmed cards are not treated as new-card candidates
 ```
 
-- [ ] **Step 4: Add payload debug fields**
+- [x] **Step 4: Add payload debug fields**
 
 Add to `runtime_snapshot`:
 
@@ -268,7 +268,7 @@ Add to `runtime_snapshot`:
 "tracked_card_count": len(table_state.cards),
 ```
 
-- [ ] **Step 5: Verify behavior**
+- [x] **Step 5: Verify behavior**
 
 Run:
 
@@ -289,7 +289,7 @@ Expected: tests OK and `py_compile` exit code `0`.
 - Create: `app_cv/tests/test_motion.py`
 - Modify: `app_cv/main.py`
 
-- [ ] **Step 1: Write motion tests**
+- [x] **Step 1: Write motion tests**
 
 Create `app_cv/tests/test_motion.py`:
 
@@ -340,7 +340,7 @@ if __name__ == "__main__":
     unittest.main()
 ```
 
-- [ ] **Step 2: Implement motion detector**
+- [x] **Step 2: Implement motion detector**
 
 Create `app_cv/tarotvision/motion.py`:
 
@@ -392,7 +392,7 @@ class MotionDetector:
         return MotionResult(motion_detected, scene_settled, changed_ratio)
 ```
 
-- [ ] **Step 3: Verify motion tests**
+- [x] **Step 3: Verify motion tests**
 
 Run:
 
@@ -403,7 +403,7 @@ python -m unittest E:\Antigravity\Projekty\TAROT\app_cv\tests\test_motion.py -v
 
 Expected: `3 tests ... OK`.
 
-- [ ] **Step 4: Integrate as a scan trigger**
+- [x] **Step 4: Integrate as a scan trigger**
 
 In `app_cv/main.py`, update motion each frame after `gray_frame` exists:
 
@@ -429,7 +429,7 @@ Do not create or identify a card from motion alone.
 - Create: `app_cv/tarotvision/roi_map.py`
 - Create: `app_cv/tests/test_roi_map.py`
 
-- [ ] **Step 1: Write ROI tests**
+- [x] **Step 1: Write ROI tests**
 
 Create `app_cv/tests/test_roi_map.py`:
 
@@ -456,7 +456,7 @@ if __name__ == "__main__":
     unittest.main()
 ```
 
-- [ ] **Step 2: Implement ROI helpers**
+- [x] **Step 2: Implement ROI helpers**
 
 Create `app_cv/tarotvision/roi_map.py`:
 
@@ -497,7 +497,7 @@ def filter_boxes_outside_occupied(candidate_boxes, occupied_boxes, max_iou=0.1):
     return result
 ```
 
-- [ ] **Step 3: Verify ROI tests**
+- [x] **Step 3: Verify ROI tests**
 
 Run:
 
@@ -516,7 +516,7 @@ Expected: `2 tests ... OK`.
 - Create: `app_cv/tarotvision/contour_tracking.py`
 - Create: `app_cv/tests/test_contour_tracking.py`
 
-- [ ] **Step 1: Write tracking assignment tests**
+- [x] **Step 1: Write tracking assignment tests**
 
 Create `app_cv/tests/test_contour_tracking.py`:
 
@@ -551,7 +551,7 @@ if __name__ == "__main__":
     unittest.main()
 ```
 
-- [ ] **Step 2: Implement assignment**
+- [x] **Step 2: Implement assignment**
 
 Create `app_cv/tarotvision/contour_tracking.py`:
 
@@ -581,7 +581,7 @@ def assign_boxes_to_cards(tracked_boxes, candidate_boxes, min_iou=0.5):
     return assignments
 ```
 
-- [ ] **Step 3: Verify tracking tests**
+- [x] **Step 3: Verify tracking tests**
 
 Run:
 
@@ -600,7 +600,7 @@ Expected: `2 tests ... OK`.
 - Create: `app_cv/tarotvision/audit_policy.py`
 - Create: `app_cv/tests/test_audit_policy.py`
 
-- [ ] **Step 1: Write audit policy tests**
+- [x] **Step 1: Write audit policy tests**
 
 Create `app_cv/tests/test_audit_policy.py`:
 
@@ -646,7 +646,7 @@ if __name__ == "__main__":
     unittest.main()
 ```
 
-- [ ] **Step 2: Implement audit policy**
+- [x] **Step 2: Implement audit policy**
 
 Create `app_cv/tarotvision/audit_policy.py`:
 
@@ -657,7 +657,7 @@ def should_reverify(frame_index, last_verified_frame, interval_frames, suspiciou
     return frame_index - last_verified_frame >= interval_frames
 ```
 
-- [ ] **Step 3: Verify audit tests**
+- [x] **Step 3: Verify audit tests**
 
 Run:
 
@@ -676,7 +676,7 @@ Expected: `3 tests ... OK`.
 - Modify: `app_cv/main.py`
 - Modify: `README.md`
 
-- [ ] **Step 1: Add state-first metrics**
+- [x] **Step 1: Add state-first metrics**
 
 Extend runtime metrics and diagnostics with:
 
@@ -695,7 +695,7 @@ Add to `runtime_snapshot`:
 "boost_frames_remaining": boost_frames_remaining,
 ```
 
-- [ ] **Step 2: Update README diagnostic section**
+- [x] **Step 2: Update README diagnostic section**
 
 Document that `cv_metrics.jsonl` should be used to compare:
 
@@ -710,7 +710,7 @@ schedule_mode
 boost_frames_remaining
 ```
 
-- [ ] **Step 3: Verify full local checks**
+- [x] **Step 3: Verify full local checks**
 
 Run:
 
@@ -772,6 +772,31 @@ new card identification: no obvious multi-second delay under normal lighting
 - Motion is only a trigger, never card identity.
 - Suspicious or missing contours trigger reverify instead of silently trusting stale state.
 
+## Session Status (2026-05-29)
+
+Completed in this session:
+
+- Task 1: `table_state` module + tests.
+- Task 2: candidate deck pool integration in `main.py`.
+- Task 3: motion trigger module + integration.
+- Task 4: ROI helpers + tests.
+- Task 5: contour-tracking helpers + tests.
+- Task 6: audit policy + tests.
+- Task 7: state-first runtime metrics, including:
+  - `available_card_count`,
+  - `tracked_card_count`,
+  - `motion_changed_ratio`,
+  - `reverify_due_count`,
+  - `tracked_assignments`,
+  - `unoccupied_observed_boxes`,
+  - `tracking_reverify_count`.
+
+Remaining high-impact work:
+
+- Execute Task 8 live benchmark scenario and compare logs against the targets.
+- Use `reverify_due_count` / `tracking_reverify_count` to reduce identity matching for stable `LOCKED` cards even further.
+- Introduce selective re-recognition for `needs_reverify` cards only, instead of broad periodic rescans.
+
 ## Immediate Next Action
 
-Start with **Task 1: Add Durable Table State and Deck Pool**. It is low risk, directly supports the user's deck-pool idea, and gives the rest of the architecture a stable place to attach.
+Execute **Task 8: Benchmark the New State-First Loop** on real camera footage, then tune matching schedule thresholds using the new tracking and reverify metrics.

@@ -92,7 +92,8 @@ Najwazniejsze pliki diagnostyczne:
 - `logs/launcher.log` -- start launchera.
 
 Przy starcie przez launcher `cv_metrics.jsonl`, `cv_runtime.log` i `ar_vite.log` opisuja biezacy przebieg testowy, zeby nowe pomiary nie mieszaly sie ze starymi.
-W `runtime` widac tez `schedule_mode` (`empty_scan`, `boost_scan`, `steady_scan`) oraz `boost_frames_remaining`, co pomaga ocenic reakcje systemu po dolozeniu lub poruszeniu karty.
+W `runtime` widac tez `schedule_mode` (`empty_scan`, `boost_scan`, `steady_scan`), `boost_frames_remaining`, `available_card_count`, `tracked_card_count`, `reverify_interval_frames` oraz `tracking_iou_threshold`.
+W metrykach pomocniczych dla state-first CV dochodza `motion_changed_ratio`, `reverify_due_count`, `tracked_assignments`, `unoccupied_observed_boxes` i `tracking_reverify_count`.
 
 **Manualnie:**
 ```bash

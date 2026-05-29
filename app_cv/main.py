@@ -13,6 +13,11 @@ import logging
 
 from tarotvision.metrics import RuntimeMetrics
 from tarotvision.matching_schedule import choose_cards_to_match, get_schedule_mode
+from tarotvision.motion import MotionDetector
+from tarotvision.audit_policy import should_reverify
+from tarotvision.table_state import TableState
+from tarotvision.roi_map import filter_boxes_outside_occupied
+from tarotvision.contour_tracking import assign_boxes_to_cards
 
 # Konfiguracja
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -35,6 +40,9 @@ INACTIVE_PER_FRAME_EMPTY = 4     # Gdy nie ma aktywnych kart, szybciej skanujemy
 INACTIVE_PER_FRAME_ACTIVE = 1    # Gdy sa aktywne karty, chronimy FPS i szukamy nowych wolniej
 INACTIVE_PER_FRAME_BOOST = 3     # Po zmianie ukladu chwilowo skanujemy szybciej, ale bez powrotu do pelnego kosztu
 BOOST_AFTER_LAYOUT_CHANGE_FRAMES = 12
+REVERIFY_INTERVAL_FRAMES = 180
+TRACKING_IOU_THRESHOLD = 0.35
+TRACKING_REVERIFY_GAP_FRAMES = 24
 
 # System dwufazowy "Zlap i Zamroz" — eliminuje mikro-jitter statycznych kart
 LOCK_AFTER_FRAMES = 8      # Klatki stabilnej detekcji zanim pozycja zostanie zamrozona
@@ -231,6 +239,16 @@ def deduplicate_detections(candidates):
     
     return {candidate["name"]: candidate for candidate in selected}
 
+
+def quad_to_box(quad):
+    xs = quad[:, 0, 0]
+    ys = quad[:, 0, 1]
+    x_min = int(np.min(xs))
+    y_min = int(np.min(ys))
+    x_max = int(np.max(xs))
+    y_max = int(np.max(ys))
+    return (x_min, y_min, max(1, x_max - x_min), max(1, y_max - y_min))
+
 log_event("========================================")
 log_event("[TAROT VISION] Computer Vision Module v2.0 (Audited)")
 log_event("========================================")
@@ -282,6 +300,7 @@ for file_path in file_paths:
     }
 
 log_event(f"[OK] Zaladowano {len(reference_cards)} wzorcow do pamieci!")
+table_state = TableState(reference_cards.keys())
 
 # 3. Inicjalizacja Kamery — jawnie ustawiamy 720p (1280x720) dla wiecej cech ORB z wiekszej odleglosci
 log_event("[KAMERA] Uruchamianie kamery... (Wcisnij 'q' by zamknac, cyfry '0'-'9' by przelaczac kamery w locie!)")
@@ -308,6 +327,8 @@ frame_counter = 0
 boost_frames_remaining = 0
 previous_active_card_names = set()
 schedule_mode_name = "empty_scan"
+motion_detector = MotionDetector(min_changed_ratio=0.02, settle_frames=2)
+tracked_boxes_by_name = {}
 
 # Petla glowna (Live feed)
 while True:
@@ -342,12 +363,21 @@ while True:
     else:
         des_frame = None
     runtime_metrics.add("feature_detect_ms", (time.perf_counter() - feature_start) * 1000.0)
+
+    if gray_frame is not None:
+        motion_result = motion_detector.update(gray_frame)
+    else:
+        motion_result = motion_detector.update(np.zeros((8, 8), dtype=np.uint8))
+    runtime_metrics.add("motion_changed_ratio", motion_result.changed_ratio)
+    if motion_result.scene_settled:
+        boost_frames_remaining = max(boost_frames_remaining, BOOST_AFTER_LAYOUT_CHANGE_FRAMES)
     
     # Lista kandydatow wykrytych w tej klatce; po petli usuwamy duplikaty przestrzenne
     detection_candidates = []
     detected_this_frame = {}
     
     all_card_names = list(reference_cards.keys())
+    candidate_card_names = table_state.available_card_ids
     active_count = sum(
         1
         for state in debounce_state.values()
@@ -363,7 +393,7 @@ while True:
     schedule_mode_name = schedule_mode.name
     inactive_per_frame = schedule_mode.inactive_per_frame
     matching_selection = choose_cards_to_match(
-        all_card_names=all_card_names,
+        all_card_names=candidate_card_names,
         debounce_state=debounce_state,
         inactive_index=inactive_index,
         frame_counter=frame_counter,
@@ -376,6 +406,19 @@ while True:
     cards_to_check = matching_selection.names
     runtime_metrics.add("cards_checked", len(cards_to_check))
     runtime_metrics.add("boost_frames_remaining", boost_frames_remaining)
+    runtime_metrics.add("available_card_count", len(candidate_card_names))
+    runtime_metrics.add("tracked_card_count", len(table_state.cards))
+
+    reverify_due_count = 0
+    for tracked_card in table_state.cards.values():
+        if should_reverify(
+            frame_index=frame_counter,
+            last_verified_frame=tracked_card.last_seen_frame,
+            interval_frames=REVERIFY_INTERVAL_FRAMES,
+            suspicious=False,
+        ):
+            reverify_due_count += 1
+    runtime_metrics.add("reverify_due_count", reverify_due_count)
     
     # Sprawdzamy czy w ogole cokolwiek na kamerze ma ostre krawedzie
     matching_start = time.perf_counter()
@@ -456,6 +499,36 @@ while True:
                         })
         
         detected_this_frame = deduplicate_detections(detection_candidates)
+
+    # Lightweight tracking quality: compare tracked boxes vs observed boxes and expose metrics.
+    observed_boxes = [quad_to_box(item["dst"]) for item in detected_this_frame.values()]
+    tracked_boxes = {name: box for name, box in tracked_boxes_by_name.items() if name in table_state.cards}
+    assigned_tracked = assign_boxes_to_cards(
+        tracked_boxes,
+        observed_boxes,
+        min_iou=TRACKING_IOU_THRESHOLD,
+    )
+    runtime_metrics.add("tracked_assignments", len(assigned_tracked))
+
+    # Track how many observed boxes are potentially "new space" outside occupied tracked areas.
+    unoccupied_observed_boxes = filter_boxes_outside_occupied(
+        observed_boxes,
+        list(tracked_boxes.values()),
+        max_iou=0.1,
+    )
+    runtime_metrics.add("unoccupied_observed_boxes", len(unoccupied_observed_boxes))
+
+    tracking_reverify_count = 0
+    for card_id, tracked_card in table_state.cards.items():
+        if card_id in assigned_tracked:
+            tracked_card.last_seen_frame = frame_counter
+            tracked_boxes_by_name[card_id] = assigned_tracked[card_id]
+            continue
+        if frame_counter - tracked_card.last_seen_frame >= TRACKING_REVERIFY_GAP_FRAMES:
+            table_state.mark_needs_reverify(card_id, "tracking_gap")
+            tracking_reverify_count += 1
+    runtime_metrics.add("tracking_reverify_count", tracking_reverify_count)
+
     runtime_metrics.add("matching_ms", (time.perf_counter() - matching_start) * 1000.0)
                 
     # 6. Dwufazowa stabilizacja: DETECTING -> LOCKED ("Zlap i Zamroz")
@@ -542,6 +615,17 @@ while True:
             })
 
     active_card_names = {card["name"] for card in active_detected_cards}
+    for card in active_detected_cards:
+        table_state.upsert_locked(
+            card_id=card["name"],
+            x=card["x"],
+            y=card["y"],
+            angle=card["angle"],
+            confidence=1.0,
+            frame_index=frame_counter,
+        )
+    for name, item in detected_this_frame.items():
+        tracked_boxes_by_name[name] = quad_to_box(item["dst"])
     newly_active_cards = active_card_names - previous_active_card_names
     if newly_active_cards:
         boost_frames_remaining = max(boost_frames_remaining, BOOST_AFTER_LAYOUT_CHANGE_FRAMES)
@@ -563,6 +647,10 @@ while True:
     }
     runtime_snapshot["schedule_mode"] = schedule_mode_name
     runtime_snapshot["boost_frames_remaining"] = boost_frames_remaining
+    runtime_snapshot["available_card_count"] = len(table_state.available_card_ids)
+    runtime_snapshot["tracked_card_count"] = len(table_state.cards)
+    runtime_snapshot["reverify_interval_frames"] = REVERIFY_INTERVAL_FRAMES
+    runtime_snapshot["tracking_iou_threshold"] = TRACKING_IOU_THRESHOLD
     status_update_start = time.perf_counter()
     with status_lock:
         current_status["detected"] = len(active_detected_cards) > 0
