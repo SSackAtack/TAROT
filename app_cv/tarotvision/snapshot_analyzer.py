@@ -60,9 +60,23 @@ def _quad_center(quad):
 
 
 def _quad_angle(quad):
+    points = _order_quad_points(quad)
+    top_left = points[0]
+    top_right = points[1]
+    vector = top_right - top_left
+    return -float(np.arctan2(vector[1], vector[0]))
+
+
+def _order_quad_points(quad):
     points = _quad_points(quad)
-    vector = points[3] - points[0]
-    return float(np.arctan2(vector[1], vector[0]))
+    sums = points.sum(axis=1)
+    diffs = np.diff(points, axis=1).reshape(4)
+    ordered = np.zeros((4, 2), dtype=np.float32)
+    ordered[0] = points[np.argmin(sums)]
+    ordered[1] = points[np.argmin(diffs)]
+    ordered[2] = points[np.argmax(sums)]
+    ordered[3] = points[np.argmax(diffs)]
+    return ordered
 
 
 def _frame_to_scene(center_x, center_y, frame_width, frame_height,

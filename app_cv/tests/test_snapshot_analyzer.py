@@ -53,6 +53,19 @@ class SnapshotAnalyzerTest(unittest.TestCase):
         self.assertAlmostEqual(result.cards[0]["x"], 0.0)
         self.assertAlmostEqual(result.cards[0]["y"], 0.0)
 
+    def test_upright_portrait_card_reports_zero_angle(self):
+        quad = np.array([[[10, 10]], [[20, 10]], [[20, 30]], [[10, 30]]],
+                        dtype=np.float32)
+        analyzer = SnapshotAnalyzer(
+            find_quads=lambda frame: [quad],
+            crop_card=lambda frame, quad: "crop",
+            recognize_crop=lambda crop: {"name": "16_tower"},
+        )
+
+        result = analyzer.analyze(np.zeros((40, 40, 3), dtype=np.uint8))
+
+        self.assertAlmostEqual(result.cards[0]["angle"], 0.0)
+
 
 if __name__ == "__main__":
     unittest.main()
