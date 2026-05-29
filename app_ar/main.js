@@ -34,7 +34,7 @@ let latestFrameData = null // Bufor na dane z WebSocketu przed zakonczeniem prel
 
 // Opcje wirtualnej siatki pozycjonującej (Grid Snapping)
 const GRID_SNAP_ENABLED = true
-const GRID_SIZE_X = 4.2  // Odstęp między kolumnami (szerokość karty ~3.2 + przerwa ~1.0)
+const GRID_SIZE_X = 3.8  // Odstęp między kolumnami (szerokość karty ~3.2 + przerwa ~0.6)
 const GRID_SIZE_Y = 6.0  // Odstęp między rzędami (wysokość karty ~5.5 + przerwa ~0.5)
 
 const cardNames = [

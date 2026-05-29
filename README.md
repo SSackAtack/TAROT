@@ -112,12 +112,22 @@ Otworz przegladarke: http://localhost:5173/
 
 ```
 TAROT/
+├── AGENTS.md            # Zasady wspolpracy zespolu AI — PRZECZYTAJ NAJPIERW
 ├── app_ar/              # Frontend AR (Vite + Three.js)
 │   ├── main.js          # Logika Three.js, WebSocket, animacje
 │   ├── style.css        # Style CSS
 │   └── public/karty/    # 22 tekstur .webp
 ├── app_cv/              # Backend CV (Python + OpenCV)
 │   ├── main.py          # Detekcja ORB, FLANN, WebSocket server
+│   ├── tarotvision/     # Pakiet state-first CV (modul zespolowy)
+│   │   ├── table_state.py       # FSM kart na stole
+│   │   ├── motion.py            # Detekcja ruchu sceny
+│   │   ├── roi_map.py           # Geometria ROI / IoU
+│   │   ├── contour_tracking.py  # Sledzenie konturow (IoU matching)
+│   │   ├── audit_policy.py      # Polityka reweryfikacji
+│   │   ├── matching_schedule.py # Harmonogram matchingu
+│   │   └── metrics.py           # Metryki EMA rolling-window
+│   ├── tests/           # Testy jednostkowe (22 testy)
 │   ├── test_camera.py   # Diagnostyka kamer
 │   └── test_matching.py # Test dopasowania
 ├── biblioteka_talii/    # Assety graficzne
@@ -134,6 +144,7 @@ TAROT/
 
 ## Dokumentacja
 
+- [Zasady wspolpracy zespolu AI](AGENTS.md) ⬅ **PRZECZYTAJ NAJPIERW**
 - [Plan koncepcyjny (FINAL)](docs/plan_koncepcyjny_v4.md)
 - [Roadmapa wdrozenia CV](docs/superpowers/plans/2026-05-29-tarotvision-cv-roadmap.md)
 - [Plan fazy state-first CV](docs/superpowers/plans/2026-05-29-tarotvision-state-first-cv-plan.md)
@@ -155,6 +166,12 @@ Projekt jest rozwijany na mocniejszym PC, ale powinien miec skalowalna sciezke u
 - **Tryb performance** -- ONNX/OpenVINO/CUDA lub YOLO jako opcja dla PC z RTX 3070, jesli benchmarki potwierdza lepsza skutecznosc albo stabilnosc.
 - **Tryb produkcyjny kamery** -- podczas nagran blokujemy autofocus i autoekspozycje, zeby ograniczyc zmiany ostrosci, jasnosci i liczby punktow cech miedzy klatkami.
 
+## Zespol
+
+Projekt rozwijany przez **zespol kilku modeli AI** (Codex, Opus, Gemini) koordynowanych przez Michala. Kazdy model moze przejac kontynuacje prac innego modelu. Dzialamy jako spojny zespol — synergia i synteza, nie rywalizacja.
+
+Szczegolowe zasady wspolpracy, konwencje kodu i workflow opisane sa w [AGENTS.md](AGENTS.md). **Kazdy agent AI MUSI przeczytac ten plik przed rozpoczeciem pracy.**
+
 ---
 
-*Projekt rozwijany przy wsparciu Antigravity (AI vibe coding).*
+*Projekt rozwijany przy wsparciu Antigravity (AI vibe coding) — Codex · Opus · Gemini.*

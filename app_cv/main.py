@@ -15,7 +15,7 @@ from tarotvision.metrics import RuntimeMetrics
 from tarotvision.matching_schedule import choose_cards_to_match, get_schedule_mode
 from tarotvision.motion import MotionDetector
 from tarotvision.audit_policy import should_reverify
-from tarotvision.table_state import TableState
+from tarotvision.table_state import TableState, PHASE_LOCKED, PHASE_NEEDS_REVERIFY
 from tarotvision.roi_map import filter_boxes_outside_occupied
 from tarotvision.contour_tracking import assign_boxes_to_cards
 
@@ -372,12 +372,121 @@ while True:
     if motion_result.scene_settled:
         boost_frames_remaining = max(boost_frames_remaining, BOOST_AFTER_LAYOUT_CHANGE_FRAMES)
     
+    # ==========================================================================
+    # STATE-FIRST OPTIMIZATION (Task 10, Opus 2026-05-29)
+    # Serce optymalizacji: karty LOCKED sledzone tanio po konturze/IoU,
+    # pelne ORB/FLANN tylko dla NEEDS_REVERIFY i nowych kandydatow.
+    # Dlaczego: matching ORB = ~60ms/karte, contour tracking IoU = ~0.01ms/karte.
+    # ==========================================================================
+
     # Lista kandydatow wykrytych w tej klatce; po petli usuwamy duplikaty przestrzenne
     detection_candidates = []
     detected_this_frame = {}
     
     all_card_names = list(reference_cards.keys())
     candidate_card_names = table_state.available_card_ids
+    runtime_metrics.add("available_card_count", len(candidate_card_names))
+    runtime_metrics.add("tracked_card_count", len(table_state.cards))
+    runtime_metrics.add("boost_frames_remaining", boost_frames_remaining)
+
+    # --- KROK 1: Contour tracking PRZED matchingiem ORB ---
+    # Karty LOCKED z dobrym IoU sa podtrzymywane tanio — nie potrzebuja ORB.
+    # Przenosimy tracking tutaj, zeby wiedziec KTORE karty mozna pominac.
+    tracked_boxes = {name: box for name, box in tracked_boxes_by_name.items() if name in table_state.cards}
+    locked_tracked_this_frame = {}  # Karty LOCKED utrzymane przez contour tracking
+    orb_skipped_locked = 0
+    tracking_reverify_count = 0
+
+    if gray_frame is not None and tracked_boxes:
+        # Prosty contour tracking: szukamy konturow prostokatnych w klatce
+        # i dopasowujemy je do znanych pozycji LOCKED kart po IoU.
+        # Unikamy kosztownego ORB/FLANN — to jest ~1000x tansze.
+        _, thresh = cv2.threshold(gray_frame, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
+        # Filtrujemy kontury do rozsadnych rozmiarow kart
+        min_contour_area = frame_width * frame_height * 0.005
+        max_contour_area = frame_width * frame_height * 0.5
+        contour_boxes = []
+        for cnt in contours:
+            area = cv2.contourArea(cnt)
+            if min_contour_area <= area <= max_contour_area:
+                contour_boxes.append(cv2.boundingRect(cnt))
+        
+        assigned_tracked = assign_boxes_to_cards(
+            tracked_boxes,
+            contour_boxes,
+            min_iou=TRACKING_IOU_THRESHOLD,
+        )
+        runtime_metrics.add("tracked_assignments", len(assigned_tracked))
+        
+        # Dla kazdej LOCKED karty z dobrym IoU: podtrzymaj pozycje BEZ ORB
+        for card_id, matched_box in assigned_tracked.items():
+            tracked_card = table_state.cards.get(card_id)
+            if tracked_card is None:
+                continue
+            
+            phase = debounce_state.get(card_id, {}).get("phase", "DETECTING")
+            
+            if phase == "LOCKED" and tracked_card.phase == PHASE_LOCKED:
+                # Karta LOCKED z dobrym IoU — podtrzymujemy tanio!
+                tracked_card.last_seen_frame = frame_counter
+                # NIE nadpisujemy tracked_boxes_by_name — zachowujemy precyzyjny bbox z ORB.
+                # Konturowy bbox zawiera cienie i blat, wiec jest za duzy.
+                orb_skipped_locked += 1
+                
+                # Wstrzykujemy "tracking detection" do detected_this_frame
+                # uzywajac zapisanej pozycji (zamrozona przez LOCK),
+                # zeby debounce_state utrzymal stable_count
+                locked_tracked_this_frame[card_id] = {
+                    "name": card_id,
+                    "x": debounce_state[card_id].get("locked_x", tracked_card.x),
+                    "y": debounce_state[card_id].get("locked_y", tracked_card.y),
+                    "angle": debounce_state[card_id].get("locked_angle", tracked_card.angle),
+                    # Syntetyczne wartosci — karta nie byla matchowana ORB
+                    "count": 0,
+                    "inlier_ratio": 1.0,
+                    "area": matched_box[2] * matched_box[3],
+                    "dst": None,  # Brak quada z ORB — uzywamy bbox
+                    "tracked_by_contour": True,  # Flaga diagnostyczna
+                }
+            else:
+                # Karta w innej fazie — tracking OK, ale nadal moze isc do ORB
+                tracked_card.last_seen_frame = frame_counter
+                # NIE nadpisujemy tracked_boxes_by_name — j.w.
+        
+        # Karty LOCKED bez przypisania IoU — wymagaja reweryfikacji
+        for card_id, tracked_card in table_state.cards.items():
+            if card_id in assigned_tracked:
+                continue
+            if frame_counter - tracked_card.last_seen_frame >= TRACKING_REVERIFY_GAP_FRAMES:
+                table_state.mark_needs_reverify(card_id, "tracking_gap")
+                tracking_reverify_count += 1
+    else:
+        runtime_metrics.add("tracked_assignments", 0)
+
+    runtime_metrics.add("tracking_reverify_count", tracking_reverify_count)
+    runtime_metrics.add("orb_skipped_locked", orb_skipped_locked)
+
+    # --- KROK 2: Budowa listy kart do ORB matchingu ---
+    # Tylko: nowe kandydaty (available) + karty NEEDS_REVERIFY
+    # LOCKED karty juz utrzymane przez contour tracking — pomijamy!
+    reverify_card_names = [
+        card_id for card_id, tracked_card in table_state.cards.items()
+        if tracked_card.phase == PHASE_NEEDS_REVERIFY
+        or should_reverify(
+            frame_index=frame_counter,
+            last_verified_frame=tracked_card.last_seen_frame,
+            interval_frames=REVERIFY_INTERVAL_FRAMES,
+            suspicious=False,
+        )
+    ]
+    runtime_metrics.add("reverify_due_count", len(reverify_card_names))
+
+    # Pula do matchingu = nowe (available) + wymagajace reweryfikacji
+    # Karty LOCKED z dobrym IoU NIE trafiaja tutaj — to jest serce optymalizacji.
+    orb_candidate_names = list(dict.fromkeys(candidate_card_names + reverify_card_names))
+
     active_count = sum(
         1
         for state in debounce_state.values()
@@ -393,7 +502,7 @@ while True:
     schedule_mode_name = schedule_mode.name
     inactive_per_frame = schedule_mode.inactive_per_frame
     matching_selection = choose_cards_to_match(
-        all_card_names=candidate_card_names,
+        all_card_names=orb_candidate_names,
         debounce_state=debounce_state,
         inactive_index=inactive_index,
         frame_counter=frame_counter,
@@ -405,27 +514,15 @@ while True:
     inactive_index = matching_selection.next_inactive_index
     cards_to_check = matching_selection.names
     runtime_metrics.add("cards_checked", len(cards_to_check))
-    runtime_metrics.add("boost_frames_remaining", boost_frames_remaining)
-    runtime_metrics.add("available_card_count", len(candidate_card_names))
-    runtime_metrics.add("tracked_card_count", len(table_state.cards))
 
-    reverify_due_count = 0
-    for tracked_card in table_state.cards.values():
-        if should_reverify(
-            frame_index=frame_counter,
-            last_verified_frame=tracked_card.last_seen_frame,
-            interval_frames=REVERIFY_INTERVAL_FRAMES,
-            suspicious=False,
-        ):
-            reverify_due_count += 1
-    runtime_metrics.add("reverify_due_count", reverify_due_count)
-    
-    # Sprawdzamy czy w ogole cokolwiek na kamerze ma ostre krawedzie
+    # --- KROK 3: Matching ORB/FLANN — tylko dla wybranych kart ---
     matching_start = time.perf_counter()
     if des_frame is not None and len(des_frame) > MIN_MATCH_COUNT:
-        # 5. Iterujemy po wybranych kartach i szukamy spelniajacych prog
+        # Iterujemy TYLKO po kartach wymagajacych pelnego rozpoznawania
         for name in cards_to_check:
-            ref_data = reference_cards[name]
+            ref_data = reference_cards.get(name)
+            if ref_data is None:
+                continue
             des_ref = ref_data["descriptors"]
             if des_ref is None: continue
                 
@@ -500,34 +597,25 @@ while True:
         
         detected_this_frame = deduplicate_detections(detection_candidates)
 
-    # Lightweight tracking quality: compare tracked boxes vs observed boxes and expose metrics.
-    observed_boxes = [quad_to_box(item["dst"]) for item in detected_this_frame.values()]
-    tracked_boxes = {name: box for name, box in tracked_boxes_by_name.items() if name in table_state.cards}
-    assigned_tracked = assign_boxes_to_cards(
-        tracked_boxes,
-        observed_boxes,
-        min_iou=TRACKING_IOU_THRESHOLD,
-    )
-    runtime_metrics.add("tracked_assignments", len(assigned_tracked))
+    # --- KROK 4: Scalenie wynikow ORB + contour tracking ---
+    # Karty LOCKED utrzymane tanio przez contour tracking dokladamy do detected_this_frame,
+    # zeby debounce_state utrzymal ich stable_count (nie zaczal loss_count).
+    for card_id, tracked_data in locked_tracked_this_frame.items():
+        if card_id not in detected_this_frame:
+            detected_this_frame[card_id] = tracked_data
+    runtime_metrics.add("locked_tracked_count", len(locked_tracked_this_frame))
 
     # Track how many observed boxes are potentially "new space" outside occupied tracked areas.
+    observed_boxes = [
+        quad_to_box(item["dst"]) for item in detected_this_frame.values()
+        if item.get("dst") is not None
+    ]
     unoccupied_observed_boxes = filter_boxes_outside_occupied(
         observed_boxes,
         list(tracked_boxes.values()),
         max_iou=0.1,
     )
     runtime_metrics.add("unoccupied_observed_boxes", len(unoccupied_observed_boxes))
-
-    tracking_reverify_count = 0
-    for card_id, tracked_card in table_state.cards.items():
-        if card_id in assigned_tracked:
-            tracked_card.last_seen_frame = frame_counter
-            tracked_boxes_by_name[card_id] = assigned_tracked[card_id]
-            continue
-        if frame_counter - tracked_card.last_seen_frame >= TRACKING_REVERIFY_GAP_FRAMES:
-            table_state.mark_needs_reverify(card_id, "tracking_gap")
-            tracking_reverify_count += 1
-    runtime_metrics.add("tracking_reverify_count", tracking_reverify_count)
 
     runtime_metrics.add("matching_ms", (time.perf_counter() - matching_start) * 1000.0)
                 
@@ -625,7 +713,9 @@ while True:
             frame_index=frame_counter,
         )
     for name, item in detected_this_frame.items():
-        tracked_boxes_by_name[name] = quad_to_box(item["dst"])
+        # Karty sledzone przez contour tracking maja dst=None — nie nadpisujemy ich bbox
+        if item.get("dst") is not None:
+            tracked_boxes_by_name[name] = quad_to_box(item["dst"])
     newly_active_cards = active_card_names - previous_active_card_names
     if newly_active_cards:
         boost_frames_remaining = max(boost_frames_remaining, BOOST_AFTER_LAYOUT_CHANGE_FRAMES)
@@ -664,15 +754,21 @@ while True:
         append_diagnostics(metrics_snapshot, runtime_snapshot, active_detected_cards)
         last_diagnostics_time = diagnostics_time
 
-    # 7. Rysowanie ramek — kolor zalezy od fazy: ZIELONA = DETECTING, NIEBIESKA = LOCKED
+    # 7. Rysowanie ramek — kolor zalezy od fazy:
+    # ZIELONA = DETECTING, NIEBIESKO-ZLOTA = LOCKED (ORB), TURKUSOWA = LOCKED (contour tracking)
     for name, data in detected_this_frame.items():
-        dst = data["dst"]
+        dst = data.get("dst")
         match_count = data["count"]
+        is_contour_tracked = data.get("tracked_by_contour", False)
         
         # Sprawdzamy faze karty
         phase = debounce_state.get(name, {}).get("phase", "DETECTING")
         
-        if phase == "LOCKED":
+        if is_contour_tracked:
+            box_color = (200, 200, 0)   # Turkusowa (BGR) — tracking bez ORB
+            text_color = (200, 200, 0)
+            status_text = "TRACKED"
+        elif phase == "LOCKED":
             box_color = (255, 180, 0)   # Niebiesko-zlota (BGR) — zamrozona
             text_color = (255, 180, 0)
             status_text = "LOCKED"
@@ -681,10 +777,18 @@ while True:
             text_color = (0, 0, 255)
             status_text = "DETECTING"
         
-        display_frame = cv2.polylines(display_frame, [np.int32(dst)], True, box_color, 3, cv2.LINE_AA)
-        
-        top_y = min([pt[0][1] for pt in dst])
-        top_x = min([pt[0][0] for pt in dst])
+        # Karty sledzone przez contour tracking nie maja quada ORB — rysujemy bbox
+        if dst is not None:
+            display_frame = cv2.polylines(display_frame, [np.int32(dst)], True, box_color, 3, cv2.LINE_AA)
+            top_y = min([pt[0][1] for pt in dst])
+            top_x = min([pt[0][0] for pt in dst])
+        elif name in tracked_boxes_by_name:
+            bx, by, bw, bh = tracked_boxes_by_name[name]
+            cv2.rectangle(display_frame, (bx, by), (bx + bw, by + bh), box_color, 3, cv2.LINE_AA)
+            top_y = by
+            top_x = bx
+        else:
+            continue
         
         cv2.putText(display_frame, f"{name.upper()} ({match_count} pkt) [{status_text}]", 
                     (int(top_x), int(top_y) - 10), cv2.FONT_HERSHEY_SIMPLEX, 
@@ -699,7 +803,7 @@ while True:
     
     cv2.putText(display_frame, f"FPS: {fps:.1f}", (20, 40), 
                 cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 255), 2, cv2.LINE_AA)
-    cv2.putText(display_frame, f"Sledzone: {len(active_names)} | Pula: {len(inactive_names)}", 
+    cv2.putText(display_frame, f"ORB: {len(cards_to_check)} | IoU: {orb_skipped_locked} | Pula: {len(inactive_names)}", 
                 (20, 75), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (200, 200, 200), 1, cv2.LINE_AA)
     runtime_metrics.add("frame_loop_ms", (time.perf_counter() - frame_loop_start) * 1000.0)
 

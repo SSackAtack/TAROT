@@ -797,6 +797,44 @@ Remaining high-impact work:
 - Use `reverify_due_count` / `tracking_reverify_count` to reduce identity matching for stable `LOCKED` cards even further.
 - Introduce selective re-recognition for `needs_reverify` cards only, instead of broad periodic rescans.
 
+## Session Status (2026-05-29, Opus — Antigravity/Gemini)
+
+Completed in this session (by Opus, continuing Codex's work):
+
+- **Task 10 (NEW): Core state-first optimization in `main.py`**
+  - Karty w `LOCKED_TRACKING` pomijane w matchingu ORB/FLANN — śledzone tanio po konturze/IoU.
+  - Contour tracking przeniesiony PRZED matching ORB — wynik determinuje KTÓRE karty pomijamy.
+  - Pełne ORB/FLANN tylko dla `NEEDS_REVERIFY` + nowych kandydatów z `available_card_ids`.
+  - Wyniki contour tracking wstrzyknięte do `detected_this_frame` — debounce_state utrzymuje stable_count.
+  - Nowe metryki: `orb_skipped_locked`, `locked_tracked_count`.
+  - Nowy kolor ramki w OpenCV overlay: turkusowa = TRACKED (contour), złota = LOCKED (ORB), zielona = DETECTING.
+  - HUD diagnostyczny: `ORB: N | IoU: M | Pula: K` zamiast `Sledzone: N | Pula: K`.
+  - Oczekiwany efekt: `matching_ms` spadek z ~415ms do ~50-80ms, FPS wzrost z ~2.3 do ~8-12.
+- **AGENTS.md**: dodano plik z zasadami współpracy zespołu AI (Codex/Opus/Gemini).
+- **README.md**: zaktualizowano strukturę projektu, sekcję dokumentacji i sekcję Zespół.
+
+Weryfikacja:
+- `py_compile main.py` → OK
+- `unittest discover tests` → 22 testy OK, 0 failures
+
+## Session Status (2026-05-29, Gemini — Antigravity) — Hotfixy i weryfikacja 6-kartowa
+
+Wykonano poprawki i przeanalizowano test z 6 kartami:
+
+1. **Błąd braku 6. karty w przeglądarce (Overlapping Grid Snapping):**
+   - **Problem:** Kamera CV poprawnie wykrywała 6 kart (w tym *The Fool*), a ramki overlay CV były rysowane bezbłędnie. Jednak przeglądarka wyświetlała tylko 5 kart.
+   - **Przyczyna:** Zbyt duży krok siatki poziomej `GRID_SIZE_X = 4.2` w `app_ar/main.js`. Przy gęstym ułożeniu kart na biurku (odległość ok. 3.8), *The Magician* (x = -10.28) oraz *The Fool* (x = -6.48) snapowały się do tej samej kolumny siatki (`targetX = -8.4`). W efekcie karty nałożyły się w przestrzeni 3D i *The Fool* został zasłonięty przez *The Magician*.
+   - **Rozwiązanie:** Zmniejszono krok siatki poziomej `GRID_SIZE_X` z `4.2` do `3.8` w `app_ar/main.js`. Umożliwiło to poprawne, unikalne pozycjonowanie wszystkich 6 kart obok siebie.
+2. **Crash w contour trackingu (poprzednia sesja):**
+   - Usunięto nieobsługiwany wyjątek `quad_to_box(None)` wywoływany, gdy karta utrzymywana była przez contour tracking (brak geometrii ORB).
+3. **Za duże ramki w OpenCV (poprzednia sesja):**
+   - Poprawiono kod wizualizacji w CV, by contour tracking nie nadpisywał precyzyjnych ramek geometrycznych z ORB swoimi przybliżonymi (za dużymi z powodu cieni i blatu) prostokątami konturowymi.
+4. **Analiza metryk testu 6 kart:**
+   - **FPS:** Wzrost do **7.1** w steady-state (max 8.5) z 6 kartami na stole (ponad **2x szybciej** vs. baseline ~3.4).
+   - **Koszt matchowania (`matching_ms`):** Spadek z 240ms do średnio **130ms** (min 96ms), czyli o **-46%**.
+   - **Współczynnik IoU:** Średnio **5.6 kart na klatkę** było utrzymywanych ultra-tanim kosztem (kontury). Tylko 2.6 kart przechodziło przez pełen matching ORB (rotacja puli).
+
 ## Immediate Next Action
 
-Execute **Task 8: Benchmark the New State-First Loop** on real camera footage, then tune matching schedule thresholds using the new tracking and reverify metrics.
+- Przeprowadzić test weryfikacyjny z 6 kartami po zmianie siatki w przeglądarce i sprawdzić, czy wszystkie 6 kart wyświetla się bez nakładania.
+- Dalsza optymalizacja parametrów IoU / thresholdów contour trackingu pod kątem eliminacji drobnych zakłóceń oświetlenia.
