@@ -141,7 +141,11 @@ const operatorMetricNames = [
     'orb_skipped_locked',
     'locked_tracked_count',
     'available_card_count',
-    'tracked_card_count'
+    'tracked_card_count',
+    'stable_for_ms',
+    'snapshot_quality_score',
+    'snapshot_analysis_ms',
+    'time_from_motion_to_publish_ms'
 ]
 
 const metricLabels = {
@@ -151,7 +155,11 @@ const metricLabels = {
     orb_skipped_locked: 'Pominiete ORB',
     locked_tracked_count: 'Sledzone konturem',
     available_card_count: 'Karty w puli',
-    tracked_card_count: 'Karty na stole'
+    tracked_card_count: 'Karty na stole',
+    stable_for_ms: 'Stabilnosc',
+    snapshot_quality_score: 'Jakosc snapshotu',
+    snapshot_analysis_ms: 'Analiza snapshotu',
+    time_from_motion_to_publish_ms: 'Ruch -> publikacja'
 }
 
 const parameterLabels = {
@@ -299,11 +307,14 @@ function updateOperatorPanel(data) {
     const metrics = data.metrics || {}
     const runtime = data.runtime || {}
     const operator = data.operator || {}
+    const layout = data.layout || {}
 
     updateOperatorGrid(operatorPanel.querySelector('[data-role="runtime"]'), [
         ['Tryb CV', runtime.profile || '-'],
         ['Profil strojenia', operator.active_profile || '-'],
         ['Harmonogram', runtime.schedule_mode || '-'],
+        ['Snapshot', layout.state || '-'],
+        ['Layout', layout.layout_id ?? '-'],
         ['Boost', runtime.boost_frames_remaining ?? '-'],
         ['Kamera', runtime.camera_index ?? '-'],
         ['Obraz', runtime.capture_width && runtime.capture_height ? `${runtime.capture_width}x${runtime.capture_height}` : '-']
@@ -455,9 +466,14 @@ function connectWebSocket() {
     ws.onmessage = (event) => {
         try {
             const data = JSON.parse(event.data)
+            const layout = data.layout || {}
             const detectedCards = data.cards || []
             updateOperatorPanel(data)
-            handleCardData(detectedCards)
+            const layoutState = layout.state || ''
+            const isWatcherOnlyState = ['settling', 'sampling_snapshots', 'analyzing_snapshot'].includes(layoutState)
+            if (!isWatcherOnlyState) {
+                handleCardData(detectedCards)
+            }
         } catch (e) {
             console.error("[WEBSOCKET ERROR] Blad przetwarzania danych:", e)
         }
