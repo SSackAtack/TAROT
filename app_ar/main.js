@@ -316,6 +316,24 @@ function updateOperatorParameters(operator) {
         return
     }
 
+    // Suwaki już wyrenderowane — aktualizujemy tylko ich wartości (bez niszczenia elementów DOM!)
+    const existingInputs = safeContainer.querySelectorAll('input[data-param]')
+    if (existingInputs.length > 0) {
+        names.forEach((name) => {
+            const val = parameters[name] ?? metadata[name].default
+            const input = operatorPanel.querySelector(`input[data-param="${name}"]`)
+            if (input) {
+                const output = input.parentElement?.querySelector('output')
+                // Blokujemy aktualizację wartości, jeśli użytkownik właśnie ją przesuwa
+                if (document.activeElement !== input) {
+                    input.value = val
+                    if (output) output.textContent = formatMetricValue(Number(val))
+                }
+            }
+        })
+        return
+    }
+
     const renderControls = (filteredNames) => {
         if (filteredNames.length === 0) return '-'
         return filteredNames.map((name) => {
@@ -370,6 +388,24 @@ function updateCameraControlsUI(supportedControls) {
         CAP_PROP_AUTO_EXPOSURE: { min: 0, max: 3, step: 1 },
         CAP_PROP_BRIGHTNESS: { min: 0, max: 255, step: 1 },
         CAP_PROP_CONTRAST: { min: 0, max: 255, step: 1 }
+    }
+
+    // Suwaki już wyrenderowane — aktualizujemy tylko wartości, aby nie zakłócać przeciągania
+    const existingInputs = container.querySelectorAll('input[data-camera-param]')
+    if (existingInputs.length > 0) {
+        Object.entries(supportedControls).forEach(([name, data]) => {
+            if (data.readback_value === -1.0) return
+            const input = container.querySelector(`input[data-camera-param="${name}"]`)
+            if (input) {
+                const output = input.parentElement?.querySelector('output')
+                // Jeśli suwak ma focus (jest przeciągany), ignorujemy aktualizację z WebSocket
+                if (document.activeElement !== input) {
+                    input.value = data.readback_value
+                    if (output) output.textContent = data.readback_value
+                }
+            }
+        })
+        return
     }
 
     const html = Object.entries(supportedControls)
