@@ -25,6 +25,10 @@ MIN_GOOD_MATCHES = 12
 LOWE_RATIO = 0.79
 # Minimalny inlier ratio z homografii RANSAC
 MIN_INLIER_RATIO = 0.25
+# ORB jest rotacyjnie odporne, wiec reversed moze czasem wygrac minimalnie
+# mimo fizycznie prostej karty. Raportujemy reversed dopiero przy wyraznej
+# przewadze nad wariantem upright dla tej samej karty.
+ORIENTATION_MARGIN_RATIO = 0.10
 
 
 def build_variant_names(card_name):
@@ -37,6 +41,17 @@ def build_variant_names(card_name):
         ['17_star:upright', '17_star:reversed']
     """
     return [f"{card_name}:upright", f"{card_name}:reversed"]
+
+
+def resolve_orientation_with_margin(upright_score, reversed_score,
+                                    margin_ratio=ORIENTATION_MARGIN_RATIO):
+    if reversed_score <= 0:
+        return "upright"
+    if upright_score <= 0:
+        return "reversed"
+    if reversed_score > upright_score * (1.0 + margin_ratio):
+        return "reversed"
+    return "upright"
 
 
 def _order_quad_points(quad):
@@ -188,8 +203,10 @@ def recognize_card_crop(gray_crop, reference_cards, orb, matcher,
 
     best_result = None
     best_score = 0.0
+    scores_by_card = {}
 
     for card_name, ref_data in reference_cards.items():
+        scores_by_card.setdefault(card_name, {"upright": 0.0, "reversed": 0.0})
         for orientation, des_key in [("upright", "descriptors"),
                                      ("reversed", "reversed_descriptors")]:
             des_ref = ref_data.get(des_key)
@@ -232,6 +249,10 @@ def recognize_card_crop(gray_crop, reference_cards, orb, matcher,
 
             # Score = match_count * inlier_ratio
             score = len(good_matches) * inlier_ratio
+            scores_by_card[card_name][orientation] = max(
+                scores_by_card[card_name][orientation],
+                score,
+            )
             if score > best_score:
                 best_score = score
                 best_result = {
@@ -241,5 +262,12 @@ def recognize_card_crop(gray_crop, reference_cards, orb, matcher,
                     "match_count": len(good_matches),
                     "inlier_ratio": round(inlier_ratio, 3),
                 }
+
+    if best_result is not None:
+        orientation_scores = scores_by_card[best_result["name"]]
+        best_result["orientation"] = resolve_orientation_with_margin(
+            orientation_scores["upright"],
+            orientation_scores["reversed"],
+        )
 
     return best_result

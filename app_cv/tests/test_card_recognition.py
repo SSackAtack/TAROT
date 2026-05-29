@@ -10,6 +10,7 @@ from tarotvision.card_recognition import (
     deskew_card_crop,
     recognize_card_crop,
     load_reference_cards,
+    resolve_orientation_with_margin,
 )
 
 
@@ -21,6 +22,35 @@ class VariantNamesTest(unittest.TestCase):
     def test_builds_for_any_card_name(self):
         variants = build_variant_names("00_fool")
         self.assertEqual(variants, ["00_fool:upright", "00_fool:reversed"])
+
+
+class ResolveOrientationWithMarginTest(unittest.TestCase):
+    def test_defaults_to_upright_when_reversed_score_is_only_slightly_better(self):
+        orientation = resolve_orientation_with_margin(
+            upright_score=100.0,
+            reversed_score=104.0,
+            margin_ratio=0.10,
+        )
+
+        self.assertEqual(orientation, "upright")
+
+    def test_reports_reversed_when_reversed_score_has_clear_margin(self):
+        orientation = resolve_orientation_with_margin(
+            upright_score=100.0,
+            reversed_score=125.0,
+            margin_ratio=0.10,
+        )
+
+        self.assertEqual(orientation, "reversed")
+
+    def test_reports_reversed_when_no_upright_match_exists(self):
+        orientation = resolve_orientation_with_margin(
+            upright_score=0.0,
+            reversed_score=12.0,
+            margin_ratio=0.10,
+        )
+
+        self.assertEqual(orientation, "reversed")
 
 
 class NormalizedSizeTest(unittest.TestCase):
