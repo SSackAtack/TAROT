@@ -49,6 +49,7 @@ class SnapshotAnalyzer:
                 ),
                 "confidence": recognition.get("confidence", 0.0),
                 "orientation": recognition.get("orientation", "unknown"),
+                "homography_angle_deg": recognition.get("homography_angle_deg", 0.0),
             })
         return SnapshotAnalysisResult(cards=cards, card_count=len(cards))
 

@@ -9,6 +9,7 @@ Supports upright and 180-degree reversed orientations for each card.
 """
 
 import glob
+import math
 import os
 
 import cv2
@@ -239,7 +240,7 @@ def recognize_card_crop(gray_crop, reference_cards, orb, matcher,
                 [kp_crop[m.trainIdx].pt for m in good_matches]
             ).reshape(-1, 1, 2)
 
-            _, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
+            H, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
             if mask is None:
                 continue
 
@@ -261,13 +262,33 @@ def recognize_card_crop(gray_crop, reference_cards, orb, matcher,
                     "confidence": round(inlier_ratio, 3),
                     "match_count": len(good_matches),
                     "inlier_ratio": round(inlier_ratio, 3),
+                    "homography": H,
                 }
 
     if best_result is not None:
         orientation_scores = scores_by_card[best_result["name"]]
-        best_result["orientation"] = resolve_orientation_with_margin(
-            orientation_scores["upright"],
-            orientation_scores["reversed"],
-        )
+        H = best_result.get("homography")
+        if H is not None:
+            angle_rad = float(np.arctan2(H[1, 0], H[0, 0]))
+            angle_deg = math.degrees(angle_rad)
+            best_result["homography_angle_deg"] = round(angle_deg, 1)
+            
+            # Detekcja flipa (obrotu o ~180 stopni): abs(angle) > 90 stopni
+            has_flip = abs(angle_rad) > (math.pi / 2)
+            detected_orientation = best_result["orientation"]
+            
+            if has_flip:
+                final_orientation = "reversed" if detected_orientation == "upright" else "upright"
+            else:
+                final_orientation = detected_orientation
+                
+            best_result["orientation"] = final_orientation
+            # Usuwamy nie-JSON-serializowalny obiekt macierzy homografii
+            del best_result["homography"]
+        else:
+            best_result["orientation"] = resolve_orientation_with_margin(
+                orientation_scores["upright"],
+                orientation_scores["reversed"],
+            )
 
     return best_result

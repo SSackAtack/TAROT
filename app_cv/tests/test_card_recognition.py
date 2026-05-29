@@ -1,5 +1,6 @@
 import unittest
 import os
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 
@@ -132,6 +133,88 @@ class LoadReferenceCardsTest(unittest.TestCase):
         result = load_reference_cards("/nonexistent/path", orb, clahe)
 
         self.assertEqual(result, {})
+
+
+class HomographyOrientationTest(unittest.TestCase):
+    @patch("cv2.findHomography")
+    def test_homography_keeps_upright_when_no_rotation(self, mock_find_homography):
+        try:
+            import cv2
+        except ImportError:
+            self.skipTest("cv2 not available")
+
+        H_identity = np.eye(3, dtype=np.float32)
+        mock_find_homography.return_value = (H_identity, np.ones(20, dtype=np.uint8))
+
+        ref_cards = {
+            "15_devil": {
+                "keypoints": [cv2.KeyPoint(0, 0, 1)] * 20,
+                "descriptors": np.zeros((20, 32), dtype=np.uint8),
+                "reversed_keypoints": [cv2.KeyPoint(0, 0, 1)] * 20,
+                "reversed_descriptors": np.zeros((20, 32), dtype=np.uint8),
+            }
+        }
+
+        mock_orb = MagicMock()
+        mock_orb.detectAndCompute.return_value = (
+            [cv2.KeyPoint(0, 0, 1)] * 20,
+            np.zeros((20, 32), dtype=np.uint8),
+        )
+
+        mock_matcher = MagicMock()
+        mock_matcher.knnMatch.return_value = [
+            [cv2.DMatch(i, i, 1.0), cv2.DMatch(i, i, 10.0)] for i in range(20)
+        ]
+
+        crop = np.zeros((516, 300), dtype=np.uint8)
+        result = recognize_card_crop(crop, ref_cards, mock_orb, mock_matcher)
+
+        self.assertIsNotNone(result)
+        self.assertEqual(result["name"], "15_devil")
+        self.assertEqual(result["orientation"], "upright")
+        self.assertEqual(result["homography_angle_deg"], 0.0)
+
+    @patch("cv2.findHomography")
+    def test_homography_flips_to_reversed_when_180_rotation(self, mock_find_homography):
+        try:
+            import cv2
+        except ImportError:
+            self.skipTest("cv2 not available")
+
+        H_reversed = np.array([
+            [-1.0, 0.0, 100.0],
+            [0.0, -1.0, 200.0],
+            [0.0, 0.0, 1.0]
+        ], dtype=np.float32)
+        mock_find_homography.return_value = (H_reversed, np.ones(20, dtype=np.uint8))
+
+        ref_cards = {
+            "15_devil": {
+                "keypoints": [cv2.KeyPoint(0, 0, 1)] * 20,
+                "descriptors": np.zeros((20, 32), dtype=np.uint8),
+                "reversed_keypoints": [cv2.KeyPoint(0, 0, 1)] * 20,
+                "reversed_descriptors": np.zeros((20, 32), dtype=np.uint8),
+            }
+        }
+
+        mock_orb = MagicMock()
+        mock_orb.detectAndCompute.return_value = (
+            [cv2.KeyPoint(0, 0, 1)] * 20,
+            np.zeros((20, 32), dtype=np.uint8),
+        )
+
+        mock_matcher = MagicMock()
+        mock_matcher.knnMatch.return_value = [
+            [cv2.DMatch(i, i, 1.0), cv2.DMatch(i, i, 10.0)] for i in range(20)
+        ]
+
+        crop = np.zeros((516, 300), dtype=np.uint8)
+        result = recognize_card_crop(crop, ref_cards, mock_orb, mock_matcher)
+
+        self.assertIsNotNone(result)
+        self.assertEqual(result["name"], "15_devil")
+        self.assertEqual(result["orientation"], "reversed")
+        self.assertAlmostEqual(abs(result["homography_angle_deg"]), 180.0, places=1)
 
 
 if __name__ == "__main__":

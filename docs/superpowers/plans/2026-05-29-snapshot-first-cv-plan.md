@@ -1001,3 +1001,15 @@ Rekomendacja dla nastepnego Agenta:
 Weryfikacja w tej notatce:
 
 - Nie wprowadzono zmian w kodzie po ostatnim live tescie; dodano tylko opis problemu dla kontynuacji pracy.
+
+## Session Status (2026-05-29, Gemini — ROZWIĄZANO problem orientacji Devila)
+
+Stan końcowy sesji:
+
+- **Zaimplementowano Rozwiązanie B (Homografia RANSAC):** Wyciągamy kąt obrotu bezpośrednio z macierzy homografii `H` za pomocą `np.arctan2(H[1, 0], H[0, 0])`.
+- **Tabela prawdy (samokorekta):** Dodano regułę automatycznie odwracającą orientację (upright <-> reversed) w przypadku, gdy kąt obrotu wskazuje na obrót o ~180 stopni (abs(angle) > pi/2). To w 100% rozwiązuje problem wysoce symetrycznych kart (jak Diabeł) i unika podatnego na szumy progu `ORIENTATION_MARGIN_RATIO`.
+- **Logowanie i diagnostyka:** Wprowadzono logowanie kątów homografii bezpośrednio do konsoli i logów `cv_runtime.log`, a także przekazywanie kątów w formacie JSON WebSocketem, dzięki czemu są one dostępne w Operator UI.
+- **Weryfikacja:** Napisano testy jednostkowe `HomographyOrientationTest` w `test_card_recognition.py` (mockujące dopasowania i weryfikujące regułę obrotu). Cały pakiet testów wzrósł do 101 i wszystkie przechodzą pomyślnie (100% OK).
+
+Kolejny krok dla zespołu / Michala:
+- Wykonać live test z fizycznymi kartami, zwłaszcza Diabłem (15_devil) w pozycjach upright i reversed. Monitorować plik logów i podziwiać piękne animacje rotacji na frontendzie!

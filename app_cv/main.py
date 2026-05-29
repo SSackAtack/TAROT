@@ -467,10 +467,20 @@ def recognize_snapshot_crop(gray_crop):
     result = recognize_card_crop(crop_for_matching, reference_cards, orb, flann)
     if result is None:
         return None
+    
+    angle_deg = result.get("homography_angle_deg", 0.0)
+    log_event(
+        f"[DIAGNOSTYKA ORIENTACJI] Karta: {result['name']} | "
+        f"Kąt z homografii: {angle_deg}° | "
+        f"Ustalona orientacja: {result['orientation']} | "
+        f"Pewność (inliers): {result.get('inlier_ratio', 0.0)}"
+    )
+    
     return {
         "name": result["name"],
         "confidence": result.get("confidence", 0.0),
         "orientation": result.get("orientation", "unknown"),
+        "homography_angle_deg": angle_deg,
     }
 
 
