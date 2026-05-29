@@ -60,3 +60,26 @@ class RuntimeConfig:
             }
             for name, param in PARAMETERS.items()
         }
+
+
+class RuntimeConfigSession:
+    def __init__(self, config=None):
+        self.config = config or RuntimeConfig()
+        self.stable_snapshot = self.config.snapshot()
+        self.pending_changes = {}
+
+    def update(self, name, value):
+        self.config.update(name, value)
+        if PARAMETERS[name].live_safe:
+            self.pending_changes.pop(name, None)
+            return True
+        self.pending_changes[name] = self.config.values[name]
+        return False
+
+    def rollback(self):
+        self.config.rollback(self.stable_snapshot)
+        self.pending_changes.clear()
+
+    def commit_stable(self):
+        self.stable_snapshot = self.config.snapshot()
+        self.pending_changes.clear()

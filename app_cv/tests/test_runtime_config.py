@@ -1,6 +1,6 @@
 import unittest
 
-from tarotvision.runtime_config import RuntimeConfig, ParameterValidationError
+from tarotvision.runtime_config import RuntimeConfig, RuntimeConfigSession, ParameterValidationError
 
 
 class RuntimeConfigTest(unittest.TestCase):
@@ -33,6 +33,24 @@ class RuntimeConfigTest(unittest.TestCase):
 
         self.assertTrue(metadata["LOCK_DEAD_ZONE_POS"]["live_safe"])
         self.assertEqual(metadata["TRACKING_IOU_THRESHOLD"]["minimum"], 0.1)
+
+    def test_live_update_does_not_move_rollback_target(self):
+        session = RuntimeConfigSession()
+
+        session.update("LOCK_DEAD_ZONE_POS", 5.19)
+        session.rollback()
+
+        self.assertEqual(session.config.values["LOCK_DEAD_ZONE_POS"], 3.0)
+
+    def test_commit_stable_moves_rollback_target(self):
+        session = RuntimeConfigSession()
+        session.update("LOCK_DEAD_ZONE_POS", 4.0)
+        session.commit_stable()
+        session.update("LOCK_DEAD_ZONE_POS", 5.0)
+
+        session.rollback()
+
+        self.assertEqual(session.config.values["LOCK_DEAD_ZONE_POS"], 4.0)
 
 
 if __name__ == "__main__":

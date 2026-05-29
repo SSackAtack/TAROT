@@ -18,7 +18,7 @@ from tarotvision.audit_policy import should_reverify
 from tarotvision.table_state import TableState, PHASE_LOCKED, PHASE_NEEDS_REVERIFY
 from tarotvision.roi_map import filter_boxes_outside_occupied
 from tarotvision.contour_tracking import assign_boxes_to_cards
-from tarotvision.runtime_config import RuntimeConfig, PARAMETERS, ParameterValidationError
+from tarotvision.runtime_config import RuntimeConfigSession, ParameterValidationError
 from tarotvision.tuning_protocol import parse_control_message, ControlMessageError
 from tarotvision.profile_store import ProfileStore
 from tarotvision.camera_controls import probe_camera_control
@@ -76,9 +76,8 @@ current_status = {
 # Zestaw polaczonych klientow
 connected_clients = set()
 control_messages = []
-runtime_config = RuntimeConfig()
-stable_config_snapshot = runtime_config.snapshot()
-pending_config_changes = {}
+config_session = RuntimeConfigSession()
+runtime_config = config_session.config
 operator_warnings = []
 supported_camera_controls = {}
 calibration_state = {"state": "idle", "last_score": None}
@@ -108,7 +107,7 @@ def build_operator_snapshot():
         "active_profile": active_tuning_profile,
         "parameters": copy.deepcopy(runtime_config.values),
         "parameter_metadata": runtime_config.metadata(),
-        "pending_changes": copy.deepcopy(pending_config_changes),
+        "pending_changes": copy.deepcopy(config_session.pending_changes),
         "supported_camera_controls": copy.deepcopy(supported_camera_controls),
         "calibration": copy.deepcopy(calibration_state),
         "warnings": list(operator_warnings[-8:]),
@@ -139,30 +138,25 @@ def probe_camera_controls(capture):
 
 
 def handle_control_message(message, capture):
-    global stable_config_snapshot
     global supported_camera_controls
     global calibration_state
     global active_tuning_profile
 
     if message.type == "tuning_update":
         try:
-            runtime_config.update(message.param, message.value)
+            live_safe = config_session.update(message.param, message.value)
         except ParameterValidationError as exc:
             add_operator_warning(str(exc))
             return
 
-        if PARAMETERS[message.param].live_safe:
-            stable_config_snapshot = runtime_config.snapshot()
-            pending_config_changes.pop(message.param, None)
+        if live_safe:
             log_event(f"[OPERATOR] Zastosowano {message.param}={runtime_config.values[message.param]}")
         else:
-            pending_config_changes[message.param] = runtime_config.values[message.param]
             add_operator_warning(f"{message.param} wymaga kroku kalibracji/apply")
         return
 
     if message.type == "tuning_rollback":
-        runtime_config.rollback(stable_config_snapshot)
-        pending_config_changes.clear()
+        config_session.rollback()
         add_operator_warning("Przywrocono ostatni stabilny snapshot parametrów")
         return
 
@@ -176,8 +170,7 @@ def handle_control_message(message, capture):
         values = profile_store.load(message.name)
         for param_name, value in values.items():
             runtime_config.update(param_name, value)
-        stable_config_snapshot = runtime_config.snapshot()
-        pending_config_changes.clear()
+        config_session.commit_stable()
         active_tuning_profile = message.name
         add_operator_warning(f"Wczytano profil {message.name}")
         return
