@@ -213,6 +213,10 @@ def process_scanned_sheet(sheet_path, output_dir, args, start_index=0, custom_pr
 
     card_contours = sorted(card_contours, key=get_contour_precedence)
 
+    if is_back and len(card_contours) > 0:
+        # Wybieramy tylko jeden, największy kontur rewersu, aby uniknąć nadpisywania tego samego pliku
+        card_contours = [max(card_contours, key=cv2.contourArea)]
+
     saved_count = 0
     corner_radius = int(args.target_width * 0.07)
     alpha_mask = create_rounded_mask(args.target_width, args.target_height, corner_radius)
@@ -365,12 +369,16 @@ def run_interactive_assistant(args):
         deck_output_dir = os.path.join(args.output_dir, deck_name)
         os.makedirs(deck_output_dir, exist_ok=True)
         
-        total_cards_str = input("[2/2] Podaj calkowita ilosc kart w tej talii (np. 22 lub 78): ").strip()
-        try:
-            total_cards = int(total_cards_str)
-        except ValueError:
-            total_cards = 22
-            print(f" -> [INFO] Niepoprawna liczba. Ustawiono domyslnie: {total_cards} kart.")
+        if args.total_cards is not None:
+            total_cards = args.total_cards
+            print(f"[2/2] Calkowita ilosc kart w tej talii ustawiona z CLI: {total_cards}")
+        else:
+            total_cards_str = input("[2/2] Podaj calkowita ilosc kart w tej talii (np. 22 lub 78): ").strip()
+            try:
+                total_cards = int(total_cards_str)
+            except ValueError:
+                total_cards = 22
+                print(f" -> [INFO] Niepoprawna liczba. Ustawiono domyslnie: {total_cards} kart.")
             
         print(f"\n -> Rozpoczynamy skanowanie calej talii '{deck_name}' ({total_cards} kart).")
         print(f" -> Pliki beda zapisywane w dedykowanym folderze: {deck_output_dir}/{deck_name}_XX.{args.format}")
@@ -559,5 +567,8 @@ if __name__ == "__main__":
     for file, count in scan_stats.items():
         print(f" -> {file:<30} : Wykryto {count} kart")
     print("="*70)
-    print("[SUKCES] Masowa obróbka zakończona powodzeniem!")
+    if total_extracted == 0:
+        print("[OSTRZEŻENIE] Nie wycięto ani jednej karty! Sprawdź jasność tła oraz czy karty nie leżą poza obszarem skanowania.")
+    else:
+        print("[SUKCES] Masowa obróbka zakończona powodzeniem!")
     print("="*70)

@@ -43,18 +43,23 @@ W celu przetestowania wszystkich funkcji skryptu (argparse, automatyczne tło, f
   * Skrypt dokonał pełnej analizy bez fizycznego zapisu kart produkcyjnych na dysku. W rogach JPG zastosowano kolory autouzupełnienia tła. Brak ostrzeżeń OpenCV.
   * **Status:** `PASS`.
 
+### Scenariusz 4: Skanowanie rewersu (koszulki) karty w trybie interaktywnym
+* **Komenda/Akcja:** Krok automatyczny po pomyślnym zeskanowaniu awersów talii w asystencie (`--interactive`).
+* **Wynik:** Pomyślnie wywołano systemowe okno WIA, pobrano skan koszulki karty, wycięto największy kontur z zachowaniem euklidesowych proporcji i zapisano jako `{nazwa_talii}_back.{format}` w dedykowanym podkatalogu talii.
+* **Status:** `PASS` (potwierdzone fizycznie na Epson Perfection V39II).
+
 ---
 
-## Weryfikacja Integracji WIA i Kreatorów Bat (Status)
+## Weryfikacja Integracji WIA i Kreatorów Bat (Status Fizyczny)
 
-Ze względu na brak podłączonego fizycznego urządzenia skanera na developerskiej maszynie CI, bezpośrednie testy komunikacji sprzętowej mają status `NOT_RUN` (zgodnie ze standardami wdrożeniowymi AI). Poniżej opisano zaimplementowane scenariusze i ich statusy:
+Pomiary i testy na fizycznym sprzęcie zostały pomyślnie wykonane przez użytkownika na stacji roboczej z systemem Windows i skanerem **Epson Perfection V39II**:
 
-* **WIA direct scanner test (Komunikacja sprzętowa):** `NOT_RUN`
-  * *Oczekiwany rezultat:* Systemowe okienko WIA Windows poprawnie komunikuje się z Epson V39II, skanuje fizycznie karty i przekazuje tymczasowy plik JPEG do obróbki.
-* **obrob_skany.bat manual Windows test (Kreator wsadowy):** `NOT_RUN`
-  * *Oczekiwany rezultat:* Polski launcher wsadowy po wybraniu opcji 1 prawidłowo wywołuje asystenta w Pythonie i na koniec otwiera folder `scans_output` w Eksploratorze.
-* **install_dependencies.bat manual Windows test (Instalator paczek):** `NOT_RUN`
-  * *Oczekiwany rezultat:* Instalator CMD na Windowsie bezbłędnie instaluje paczki z `requirements.txt` (w tym `pywin32`) i aktualizuje pip.
+* **WIA direct scanner test (Komunikacja sprzętowa):** `PASS`
+  * *Rezultat:* Systemowe okienko WIA Windows poprawnie komunikuje się ze skanerem, wykonuje fizyczny skan i przekazuje plik tymczasowy do obróbki. Detekcja zniekształceń (rozciągania) kart została wyeliminowana za pomocą euklidesowych odległości wierzchołków.
+* **obrob_skany.bat manual Windows test (Kreator wsadowy):** `PASS`
+  * *Rezultat:* Polski launcher wsadowy po wybraniu opcji `1` pomyślnie wywołuje asystenta w Pythonie, wykonuje skan próbny/masowy, a na koniec otwiera wygenerowany podkatalog talii w Eksploratorze.
+* **install_dependencies.bat manual Windows test (Instalator paczek):** `PASS`
+  * *Rezultat:* Instalator CMD na Windowsie bezbłędnie instaluje paczki z `requirements.txt` (w tym `pywin32`) i aktualizuje środowisko.
 
 ---
 
@@ -122,6 +127,24 @@ KROK 3: Otwieranie katalogu z wycietymi kartami...
 Za chwile otworzy sie folder scans_output.
 Zobaczysz tam wyciete karty oraz obrazy debug_*.jpg z podgladem detekcji!
 ```
+
+---
+
+## Raport ze Skanowania Fizycznego (User Calibration Run)
+
+Poniższe dane dokumentują rzeczywiste, pomyślne uruchomienie na fizycznym skanerze wykonane przez użytkownika:
+
+* **Urządzenie:** Epson Perfection V39II
+* **Sterownik / Interfejs:** Windows WIA COM Interface (`win32com.client`)
+* **Uruchomiona komenda:**
+  ```powershell
+  python scripts/process_scans.py --interactive --format png --naming generic --debug-overlay
+  ```
+* **Krok wejściowy:** Fizyczne skanowanie 4 kart tarota ułożonych pionowo. Pokrywa skanera zamknięta.
+* **Format wejściowy (temporary):** WIA temporary JPEG (`debug_scan_wia_temp.1780161007.jpg` w `scans_output/`)
+* **Wykryte i przetworzone karty:** 4 karty, współczynnik downscalingu roboczego: 1600px.
+* **Format wyjściowy:** Bezstratny `PNG` z zaokrąglonymi rogami alfa w folderze `scans_output/` (`Test_00.png` do `Test_03.png`).
+* **Wynik:** Wszystkie 4 karty wycięto o wymiarach $600 \times 1032\text{ px}$. Proporcje są idealne, brak efektu rozciągnięcia ani skrzywienia. 
 
 ---
 
