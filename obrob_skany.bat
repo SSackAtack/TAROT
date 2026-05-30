@@ -34,6 +34,14 @@ echo =======================================================================
 echo      [1] ASYSTENT SKANOWANIA - Kreator masowego skanowania (WIA)
 echo =======================================================================
 echo.
+echo Wymagania: System Windows + sterownik skanera WIA + pywin32.
+echo.
+echo [UWAGA] Bezposrednie skanowanie WIA w systemie Windows wymusza tymczasowy
+echo format JPEG ze wzgledu na ograniczenia systemowych obiektow COM.
+echo Dla bezkompromisowej jakosci referencyjnej (Master Quality) kart,
+echo zalecamy skanowanie do bezstratnego formatu PNG/TIFF za pomoca
+echo oprogramowania od skanera i wybranie opcji [2] OBROB GOTOWE PLIKI.
+echo.
 echo Uruchamianie interaktywnego asystenta w Pythonie...
 python scripts/process_scans.py --interactive --format png --naming generic --debug-overlay
 

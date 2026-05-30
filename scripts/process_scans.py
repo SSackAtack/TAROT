@@ -94,6 +94,11 @@ def scan_image_via_wia():
         # Tworzymy systemowy obiekt dialogu skanowania WIA
         dialog = win32com.client.Dispatch("WIA.CommonDialog")
         
+        print("\n -> [WIA] Inicjalizacja sprzetowa skanera...")
+        print("    [UWAGA] Bezposrednie skanowanie WIA w systemie Windows wymusza tymczasowy format JPEG")
+        print("    ze wzgledu na ograniczenia systemowych obiektow COM. Dla najwyzszej, bezkompromisowej")
+        print("    jakosci referencyjnej (Master) zalecamy tradycyjny workflow: skanowanie do bezstratnego")
+        print("    formatu PNG / TIFF za pomoca oprogramowania skanera, a nastepnie obrobke z scans_input.")
         print(" -> Otwieranie systemowego kreatora skanowania Windows...")
         
         # Otwieramy systemowe okno dialogowe wyboru i skanowania obrazu

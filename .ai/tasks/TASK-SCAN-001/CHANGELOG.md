@@ -1,29 +1,49 @@
-# Changelog: TASK-SCAN-001 (Hardening)
+# Changelog: TASK-SCAN-001 (Hardening & WIA Integration)
 
-Wszystkie modyfikacje wprowadzone w ramach zadania **TASK-SCAN-001** w celu pełnego uodpornienia i parametryzacji skryptu masowej obróbki skanów kart tarota.
+Wszystkie modyfikacje wprowadzone w ramach zadania **TASK-SCAN-001** w celu pełnego uodpornienia, parametryzacji, integracji sprzętowej oraz automatyzacji masowego skanowania kart tarota.
 
 ---
 
 ## [MODIFY] `scripts/process_scans.py`
 
-* **Wdrożono pełną obsługę parametrów CLI (Linii komend) przy użyciu modułu `argparse`:**
-  * Dodano opcję `--background {dark,light,auto}` do sterowania typem tła (domyślnie `dark`).
-  * Dodano opcję `--format {png,jpg,webp}` pozwalającą zapisać pliki w bezstratnym PNG, zoptymalizowanym JPG lub WebP (domyślnie `webp`).
-  * Dodano opcję `--start-index {0,1}` do wyboru indeksu startowego numeracji (domyślnie `0`).
-  * Dodano opcje `--target-width` i `--target-height` do konfiguracji docelowego rozmiaru kart.
-  * Dodano opcję `--quality` (domyślnie `95`) regulującą jakość kompresji formatów JPG/WebP.
+* **Wdrożono sprzętową integrację ze skanerami (Windows WIA Acquisition):**
+  * Zintegrowano moduł `win32com.client` i systemowy interfejs COM `WIA.CommonDialog`.
+  * Dodano funkcję `scan_image_via_wia()`, wywołującą systemowy kreator skanowania Windows dla podłączonego skanera fizycznego.
+  * Dodano flagę CLI `--scan` automatycznie wpinającą świeżo zeskanowany obraz do precyzyjnego pipeline'u obróbki.
+  * Zaimplementowano odporność na błędy: przechwytywanie CancelError (anulowanie skanowania) oraz problemów z odłączonym sprzętem.
 
-* **Zaimplementowano automatyczną detekcję jasności tła (`--background auto`):**
-  * Dodano funkcję `detect_background_dark(img_gray)`, która pobiera próbki pikseli wzdłuż ramki zewnętrznej arkusza (szerokość 15 px) i oblicza ich medianę.
-  * Jeśli mediana jasności jest niska (< 100), tło klasyfikowane jest jako ciemne (np. czarna podkładka), w przeciwnym razie jako jasne (zamknięta biała pokrywa).
+* **Wdrożono Interaktywnego Asystenta Masowego Skanowania:**
+  * Dodano flagę CLI `--interactive` uruchamiającą polskiego asystenta krok po kroku w konsoli.
+  * Zaimplementowano pętlę masowego skanowania (arkusz po arkuszu) monitorującą całkowitą zadeklarowaną liczbę kart (`--total-cards`) i zliczającą postęp.
+  * Dodano dynamiczny przyrost indeksacji plików wyjściowych w formacie `{prefix}_{numer:02d}.png` (np. `tarot_marsylski_00.png` do `tarot_marsylski_21.png`).
+  * Zaimplementowano obsługę szybkiego Skanu Próbnego z prefiksem `Test_` w celach kalibracji jasności tła.
 
-* **Ulepszono generowanie zaokrąglonych rogów i rzuty typów:**
-  * Maska przezroczystości zaokrąglonych rogów jest aplikowana jako kanał alfa dla formatów PNG i WebP.
-  * Dla formatu JPG, który nie obsługuje kanału alfa, rogi są automatycznie wypełniane kolorem tła (czarnym dla ciemnego tła, białym dla jasnego tła) z użyciem `np.where`.
-  * Zaimplementowano rzutowanie typu na `uint8` za pomocą `.astype(np.uint8)` w operacjach na maskach JPG, co wyeliminowało ostrzeżenie OpenCV `depth image fallback to CV_8U`.
+* **Dodano ostrzeżenia o jakości Master (WIA JPEG vs PNG/TIFF):**
+  * Dodano czytelne komunikaty ostrzegawcze w konsoli: bezpośrednie skanowanie WIA w Windowsie wymusza kompresję JPEG z powodu ograniczeń systemowych COM.
+  * W celach zachowania bezkompromisowej jakości Master dla algorytmów CV zalecany jest tradycyjny workflow: skanowanie do bezstratnego PNG/TIFF w programie zewnętrznym skanera, a następnie masowa obróbka folderu `scans_input`.
 
-* **Wdrożono zaawansowane statystyki i raport końcowy:**
-  * Po przetworzeniu wszystkich plików skrypt wyświetla w konsoli premium tabelę ze szczegółowym podsumowaniem: łączna liczba arkuszy, liczba wyciętych kart, czas wykonania operacji oraz dokładne zliczenie kart dla każdego pliku wejściowego.
+* **Usprawniono obróbkę i kompatybilność konsoli:**
+  * Wdrożono detekcję konturów na obrazie roboczym z wycinaniem homograficznym w pełnej rozdzielczości DPI.
+  * Zaimplementowano Robust Corner Ordering (funkcja `order_points`).
+  * Dodano generowanie maski zaokrąglonych rogów i rzuty typów do `uint8` w OpenCV.
+  * Usunięto znaki Unicode (strzałki `➔`), zapobiegając błędom `UnicodeEncodeError` w terminalu Windows (kodowanie CP1250).
 
-* **Zapewniono kompatybilność kodowania znaków:**
-  * Usunięto znaki Unicode (strzałki `➔`) z komunikatów `print`, zastępując je standardowymi znakami ASCII `->` w celu całkowitego zapobieżenia błędom `UnicodeEncodeError` w terminalu Windows (kodowanie CP1250).
+---
+
+## [NEW] `scripts/generate_test_scan.py`
+* Utworzono generator syntetycznych obrazów testowych bezpośrednio w repozytorium, umożliwiający pomyślną reprodukcję testów ciemnego i jasnego tła przez innych agentów.
+
+---
+
+## [NEW] `obrob_skany.bat`
+* Utworzono w pełni zautomatyzowane centrum wsadowe (batch launcher) z polskim menu wyboru i CRLF zakończeniami linii, dające szybki dostęp do asystenta, obróbki i generatora testów.
+
+---
+
+## [MODIFY] `install_dependencies.bat`
+* Przebudowano instalator CMD na w 100% kompatybilną składnię `goto` i CRLF, dodając automatyczną instalację biblioteki `pywin32`.
+
+---
+
+## [MODIFY] `requirements.txt`
+* Dodano paczkę `pywin32` ograniczoną warunkiem `sys_platform=='win32'`, co stabilizuje instalację w środowiskach CI GitHub Actions.
