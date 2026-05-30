@@ -27,6 +27,8 @@ Wszystkie modyfikacje wprowadzone w ramach zadania **TASK-SCAN-001** w celu peł
   * Zaimplementowano Robust Corner Ordering (funkcja `order_points`).
   * Dodano generowanie maski zaokrąglonych rogów i rzuty typów do `uint8` w OpenCV.
   * Usunięto znaki Unicode (strzałki `➔`), zapobiegając błędom `UnicodeEncodeError` w terminalu Windows (kodowanie CP1250).
+  * **Poprawiono zniekształcenia (rozciąganie) kart:** Zastąpiono niestabilną funkcję OpenCV `cv2.minAreaRect` (która potrafi losowo zamieniać szerokość i wysokość w zależności od wersji i kąta nachylenia) precyzyjnym wyznaczaniem orientacji kart na podstawie odległości euklidesowych wierzchołków (`width_real` i `height_real`).
+  * **Wyeliminowano odbicie lustrzane (mirroring):** Skorygowano punkty docelowe `dst_pts` dla kart leżących poziomo (landscape), zachowując stały kierunek zgodny z ruchem wskazówek zegara.
 
 ---
 

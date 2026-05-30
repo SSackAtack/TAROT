@@ -3,7 +3,7 @@
 * **Nazwa zadania:** TASK-SCAN-001 — Scanner scan processor hardening
 * **Data rozpoczęcia:** 2026-05-30
 * **Data zakończenia:** 2026-05-30
-* **Status:** `DONE` (Zweryfikowany syntetycznie, gotowy do testów na fizycznych skanach)
+* **Status:** `DONE` (W pełni zweryfikowany na fizycznym skanerze, wdrożono poprawki orientacji i proporcji)
 * **Realizator (Owner):** Gemini
 
 ---

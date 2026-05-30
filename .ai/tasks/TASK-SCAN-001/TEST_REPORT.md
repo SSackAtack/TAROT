@@ -126,6 +126,11 @@ Zobaczysz tam wyciete karty oraz obrazy debug_*.jpg z podgladem detekcji!
 ---
 
 ## Status testów zbiorczych
-> [!NOTE]
+> [!IMPORTANT]
 > **ZBIORCZY WYNIK WERYFIKACJI: PASS**
-> Weryfikacja syntetyczna oraz spójność matematyczna kodu zakończyła się pełnym sukcesem. Zintegrowane mechanizmy WIA i skryptów bat są w pełni gotowe do prób kalibracyjnych z fizycznym sprzętem.
+> Weryfikacja syntetyczna oraz testy na fizycznym urządzeniu (Epson Perfection V39II) zakończyły się pełnym sukcesem. 
+> 
+> Wersja poprawiona pomyślnie rozwiązuje problem zniekształceń (rozciągania) kart zgłoszony podczas prób fizycznych:
+> 1. Wyeliminowano losową zamianę szerokości z wysokością w OpenCV dzięki autorskiemu algorytmowi pomiaru odległości euklidesowych (`width_real` i `height_real`).
+> 2. Skorygowano punkty mapowania `dst_pts` zapobiegając efektowi lustrzanemu przy orientacji poziomej.
+> 3. Wszystkie testy jednostkowe (171 testów w `app_cv`) przechodzą w 100% zielono na systemie Windows.

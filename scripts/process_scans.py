@@ -253,24 +253,30 @@ def process_scanned_sheet(sheet_path, output_dir, args, start_index=0, custom_pr
         box_orig = box / scale
         ordered_box = order_points(box_orig)
 
-        width = int(rect[1][0] / scale)
-        height = int(rect[1][1] / scale)
+        # Obliczamy rzeczywistą szerokość i wysokość boku na podstawie odległości euklidesowych.
+        # Zapobiega to błędowi OpenCV minAreaRect, które potrafi losowo zamieniać szerokość i wysokość miejscami.
+        width_real = (np.linalg.norm(ordered_box[0] - ordered_box[1]) + np.linalg.norm(ordered_box[3] - ordered_box[2])) / 2.0
+        height_real = (np.linalg.norm(ordered_box[0] - ordered_box[3]) + np.linalg.norm(ordered_box[1] - ordered_box[2])) / 2.0
 
-        if width > height:
+        if width_real > height_real:
+            # Karta leży poziomo (szerokość > wysokość).
+            # Mapujemy wierzchołki zgodnie z ruchem wskazówek zegara, aby uniknąć odbicia lustrzanego (mirroring)
             src_pts = ordered_box
             dst_pts = np.array([
-                [0, 0],
-                [0, args.target_height - 1],
-                [args.target_width - 1, args.target_height - 1],
-                [args.target_width - 1, 0]
+                [0, args.target_height - 1],                       # ordered_box[0] (TL) -> BL
+                [0, 0],                                             # ordered_box[1] (TR) -> TL
+                [args.target_width - 1, 0],                         # ordered_box[2] (BR) -> TR
+                [args.target_width - 1, args.target_height - 1]     # ordered_box[3] (BL) -> BR
             ], dtype="float32")
         else:
+            # Karta leży pionowo (szerokość <= wysokość).
+            # Klasyczne mapowanie 1-do-1 z zachowaniem proporcji
             src_pts = ordered_box
             dst_pts = np.array([
-                [0, 0],
-                [args.target_width - 1, 0],
-                [args.target_width - 1, args.target_height - 1],
-                [0, args.target_height - 1]
+                [0, 0],                                             # ordered_box[0] (TL) -> TL
+                [args.target_width - 1, 0],                         # ordered_box[1] (TR) -> TR
+                [args.target_width - 1, args.target_height - 1],     # ordered_box[2] (BR) -> BR
+                [0, args.target_height - 1]                         # ordered_box[3] (BL) -> BL
             ], dtype="float32")
 
         M = cv2.getPerspectiveTransform(src_pts, dst_pts)
