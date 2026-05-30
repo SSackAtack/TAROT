@@ -5,6 +5,19 @@
 
 ---
 
+## Required startup sequence for AI agents
+
+Before coding:
+
+1. Read `.ai/PROJECT_STATE.md`.
+2. Read `.ai/TASKS_INDEX.md`.
+3. Read the assigned `.ai/tasks/TASK-XXX/TASK.md`.
+4. Confirm scope and files allowed to change.
+5. Do not change files outside scope without owner approval.
+6. After work, update `STATE.md`, `CHANGELOG.md` and `TEST_REPORT.md`.
+
+---
+
 ## 1. Zespol
 
 Nad projektem TarotVision pracuje **zespol kilku modeli AI** koordynowanych przez czlowieka (Michal). Kazdy model moze w dowolnym momencie przejac kontynuacje prac rozpoczetych przez inny model.

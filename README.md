@@ -173,6 +173,20 @@ TAROT/
 └── start_tarotvision.bat # Launcher (Windows)
 ```
 
+## AI Workflow / Failover
+
+Źródłem prawdy dla pracy agentów jest katalog `.ai/`.
+
+Przed rozpoczęciem taska należy sprawdzić:
+
+1. `.ai/PROJECT_STATE.md`
+2. `.ai/TASKS_INDEX.md`
+3. właściwy katalog `.ai/tasks/TASK-XXX/`
+4. aktualny branch taska
+5. wyniki CI / test report
+
+Duże zmiany muszą być dzielone na małe taski obejmujące maksymalnie 1–3 pliki produkcyjne, chyba że Michał zatwierdzi Human Override.
+
 ## Dokumentacja
 
 - [Zasady wspolpracy zespolu AI](AGENTS.md) ⬅ **PRZECZYTAJ NAJPIERW**
