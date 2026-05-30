@@ -30,6 +30,25 @@ Pozostalo:
 - Gemini powinien wykonac Task 0 jako pierwszy: potwierdzic plan z Michalem albo oznaczyc decyzje wymagajace akceptacji.
 - Nastepnie zaczac od refaktoru bez zmiany zachowania, zgodnie z Task 1 i Task 2.
 
+## Session Status (2026-05-30, Michal + Gemini + Codex - doprecyzowanie konsoli Studio)
+
+Ustalenia potwierdzone przez Michala i Gemini:
+
+- Sciezka nagran jest konfigurowalna z poziomu Konsoli Operatora. Backend waliduje katalog i zapisuje fizyczne pliki poza narzucona sciezka repo, np. `D:\TarotRecordings`.
+- TarotVision Studio dostaje dedykowany launcher, np. `start_tarotvision_studio.bat`, oddzielony od codziennego trybu developerskiego.
+- Intro, outro i napisy sa renderowane na zywo w przegladarce i nagrywane w jednym pliku. FFmpeg zostaje opcja przyszlosciowa, nie wymaganiem MVP.
+- Frontend pozostaje lekki: na razie `npm run build` + testy/manual smoke. Vitest odkladamy do czasu, az liczba czystych funkcji JS uzasadni nowa zaleznosc.
+- YouTube uploader jest etapem 2. Najpierw perfekcyjne lokalne nagrywanie offline, audio mixer, frame stream i director mode.
+- Konsola Studio staje sie osobnym kamieniem milowym: nie tylko panel diagnostyczny, ale profesjonalne centrum przygotowania i nagrywania sesji.
+
+Artefakt wizualny:
+
+- Mockup referencyjny konsoli: `docs/visuals/tarotvision-studio-console-concept.png`.
+
+Weryfikacja:
+
+- Dodano obraz koncepcyjny i doprecyzowano plan. Nie zmieniano kodu runtime.
+
 ## Stan aktualny
 
 ### Fakty z repo
@@ -458,15 +477,265 @@ Gemini powinien utrzymac kompatybilnosc z obecnym `cards`, ale dodac wersjonowan
 
 Zasada: brak pola nie moze wysypac frontendu. Frontend ma normalizowac payload przez `messageNormalizer.js`.
 
+## Konsola TarotVision Studio
+
+### Cel konsoli
+
+Konsola ma byc praktycznym centrum pracy operatora podczas nagrywania. Nie jest landing page'em, edytorem wideo ani panelem administracyjnym. Ma pomagac w czterech rzeczach:
+
+1. Przygotowac sesje.
+2. Kontrolowac nagranie.
+3. Monitorowac CV/audio/zapis.
+4. Wymusic scene albo dodac marker, gdy automatyka nie wystarcza.
+
+### Tryby dostepu
+
+- `http://localhost:5173/` - czysty overlay/preview, bez paneli, do OBS albo podgladu.
+- `http://localhost:5173/?operator=1` - obecny panel strojenia developerskiego.
+- `http://localhost:5173/?studio=1` - docelowa Konsola Studio.
+
+Wazne: `?operator=1` i `?studio=1` moga wspoldzielic komponenty, ale nie powinny byc tym samym ekranem. Operator developerski sluzy do strojenia CV. Studio sluzy do realnego nagrania.
+
+### Referencja wizualna
+
+![TarotVision Studio Console Concept](../../visuals/tarotvision-studio-console-concept.png)
+
+Mockup pokazuje docelowy kierunek: duzy preview po lewej, prawa kolumna kontroli, transport nagrania na dole, status systemu na gorze. Nie nalezy kopiowac grafiki 1:1, ale nalezy zachowac hierarchie informacji.
+
+### Zasady UX
+
+1. **Preview jest najwazniejsze.**
+   Najwiekszy obszar ekranu to finalny kadr nagrania: stol, AR, PiP, safe guides, aktualna scena.
+
+2. **Nagrywanie ma miec zawsze widoczny stan.**
+   Record/stop, timer, format, destination path i stan zapisu sa zawsze widoczne w trybie Studio.
+
+3. **Diagnostyka jest kompaktowa.**
+   Pokazujemy tylko metryki, ktore operator moze wykorzystac w trakcie sesji: FPS, stan snapshotu, liczba kart, jakosc, poziomy audio, status zapisu.
+
+4. **Zaawansowane strojenie jest schowane.**
+   Progi CV, ORB, ArUco i kalibracja sa w sekcjach zwijanych albo w `?operator=1`. Studio nie moze przytlaczac ustawieniami developerskimi.
+
+5. **Manual override zawsze wygrywa z automatyka.**
+   Rezyser automatyczny jest pomocnikiem, nie wlascicielem sesji. Operator moze wymusic `Stol`, `WOW`, `PiP`, `Intro`, `Outro`.
+
+6. **Brak funkcji "na wszelki wypadek".**
+   Nie dodawac chatu, biblioteki projektow, edytora NLE, wielu timeline trackow, uploadu YouTube ani FFmpeg w pierwszym milestone konsoli.
+
+### Layout ekranu Studio
+
+```text
++--------------------------------------------------------------------------------+
+| Top status: TarotVision Studio | CV | Camera | WebSocket | Audio | Disk | REC   |
++--------------------------------------------------------+-----------------------+
+|                                                        | Recording             |
+|                                                        | Scene                 |
+|                  Final Preview Canvas                  | Audio                 |
+|             table + AR + PiP + safe guides             | CV Health             |
+|                                                        | Save Path             |
+|                                                        | Markers               |
++--------------------------------------------------------+-----------------------+
+| Transport: REC/STOP | marker | intro | outro | director auto | timeline markers |
++--------------------------------------------------------------------------------+
+```
+
+### Sekcje konsoli MVP
+
+#### Top status
+
+Widoczne zawsze:
+
+- `CV`: `OK`, `settling`, `analyzing`, `no camera`, `warning`.
+- `Camera`: indeks/nazwa kamery stolowej.
+- `WebSocket`: `OK` / reconnecting.
+- `Audio`: peak + device ready.
+- `Disk`: sciezka OK / blad walidacji.
+- `REC`: idle / armed / recording / stopping / error.
+
+#### Preview
+
+Musi pokazywac:
+
+- finalny kadr nagrywania,
+- bezpieczne marginesy kadru,
+- opcjonalny PiP,
+- aktualna scene director mode,
+- delikatny indicator recording, gdy trwa nagranie.
+
+Nie pokazywac stale:
+
+- dlugich instrukcji,
+- surowych logow,
+- wszystkich parametrow CV.
+
+#### Nagrywanie
+
+Kontrolki:
+
+- record,
+- stop,
+- timer,
+- format MIME,
+- chunk count albo status zapisu,
+- destination path status.
+
+Wymogi:
+
+- Start nagrania jest zablokowany, jezeli sciezka zapisu jest niepoprawna.
+- Start nagrania nie jest zablokowany przez brak mikrofonu; wtedy nagrywa video-only i pokazuje warning.
+- Zatrzymanie nagrania musi finalizowac metadata i timeline.
+
+#### Scena
+
+Segmented control:
+
+- `Stol`,
+- `WOW`,
+- `PiP`,
+- `Intro`,
+- `Outro`,
+- `Auto`.
+
+Wymogi:
+
+- Wybor reczny ustawia `director.override`.
+- `Auto` oddaje sterowanie director mode.
+- Aktualna scena musi byc widoczna w top status albo w sekcji Scena.
+
+#### Audio
+
+Minimalne kontrolki:
+
+- wybor mikrofonu,
+- gain `Mic`,
+- gain `BGM`,
+- gain `SFX`,
+- master gain,
+- mute dla kazdego zrodla,
+- proste metry poziomu.
+
+Nie dodawac w MVP:
+
+- wielopasmowego EQ,
+- reverb UI,
+- sidechain,
+- zapisanych presetow audio.
+
+#### CV Health
+
+Pokazywac:
+
+- FPS,
+- snapshot state,
+- stable ms,
+- liczba kart,
+- quality score,
+- ostatnie ostrzezenie.
+
+Nie pokazywac w MVP:
+
+- pelnych score'ow ORB,
+- listy match count dla kazdej karty,
+- raw contour diagnostics.
+
+#### Zapis
+
+Kontrolki:
+
+- pole sciezki zapisu,
+- przycisk wyboru folderu jezeli mozliwy w przegladarce,
+- przycisk `Sprawdz`,
+- status walidacji,
+- wolne miejsce jezeli backend moze je bezpiecznie ustalic.
+
+Backend:
+
+- ma odrzucac sciezki puste,
+- ma odrzucac pliki zamiast katalogow,
+- ma tworzyc katalog, jesli operator jawnie to zatwierdzi,
+- ma blokowac path traversal,
+- ma zapisywac profil lokalny w `logs/studio_profile.json` albo docelowym config store.
+
+#### Markery
+
+Kontrolki:
+
+- `Marker`,
+- `Intro`,
+- `Outro`,
+- opcjonalnie `Wazny moment`.
+
+Wymogi:
+
+- Marker dodaje wpis do timeline JSON.
+- Marker nie przerywa nagrywania.
+
+### Task Studio Console 1: Fundament konsoli
+
+- [ ] Dodaj tryb `?studio=1` niezalezny od `?operator=1`.
+- [ ] Utworz `app_ar/src/studio/studioConsole.js`.
+- [ ] Utworz `app_ar/src/studio/studioState.js`.
+- [ ] Utworz layout: top status, preview, right sidebar, bottom transport.
+- [ ] Przenies tylko potrzebne elementy operatora; nie kopiuj calego panelu developerskiego.
+- [ ] `npm --prefix app_ar run build` musi przechodzic.
+
+### Task Studio Console 2: Sciezka zapisu
+
+- [ ] Backend: dodaj walidator sciezki katalogu nagran.
+- [ ] Frontend: dodaj pole sciezki i status walidacji.
+- [ ] Backend: dodaj control message `studio_set_recording_dir`.
+- [ ] Backend: dodaj response status w `studio.recording_dir_status`.
+- [ ] Testy backendu: poprawna sciezka, pusta sciezka, plik zamiast katalogu, path traversal, brak uprawnien.
+
+### Task Studio Console 3: Recording controls
+
+- [ ] Dodaj UI record/stop/timer/format.
+- [ ] Podlacz do `MediaRecorderController`.
+- [ ] Status rekordera trafia do `studio` w app state.
+- [ ] Brak poprawnej sciezki blokuje start nagrania docelowego do backendu.
+- [ ] Dla MVP A dopuszczalny jest download z przegladarki, ale UI juz ma pokazywac docelowa sciezke.
+
+### Task Studio Console 4: Audio section
+
+- [ ] Dodaj sekcje audio z `Mic`, `BGM`, `SFX`.
+- [ ] Pokaz metry poziomu.
+- [ ] Mute i gain sa dostepne bez otwierania zaawansowanych ustawien.
+- [ ] Brak mikrofonu pokazuje warning, nie crash.
+
+### Task Studio Console 5: Scene/director controls
+
+- [ ] Dodaj segmented control scen.
+- [ ] Dodaj `Auto` director mode.
+- [ ] Manual override musi byc widoczny.
+- [ ] Timeline marker zapisuje zmiane sceny.
+
+### Task Studio Console 6: CV health minimal
+
+- [ ] Pokaz tylko najwazniejsze metryki CV.
+- [ ] Dodaj ostatnie ostrzezenie operatora.
+- [ ] Nie dodawaj pelnych logow do glownego widoku.
+
+### Task Studio Console 7: Dedicated launcher
+
+- [ ] Dodaj `start_tarotvision_studio.bat`.
+- [ ] Launcher startuje backend i frontend tak jak obecnie, ale otwiera/drukuje adres `http://localhost:5173/?studio=1`.
+- [ ] Logi zapisuje do tych samych katalogow runtime.
+- [ ] README opisuje launcher dopiero po weryfikacji.
+
 ## Taski
 
 ### Task 0: Potwierdzenie decyzji architektonicznych
 
-- [ ] Przeczytaj `AGENTS.md`, README i ten plan.
-- [ ] Potwierdz z Michalem dwie decyzje:
+- [x] Przeczytaj `AGENTS.md`, README i ten plan.
+- [x] Potwierdz z Michalem dwie decyzje:
   - Python pozostaje wlascicielem kamery stolowej.
-  - MVP rekordera uzywa browser `MediaRecorder`, a backend tylko zapisuje/udostepnia pliki i pozniej uploaduje na YouTube.
-- [ ] Jesli Michal odrzuci ktoras decyzje, zaktualizuj ten plan przed kodowaniem.
+  - MVP rekordera uzywa browser `MediaRecorder`, a backend zapisuje/udostepnia pliki i dopiero pozniej uploaduje na YouTube.
+- [x] Potwierdzono dodatkowo:
+  - konfigurowalna sciezka nagran z Konsoli Studio,
+  - dedykowany launcher Studio,
+  - intro/outro live w przegladarce,
+  - brak Vitest w MVP,
+  - YouTube jako etap 2.
 
 Kryterium sukcesu:
 
@@ -709,8 +978,8 @@ Nie implementuj:
 Natychmiastowy nastepny ruch dla Gemini:
 
 1. Przeczytac `AGENTS.md`, README, `future_integrated_recorder_spec.md` i ten plan.
-2. Dopisac `Session Status` z potwierdzeniem decyzji Task 0.
-3. Rozpoczac Task 1: `StatusStore` i `DiagnosticsWriter`, bez zmiany zachowania runtime.
+2. Rozpoczac Task 1: `StatusStore` i `DiagnosticsWriter`, bez zmiany zachowania runtime.
+3. Rownolegle potraktowac sekcje `Konsola TarotVision Studio` jako docelowy blueprint UI, ale nie zaczynac jej implementacji przed ustabilizowaniem granic `main.py` i `main.js`.
 
 ## Kryteria akceptacji calej architektury
 
@@ -743,9 +1012,7 @@ Natychmiastowy nastepny ruch dla Gemini:
 
 ## Decyzje wymagajace akceptacji Michala
 
-- Czy `recordings/` ma byc zapisywane w repo workspace, czy w osobnym katalogu uzytkownika.
-- Czy MVP studia ma byc tylko lokalnym narzedziem developerskim, czy od razu ma miec tryb "produkcyjny" z osobnym launcherem.
-- Czy dodajemy FFmpeg jako opcjonalny etap montazowy.
-- Czy dodajemy framework testowy dla frontendu, np. Vitest.
-- Czy YouTube upload ma byc dostepny w pierwszym wydaniu studia, czy po stabilizacji nagrywania.
-
+- Czy `recordings/` ma miec domyslna wartosc startowa, zanim operator wybierze wlasna sciezke.
+- Czy wybor katalogu ma uzywac natywnego File System Access API w przegladarce, czy zwyklego pola tekstowego + walidacji backendu. Uwaga: File System Access API nie jest rowno wspierane we wszystkich przegladarkach.
+- Czy Studio ma miec osobny adres docelowy `?studio=1`, czy pozniej osobna trase Vite, np. `/studio`.
+- Czy dodajemy FFmpeg jako opcjonalny etap montazowy po stabilizacji nagrywania lokalnego.
