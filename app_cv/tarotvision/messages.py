@@ -32,6 +32,10 @@ def build_status_payload(cards, metrics=None, warnings=None,
         dict ready for JSON serialization.
     """
     studio_dict = copy.deepcopy(studio) if studio is not None else {}
+    if "director_mode" not in studio_dict:
+        studio_dict["director_mode"] = "manual"
+    if "director_scene" not in studio_dict:
+        studio_dict["director_scene"] = "table"
     if "audio" not in studio_dict:
         studio_dict["audio"] = {
             "channels": {

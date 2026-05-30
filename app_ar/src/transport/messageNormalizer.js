@@ -44,6 +44,7 @@ export function normalizeStatusPayload(rawPayload) {
         dropped_frames: 0,
         audio_peak_db: null,
         director_scene: 'table',
+        director_mode: 'manual',
         ...payload.studio
     }
 
@@ -101,6 +102,7 @@ export function createDefaultPayload() {
             dropped_frames: 0,
             audio_peak_db: null,
             director_scene: 'table',
+            director_mode: 'manual',
             audio: {
                 channels: {
                     mic: { volume: 1.0, muted: false },

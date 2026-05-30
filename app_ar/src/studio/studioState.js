@@ -2,7 +2,8 @@ import { appState } from '../core/appState'
 
 export const studioState = {
     // Lokalne ustawienia konsoli studio
-    activeScene: 'table', // table, wow, portrait_pip, title_card, auto
+    activeScene: 'table', // table, wow, portrait_pip, title_card
+    directorMode: 'manual', // manual, auto
     micVolume: parseFloat(localStorage.getItem('studio_micVolume') || '1.0'),
     bgmVolume: parseFloat(localStorage.getItem('studio_bgmVolume') || '0.5'),
     sfxVolume: parseFloat(localStorage.getItem('studio_sfxVolume') || '0.8'),
@@ -39,6 +40,7 @@ export function updateStudioStateFromPayload(studioPayload) {
     studioState.droppedFrames = studioPayload.dropped_frames || 0
     studioState.audioPeakDb = studioPayload.audio_peak_db !== undefined ? studioPayload.audio_peak_db : null
     studioState.activeScene = studioPayload.director_scene || 'table'
+    studioState.directorMode = studioPayload.director_mode || 'manual'
 
     if (studioPayload.audio && studioPayload.audio.channels) {
         const channels = ['mic', 'bgm', 'sfx', 'master']

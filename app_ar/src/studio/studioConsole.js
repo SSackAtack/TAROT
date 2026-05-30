@@ -3,11 +3,14 @@ import { studioState, updateStudioStateFromPayload, saveStudioVolumeSettings } f
 import { sendControlMessage } from '../transport/wsClient'
 import { startStudioRecording, stopStudioRecording } from './mediaRecorderController'
 import { startStudioMicrophone, updateAudioMixerValues } from './audioMixer'
+import { addTimelineMarker, formatMsToTime } from './timeline'
+import { processDirectorDecision } from './director'
 
 // Globalne referencje do elementów DOM konsoli
 let sidebarEl = null
 let topbarEl = null
 let bottombarEl = null
+let previousCards = []
 
 export function createStudioConsole() {
     if (!appState.studioMode) return
@@ -116,7 +119,7 @@ export function createStudioConsole() {
                 <button class="studio-scene-btn" data-scene="title_card" disabled title="Intro/Outro niedostępne w tej wersji">
                     <span class="icon">🎬</span><span>Intro/Outro</span>
                 </button>
-                <button class="studio-scene-btn" data-scene="auto" style="grid-column: 1 / -1; margin-top: 4px;" disabled title="Automatyczny reżyser niedostępny w tej wersji">
+                <button class="studio-scene-btn" data-scene="auto" id="btn-studio-auto" style="grid-column: 1 / -1; margin-top: 4px;">
                     <span class="icon">🤖</span><span>Automatyczny Reżyser (Auto)</span>
                 </button>
             </div>
@@ -198,10 +201,22 @@ export function createStudioConsole() {
                 <span class="indicator-rec" style="display:none;"></span>
                 <span>ARM RECORDING</span>
             </button>
-            <button class="studio-btn-transport" id="btn-studio-marker" disabled title="Dodawanie markerów niedostępne w tej wersji">
-                <span>➕</span><span>ADD TIMELINE MARKER</span>
+            <button class="studio-btn-transport" id="btn-studio-marker" disabled title="Wymagane aktywne nagrywanie">
+                <span>➕</span><span>ADD MARKER</span>
             </button>
         </div>
+        
+        <div class="studio-timeline-box" style="flex: 1; margin: 0 24px; padding: 6px 12px; background: rgba(15, 23, 42, 0.4); border: 1px solid rgba(139, 92, 246, 0.2); border-radius: 6px; display: flex; flex-direction: column; justify-content: center; gap: 6px; min-width: 250px;">
+            <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 500; color: #a78bfa; letter-spacing: 0.5px;">
+                <span>STUDIO TIMELINE TRACKER</span>
+                <span id="studio-timeline-counter" style="color: #94a3b8;">0 markers</span>
+            </div>
+            <div class="studio-timeline-track" id="studio-timeline-track" style="height: 8px; background: rgba(30, 41, 59, 0.8); border-radius: 4px; position: relative; overflow: visible; border: 1px solid rgba(255,255,255,0.05);">
+                <div class="studio-timeline-playhead" id="studio-timeline-playhead" style="position: absolute; left: 0%; top: -2px; width: 4px; height: 12px; background: #ffd700; border-radius: 2px; transition: left 0.1s linear; display: none;"></div>
+            </div>
+            <div id="studio-timeline-latest-marker" style="font-size: 10px; color: rgba(255,255,255,0.4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; font-family: monospace;">Timeline idle</div>
+        </div>
+
         <div class="studio-transport-group">
             <button class="studio-btn-transport" id="btn-studio-intro" disabled title="Odtwarzanie intro niedostępne w tej wersji">
                 <span>🎬</span><span>PLAY INTRO</span>
@@ -247,31 +262,50 @@ function initStudioConsoleEvents() {
         })
     }
 
-    // 2. Zmiana Scen Reżysera (Tylko sceny stołowe i WOW są aktywne lokalnie)
+    // 2. Zmiana Scen Reżysera i trybu Auto/Manual
     const sceneButtons = sidebarEl.querySelectorAll('.studio-scene-btn')
     sceneButtons.forEach(btn => {
         if (btn.disabled) return
         btn.addEventListener('click', () => {
-            sceneButtons.forEach(b => b.classList.remove('studio-scene-btn--active'))
-            btn.classList.add('studio-scene-btn--active')
-            
             const scene = btn.getAttribute('data-scene')
-            studioState.activeScene = scene
+            
+            if (scene === 'auto') {
+                // Włączenie trybu automatycznego
+                sendControlMessage({
+                    type: "studio_set_director_mode",
+                    mode: "auto"
+                })
+            } else {
+                // Wyłączenie trybu automatycznego (nadpisanie ręczne)
+                if (studioState.directorMode === 'auto') {
+                    sendControlMessage({
+                        type: "studio_set_director_mode",
+                        mode: "manual"
+                    })
+                }
+                
+                studioState.activeScene = scene
+                
+                // Specjalna interakcja: Jeśli kliknięto WOW, włączamy WOW mode we frontendzie
+                if (scene === 'wow') {
+                    appState.wowMode = true
+                    document.body.classList.add('wow-mode-active')
+                } else if (scene === 'table') {
+                    appState.wowMode = false
+                    document.body.classList.remove('wow-mode-active')
+                }
+                
+                // Dodajemy marker zmiany sceny
+                if (studioState.recordingState === 'recording') {
+                    addTimelineMarker('scene_changed', { scene: scene, mode: 'manual' })
+                }
 
-            // Specjalna interakcja: Jeśli kliknięto WOW, włączamy WOW mode we frontendzie
-            if (scene === 'wow') {
-                appState.wowMode = true
-                document.body.classList.add('wow-mode-active')
-            } else if (scene === 'table') {
-                appState.wowMode = false
-                document.body.classList.remove('wow-mode-active')
+                // Wysyłamy zmianę sceny na backend
+                sendControlMessage({
+                    type: "studio_set_director_scene",
+                    scene: scene
+                })
             }
-
-            // Wysyłamy wiadomość reżysera na backend (kontrakt)
-            sendControlMessage({
-                type: "studio_set_director_scene",
-                scene: scene
-            })
         })
     })
 
@@ -308,6 +342,63 @@ function initStudioConsoleEvents() {
         }
     })
 
+    // 3b. Obsługa przycisku markera ręcznego
+    const markerBtn = bottombarEl ? bottombarEl.querySelector('#btn-studio-marker') : null
+    if (markerBtn) {
+        markerBtn.addEventListener('click', () => {
+            if (studioState.recordingState === 'recording') {
+                addTimelineMarker('operator_marker')
+            }
+        })
+    }
+
+    // 3c. Dynamiczne nasłuchiwanie i rysowanie osi czasu
+    window.addEventListener('studio-timeline-update', (e) => {
+        const { marker, markers } = e.detail
+        const counter = bottombarEl ? bottombarEl.querySelector('#studio-timeline-counter') : null
+        const latestLabel = bottombarEl ? bottombarEl.querySelector('#studio-timeline-latest-marker') : null
+        const track = bottombarEl ? bottombarEl.querySelector('#studio-timeline-track') : null
+        
+        if (counter) {
+            counter.textContent = `${markers.length} markers`
+        }
+        
+        if (latestLabel) {
+            latestLabel.textContent = `Latest: [${formatMsToTime(marker.timestamp_ms)}] ${marker.type.toUpperCase()}${marker.scene ? ' -> ' + marker.scene.toUpperCase() : ''}`
+        }
+        
+        if (track) {
+            if (marker.type === 'recording_started') {
+                // Czyścimy stare kropki przy nowym nagraniu
+                track.querySelectorAll('.studio-timeline-dot').forEach(el => el.remove())
+            }
+            
+            if (marker.type !== 'recording_stopped') {
+                const maxDuration = Math.max(30000, studioState.elapsedMs)
+                const pct = (marker.timestamp_ms / maxDuration) * 100
+                
+                const dot = document.createElement('div')
+                dot.className = 'studio-timeline-dot'
+                dot.style.position = 'absolute'
+                dot.style.left = `${Math.min(99, pct)}%`
+                dot.style.top = '1px'
+                dot.style.width = '6px'
+                dot.style.height = '6px'
+                dot.style.borderRadius = '50%'
+                
+                if (marker.type === 'recording_started') dot.style.background = '#10b981'
+                else if (marker.type === 'scene_changed') dot.style.background = '#8b5cf6'
+                else if (marker.type === 'card_revealed') dot.style.background = '#ffd700'
+                else if (marker.type === 'operator_marker') dot.style.background = '#ef4444'
+                else dot.style.background = '#ffffff'
+                
+                dot.style.boxShadow = '0 0 6px rgba(255,255,255,0.8)'
+                dot.title = `[${formatMsToTime(marker.timestamp_ms)}] ${marker.type}`
+                track.appendChild(dot)
+            }
+        }
+    })
+
     // 4. Obsługa przycisku nagrywania (ARM RECORDING / STOP RECORDING)
     const recBtn = bottombarEl ? bottombarEl.querySelector('#btn-studio-rec') : null
     if (recBtn) {
@@ -339,6 +430,61 @@ export function updateStudioConsole(data) {
 
     // 1. Zsynchronizuj status studia z payloadu
     updateStudioStateFromPayload(data.studio)
+
+    const isRecording = studioState.recordingState === 'recording'
+
+    // Zdarzenie card_revealed przy nagrywaniu
+    if (isRecording) {
+        const currentCards = data.cards || []
+        const currentCardNames = currentCards.map(c => c.name || c).sort().join(',')
+        const prevCardNames = previousCards.map(c => c.name || c).sort().join(',')
+        
+        if (currentCardNames !== prevCardNames && currentCards.length > previousCards.length) {
+            // Dodano kartę - zarejestruj marker na osi czasu
+            const newCards = currentCards.filter(c => !previousCards.some(pc => (pc.name || pc) === (c.name || c)))
+            newCards.forEach(c => {
+                addTimelineMarker('card_revealed', { card: c.name || c })
+            })
+        }
+    }
+    previousCards = data.cards || []
+
+    // Decyzje automatycznego reżysera
+    if (studioState.directorMode === 'auto') {
+        processDirectorDecision(data)
+    }
+
+    // Synchronizacja wizualna Segmented Control (przyciski scen i auto)
+    const sceneButtons = sidebarEl.querySelectorAll('.studio-scene-btn')
+    sceneButtons.forEach(btn => {
+        const scene = btn.getAttribute('data-scene')
+        
+        if (studioState.directorMode === 'auto') {
+            if (scene === 'auto') {
+                btn.classList.add('studio-scene-btn--active')
+            } else {
+                btn.classList.remove('studio-scene-btn--active')
+                // Jeśli to scena wybrana aktualnie przez automat, nadajemy specjalną ramkę
+                if (scene === studioState.activeScene) {
+                    btn.classList.add('studio-scene-btn--auto-active')
+                } else {
+                    btn.classList.remove('studio-scene-btn--auto-active')
+                }
+            }
+        } else {
+            // Tryb manualny
+            if (scene === 'auto') {
+                btn.classList.remove('studio-scene-btn--active')
+            } else {
+                btn.classList.remove('studio-scene-btn--auto-active')
+                if (scene === studioState.activeScene) {
+                    btn.classList.add('studio-scene-btn--active')
+                } else {
+                    btn.classList.remove('studio-scene-btn--active')
+                }
+            }
+        }
+    })
 
     // 1b. Synchronizacja suwaków i wyciszeń Miksera Audio z WebSocketu
     const audioChannels = ['mic', 'bgm', 'sfx', 'master']
@@ -397,7 +543,6 @@ export function updateStudioConsole(data) {
     }
 
     const recInd = topbarEl.querySelector('#indicator-rec')
-    const isRecording = studioState.recordingState === 'recording'
     if (recInd) {
         recInd.classList.toggle('studio-indicator--rec', isRecording)
         recInd.classList.toggle('studio-indicator--active', isRecording)
@@ -438,6 +583,39 @@ export function updateStudioConsole(data) {
                 recBtn.classList.remove('studio-btn-transport--stopping')
                 if (recTextSpan) recTextSpan.textContent = 'START RECORDING'
                 if (recIndicator) recIndicator.style.display = 'none'
+            }
+        }
+    }
+
+    // Aktualizacja statusu przycisku markera i playheadu osi czasu
+    const markerBtn = bottombarEl ? bottombarEl.querySelector('#btn-studio-marker') : null
+    const playhead = bottombarEl ? bottombarEl.querySelector('#studio-timeline-playhead') : null
+    
+    if (markerBtn) {
+        if (isRecording) {
+            markerBtn.removeAttribute('disabled')
+            markerBtn.removeAttribute('title')
+        } else {
+            markerBtn.setAttribute('disabled', 'true')
+            markerBtn.setAttribute('title', 'Wymagane aktywne nagrywanie')
+        }
+    }
+    
+    if (playhead) {
+        if (isRecording) {
+            playhead.style.display = 'block'
+            const maxDuration = Math.max(30000, studioState.elapsedMs)
+            const pct = (studioState.elapsedMs / maxDuration) * 100
+            playhead.style.left = `${Math.min(99.5, pct)}%`
+        } else {
+            playhead.style.display = 'none'
+            const counter = bottombarEl ? bottombarEl.querySelector('#studio-timeline-counter') : null
+            const latestLabel = bottombarEl ? bottombarEl.querySelector('#studio-timeline-latest-marker') : null
+            if (counter && studioState.recordingState === 'idle') {
+                counter.textContent = '0 markers'
+            }
+            if (latestLabel && studioState.recordingState === 'idle') {
+                latestLabel.textContent = 'Timeline idle'
             }
         }
     }

@@ -132,6 +132,39 @@ class TuningProtocolTest(unittest.TestCase):
         )
         self.assertIsNone(message_null.peak_db)
 
+    def test_parses_studio_set_director_mode(self):
+        message = parse_control_message(
+            '{"type": "studio_set_director_mode", "mode": "auto"}'
+        )
+        self.assertEqual(message.type, "studio_set_director_mode")
+        self.assertEqual(message.mode, "auto")
+
+        message_manual = parse_control_message(
+            '{"type": "studio_set_director_mode", "mode": "manual"}'
+        )
+        self.assertEqual(message_manual.mode, "manual")
+
+    def test_rejects_studio_set_director_mode_invalid(self):
+        with self.assertRaises(ControlMessageError):
+            parse_control_message('{"type": "studio_set_director_mode", "mode": "invalid"}')
+        with self.assertRaises(ControlMessageError):
+            parse_control_message('{"type": "studio_set_director_mode"}')
+
+    def test_parses_studio_save_timeline(self):
+        message = parse_control_message(
+            '{"type": "studio_save_timeline", "recording_id": "rec_123", "markers": [{"timestamp_ms": 0, "type": "recording_started"}]}'
+        )
+        self.assertEqual(message.type, "studio_save_timeline")
+        self.assertEqual(message.recording_id, "rec_123")
+        self.assertEqual(len(message.markers), 1)
+        self.assertEqual(message.markers[0]["type"], "recording_started")
+
+    def test_rejects_studio_save_timeline_invalid_format(self):
+        with self.assertRaises(ControlMessageError):
+            parse_control_message('{"type": "studio_save_timeline", "recording_id": "rec_123", "markers": "not-a-list"}')
+        with self.assertRaises(ControlMessageError):
+            parse_control_message('{"type": "studio_save_timeline", "markers": []}')
+
 
 if __name__ == "__main__":
     unittest.main()

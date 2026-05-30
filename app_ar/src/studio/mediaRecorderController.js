@@ -2,6 +2,7 @@ import { studioState } from './studioState'
 import { sendControlMessage } from '../transport/wsClient'
 import { renderer } from '../renderer/arRenderer'
 import { getStudioAudioTrack, playSyntheticSFX } from './audioMixer'
+import { initTimeline, finalizeTimeline, downloadTimelineFile } from './timeline'
 
 let mediaRecorder = null
 let recordedChunks = []
@@ -96,6 +97,9 @@ export async function startStudioRecording() {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
     const recordingId = `rec_${timestamp}`
 
+    // Inicjalizacja osi czasu
+    initTimeline()
+
     // Ustawienie lokalnego stanu nagrywania
     studioState.recordingState = 'recording'
     studioState.recordingId = recordingId
@@ -162,6 +166,13 @@ export function stopStudioRecording() {
 function finalizeRecording() {
     console.log('Finalizing recording...')
     
+    // Zakończenie i eksport timeline
+    const recId = studioState.recordingId
+    const markers = finalizeTimeline()
+    if (markers && markers.length > 0) {
+        downloadTimelineFile(recId, markers)
+    }
+
     if (recordedChunks.length === 0) {
         console.error('No recorded chunks available')
         studioState.recordingState = 'error'
@@ -172,7 +183,7 @@ function finalizeRecording() {
     const blob = new Blob(recordedChunks, { type: mimeType })
     const url = URL.createObjectURL(blob)
     
-    const filename = `${studioState.recordingId || 'tarotvision_recording'}.webm`
+    const filename = `${recId || 'tarotvision_recording'}.webm`
     
     // MVP A: Lokalny download pliku w przeglądarce
     const a = document.createElement('a')

@@ -256,6 +256,45 @@ def handle_control_message(message, camera_session):
         status_store.update_studio_state(audio_peak_db=message.peak_db)
         return
 
+    if message.type == "studio_set_director_mode":
+        status_store.update_studio_state(director_mode=message.mode)
+        add_operator_warning(f"Studio: Zmieniono tryb rezysera na: {message.mode}")
+        return
+
+    if message.type == "studio_save_timeline":
+        import os
+        current_status = status_store.get_status()
+        dir_status = current_status.get("studio", {}).get("recording_dir_status", {})
+        
+        base_dir = "./recordings"
+        if dir_status and dir_status.get("valid"):
+            base_dir = dir_status.get("path", "./recordings")
+            
+        rec_id = message.recording_id
+        safe_rec_id = "".join(c for c in rec_id if c.isalnum() or c in "-_")
+        if not safe_rec_id:
+            safe_rec_id = "unknown_rec"
+            
+        filename = f"{safe_rec_id}_timeline.json"
+        target_dir = os.path.abspath(base_dir)
+        target_path = os.path.abspath(os.path.join(target_dir, filename))
+        
+        if not target_path.startswith(target_dir):
+            add_operator_warning("Studio: Zablokowano probe zapisu timeline poza dozwolonym katalogiem")
+            return
+            
+        try:
+            os.makedirs(target_dir, exist_ok=True)
+            with open(target_path, "w", encoding="utf-8") as f:
+                json.dump({
+                    "recording_id": message.recording_id,
+                    "markers": message.markers
+                }, f, indent=2, ensure_ascii=False)
+            add_operator_warning(f"Studio: Zapisano timeline dla nagrania {message.recording_id} na serwerze")
+        except Exception as e:
+            add_operator_warning(f"Studio: Blad zapisu timeline na serwerze: {str(e)}")
+        return
+
 
 def drain_control_messages(camera_session):
     with status_lock:

@@ -14,6 +14,7 @@ class TestStatusStore(unittest.TestCase):
         self.assertFalse(status["detected"])
         self.assertEqual(status["cards"], [])
         self.assertEqual(status["studio"]["recording_state"], "idle")
+        self.assertEqual(status["studio"]["director_mode"], "manual")
         self.assertEqual(status["operator"]["calibration"]["state"], "idle")
 
     def test_deep_copy_safety(self):
@@ -82,7 +83,8 @@ class TestStatusStore(unittest.TestCase):
             dropped_frames=2,
             audio_peak_db=-3.5,
             director_scene="wow",
-            recording_dir_status=dir_status
+            recording_dir_status=dir_status,
+            director_mode="auto"
         )
         
         status = self.store.get_status()
@@ -93,6 +95,7 @@ class TestStatusStore(unittest.TestCase):
         self.assertEqual(studio["dropped_frames"], 2)
         self.assertEqual(studio["audio_peak_db"], -3.5)
         self.assertEqual(studio["director_scene"], "wow")
+        self.assertEqual(studio["director_mode"], "auto")
         self.assertEqual(studio["recording_dir_status"], dir_status)
 
     def test_update_studio_state_audio(self):

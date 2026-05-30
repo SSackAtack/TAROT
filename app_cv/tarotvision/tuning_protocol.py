@@ -22,6 +22,8 @@ class ControlMessage:
     volume: float | None = None
     muted: bool | None = None
     peak_db: float | None = None
+    mode: str | None = None
+    markers: list | None = None
 
 
 ALLOWED_TYPES = {
@@ -41,7 +43,10 @@ ALLOWED_TYPES = {
     "studio_set_audio_volume",
     "studio_set_audio_mute",
     "studio_update_audio_peak",
+    "studio_set_director_mode",
+    "studio_save_timeline",
 }
+
 
 
 def parse_control_message(raw_message):
@@ -131,4 +136,22 @@ def parse_control_message(raw_message):
                 raise ControlMessageError(f"Invalid peak_db format: {peak}") from exc
         return ControlMessage(type=message_type, peak_db=peak)
 
+    if message_type == "studio_set_director_mode":
+        if "mode" not in payload:
+            raise ControlMessageError(f"{message_type} requires mode")
+        mode = str(payload["mode"])
+        if mode not in {"manual", "auto"}:
+            raise ControlMessageError(f"Invalid director mode: {mode}")
+        return ControlMessage(type=message_type, mode=mode)
+
+    if message_type == "studio_save_timeline":
+        if "recording_id" not in payload or "markers" not in payload:
+            raise ControlMessageError(f"{message_type} requires recording_id and markers")
+        rec_id = str(payload["recording_id"])
+        markers = payload["markers"]
+        if not isinstance(markers, list):
+            raise ControlMessageError("markers must be a list")
+        return ControlMessage(type=message_type, recording_id=rec_id, markers=markers)
+
     return ControlMessage(type=message_type)
+
