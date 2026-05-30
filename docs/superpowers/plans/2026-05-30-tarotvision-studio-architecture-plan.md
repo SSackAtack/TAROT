@@ -6,7 +6,7 @@ Ten dokument jest planem wykonawczym dla Gemini. Celem nie jest jednorazowe dopi
 
 Najwazniejsza decyzja architektoniczna: najpierw odchudzamy entrypointy i stabilizujemy granice modulow, potem dopiero dokladamy studio. Nie wolno dopisywac rekordera, miksera audio ani YouTube uploadu bezposrednio do obecnego monolitu `app_cv/main.py` lub `app_ar/main.js`.
 
-## Session Status (2026-05-30, Gemini - Modularyzacja frontendu, Status Payload v1, Task 5b i przygotowanie pod Studio Console)
+## Session Status (2026-05-30, Gemini - Modularyzacja frontendu, Status Payload v1, Task 5b, Task Studio Console 1 i przygotowanie pod Studio Console 2)
 
 Wykonano:
 - Zrealizowano w całości **Task 4** (Modularyzacja monolitu frontendu React/Vite/Three.js do czystych modułów ES6 w `app_ar/src/`).
@@ -21,12 +21,16 @@ Wykonano:
 - Zrealizowano w całości **Task 5b** (Architektoniczna spójność protokołu).
 - Zintegrowano `StatusStore` z `build_status_payload` z messages.py w celu automatycznego egzekwowania schematu Payload v1 we wszystkich kluczach stanu.
 - Dodano test jednostkowy `test_get_status_returns_complete_v1_schema` weryfikujący obecność wszystkich sekcji top-level w payloadzie.
-- Zweryfikowano poprawność kompilacji: `npm run build` przebiega pomyślnie i kompiluje 17 modułów w 268ms.
+- Zrealizowano w całości **Task Studio Console 1: Fundament konsoli** (Implementacja trybu `?studio=1` w osobnym module frontendu `app_ar/src/studio/studioConsole.js`).
+- Utworzono layout: top status, preview overlay z safe guides, right sidebar z sekcjami: Nagrywanie, Reżyser/Sceny, Mikser Audio, CV Health, a na dole panel transportu.
+- Wstrzyknięto dynamiczne, zaawansowane style CSS dla trybu Studio oparte o Glassmorphism, zaawansowane ciemne tła z gradientami i mikroanimacje.
+- Wdrożono integrację z WebSocket (wsClient.js) i dynamiczne ładowanie panelu w bootstrap.js na podstawie stanu appState.studioMode.
+- Zweryfikowano poprawność kompilacji: `npm run build` przebiega pomyślnie i kompiluje 19 modułów w 274ms.
 - Zweryfikowano testy backendowe: Wszystkie **138 testów jednostkowych** Pythona przechodzi pomyślnie (0.316s).
 
 Pozostało:
-- Uzyskać review od Codexa (GREEN LIGHT) dla Task 5 (w tym poprawki 5b).
-- Przejść do kamienia milowego konsoli nagraniowej: **Task Studio Console 1: Fundament konsoli** w celu utworzenia trybu `?studio=1` w osobnym module frontendu `app_ar/src/studio/studioConsole.js`.
+- Uzyskać review od Codexa (GREEN LIGHT) dla Task Studio Console 1.
+- Przejść do **Task Studio Console 2: Ścieżka zapisu** w celu dodania backendowego walidatora katalogów nagrań na backendzie i kontrolki ścieżki w Konsoli Studio.
 
 ## Session Status (2026-05-30, Codex - projekt architektury dla Gemini)
 
@@ -746,12 +750,12 @@ Wymogi:
 
 ### Task Studio Console 1: Fundament konsoli
 
-- [ ] Dodaj tryb `?studio=1` niezalezny od `?operator=1`.
-- [ ] Utworz `app_ar/src/studio/studioConsole.js`.
-- [ ] Utworz `app_ar/src/studio/studioState.js`.
-- [ ] Utworz layout: top status, preview, right sidebar, bottom transport.
-- [ ] Przenies tylko potrzebne elementy operatora; nie kopiuj calego panelu developerskiego.
-- [ ] `npm --prefix app_ar run build` musi przechodzic.
+- [x] Dodaj tryb `?studio=1` niezalezny od `?operator=1`.
+- [x] Utworz `app_ar/src/studio/studioConsole.js`.
+- [x] Utworz `app_ar/src/studio/studioState.js`.
+- [x] Utworz layout: top status, preview, right sidebar, bottom transport.
+- [x] Przenies tylko potrzebne elementy operatora; nie kopiuj calego panelu developerskiego.
+- [x] `npm --prefix app_ar run build` musi przechodzic.
 
 ### Task Studio Console 2: Sciezka zapisu
 
