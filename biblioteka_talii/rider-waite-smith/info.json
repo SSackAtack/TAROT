@@ -3,118 +3,320 @@
   "deck_id": "rws_1909_wikimedia",
   "language": "en",
   "copyright": "public_domain",
-  "card_count": 22,
+  "card_count": 78,
   "source": "Wikimedia Commons (Pamela Colman Smith Commemorative Set)",
   "cards": [
     {
       "id": 0,
-      "file_base": "00_fool",
-      "wiki_url": "https://upload.wikimedia.org/wikipedia/commons/9/90/RWS_Tarot_00_Fool.jpg"
+      "file_base": "RWS_00"
     },
     {
       "id": 1,
-      "file_base": "01_magician",
-      "wiki_url": "https://upload.wikimedia.org/wikipedia/commons/d/de/RWS_Tarot_01_Magician.jpg"
+      "file_base": "RWS_01"
     },
     {
       "id": 2,
-      "file_base": "02_high_priestess",
-      "wiki_url": "https://upload.wikimedia.org/wikipedia/commons/8/88/RWS_Tarot_02_High_Priestess.jpg"
+      "file_base": "RWS_02"
     },
     {
       "id": 3,
-      "file_base": "03_empress",
-      "wiki_url": "https://upload.wikimedia.org/wikipedia/commons/d/d2/RWS_Tarot_03_Empress.jpg"
+      "file_base": "RWS_03"
     },
     {
       "id": 4,
-      "file_base": "04_emperor",
-      "wiki_url": "https://upload.wikimedia.org/wikipedia/commons/c/c3/RWS_Tarot_04_Emperor.jpg"
+      "file_base": "RWS_04"
     },
     {
       "id": 5,
-      "file_base": "05_hierophant",
-      "wiki_url": "https://upload.wikimedia.org/wikipedia/commons/8/8d/RWS_Tarot_05_Hierophant.jpg"
+      "file_base": "RWS_05"
     },
     {
       "id": 6,
-      "file_base": "06_lovers",
-      "wiki_url": "https://upload.wikimedia.org/wikipedia/commons/d/db/RWS_Tarot_06_Lovers.jpg"
+      "file_base": "RWS_06"
     },
     {
       "id": 7,
-      "file_base": "07_chariot",
-      "wiki_url": "https://upload.wikimedia.org/wikipedia/commons/9/9b/RWS_Tarot_07_Chariot.jpg"
+      "file_base": "RWS_07"
     },
     {
       "id": 8,
-      "file_base": "08_strength",
-      "wiki_url": "https://upload.wikimedia.org/wikipedia/commons/f/f5/RWS_Tarot_08_Strength.jpg"
+      "file_base": "RWS_08"
     },
     {
       "id": 9,
-      "file_base": "09_hermit",
-      "wiki_url": "https://upload.wikimedia.org/wikipedia/commons/4/4d/RWS_Tarot_09_Hermit.jpg"
+      "file_base": "RWS_09"
     },
     {
       "id": 10,
-      "file_base": "10_wheel_of_fortune",
-      "wiki_url": "https://upload.wikimedia.org/wikipedia/commons/3/3c/RWS_Tarot_10_Wheel_of_Fortune.jpg"
+      "file_base": "RWS_10"
     },
     {
       "id": 11,
-      "file_base": "11_justice",
-      "wiki_url": "https://upload.wikimedia.org/wikipedia/commons/e/e0/RWS_Tarot_11_Justice.jpg"
+      "file_base": "RWS_11"
     },
     {
       "id": 12,
-      "file_base": "12_hanged_man",
-      "wiki_url": "https://upload.wikimedia.org/wikipedia/commons/2/2b/RWS_Tarot_12_Hanged_Man.jpg"
+      "file_base": "RWS_12"
     },
     {
       "id": 13,
-      "file_base": "13_death",
-      "wiki_url": "https://upload.wikimedia.org/wikipedia/commons/d/d7/RWS_Tarot_13_Death.jpg"
+      "file_base": "RWS_13"
     },
     {
       "id": 14,
-      "file_base": "14_temperance",
-      "wiki_url": "https://upload.wikimedia.org/wikipedia/commons/f/f8/RWS_Tarot_14_Temperance.jpg"
+      "file_base": "RWS_14"
     },
     {
       "id": 15,
-      "file_base": "15_devil",
-      "wiki_url": "https://upload.wikimedia.org/wikipedia/commons/5/55/RWS_Tarot_15_Devil.jpg"
+      "file_base": "RWS_15"
     },
     {
       "id": 16,
-      "file_base": "16_tower",
-      "wiki_url": "https://upload.wikimedia.org/wikipedia/commons/5/53/RWS_Tarot_16_Tower.jpg"
+      "file_base": "RWS_16"
     },
     {
       "id": 17,
-      "file_base": "17_star",
-      "wiki_url": "https://upload.wikimedia.org/wikipedia/commons/d/db/RWS_Tarot_17_Star.jpg"
+      "file_base": "RWS_17"
     },
     {
       "id": 18,
-      "file_base": "18_moon",
-      "wiki_url": "https://upload.wikimedia.org/wikipedia/commons/7/7f/RWS_Tarot_18_Moon.jpg"
+      "file_base": "RWS_18"
     },
     {
       "id": 19,
-      "file_base": "19_sun",
-      "wiki_url": "https://upload.wikimedia.org/wikipedia/commons/1/17/RWS_Tarot_19_Sun.jpg"
+      "file_base": "RWS_19"
     },
     {
       "id": 20,
-      "file_base": "20_judgement",
-      "wiki_url": "https://upload.wikimedia.org/wikipedia/commons/d/dd/RWS_Tarot_20_Judgement.jpg"
+      "file_base": "RWS_20"
     },
     {
       "id": 21,
-      "file_base": "21_world",
-      "wiki_url": "https://upload.wikimedia.org/wikipedia/commons/f/ff/RWS_Tarot_21_World.jpg"
+      "file_base": "RWS_21"
+    },
+    {
+      "id": 22,
+      "file_base": "RWS_22"
+    },
+    {
+      "id": 23,
+      "file_base": "RWS_23"
+    },
+    {
+      "id": 24,
+      "file_base": "RWS_24"
+    },
+    {
+      "id": 25,
+      "file_base": "RWS_25"
+    },
+    {
+      "id": 26,
+      "file_base": "RWS_26"
+    },
+    {
+      "id": 27,
+      "file_base": "RWS_27"
+    },
+    {
+      "id": 28,
+      "file_base": "RWS_28"
+    },
+    {
+      "id": 29,
+      "file_base": "RWS_29"
+    },
+    {
+      "id": 30,
+      "file_base": "RWS_30"
+    },
+    {
+      "id": 31,
+      "file_base": "RWS_31"
+    },
+    {
+      "id": 32,
+      "file_base": "RWS_32"
+    },
+    {
+      "id": 33,
+      "file_base": "RWS_33"
+    },
+    {
+      "id": 34,
+      "file_base": "RWS_34"
+    },
+    {
+      "id": 35,
+      "file_base": "RWS_35"
+    },
+    {
+      "id": 36,
+      "file_base": "RWS_36"
+    },
+    {
+      "id": 37,
+      "file_base": "RWS_37"
+    },
+    {
+      "id": 38,
+      "file_base": "RWS_38"
+    },
+    {
+      "id": 39,
+      "file_base": "RWS_39"
+    },
+    {
+      "id": 40,
+      "file_base": "RWS_40"
+    },
+    {
+      "id": 41,
+      "file_base": "RWS_41"
+    },
+    {
+      "id": 42,
+      "file_base": "RWS_42"
+    },
+    {
+      "id": 43,
+      "file_base": "RWS_43"
+    },
+    {
+      "id": 44,
+      "file_base": "RWS_44"
+    },
+    {
+      "id": 45,
+      "file_base": "RWS_45"
+    },
+    {
+      "id": 46,
+      "file_base": "RWS_46"
+    },
+    {
+      "id": 47,
+      "file_base": "RWS_47"
+    },
+    {
+      "id": 48,
+      "file_base": "RWS_48"
+    },
+    {
+      "id": 49,
+      "file_base": "RWS_49"
+    },
+    {
+      "id": 50,
+      "file_base": "RWS_50"
+    },
+    {
+      "id": 51,
+      "file_base": "RWS_51"
+    },
+    {
+      "id": 52,
+      "file_base": "RWS_52"
+    },
+    {
+      "id": 53,
+      "file_base": "RWS_53"
+    },
+    {
+      "id": 54,
+      "file_base": "RWS_54"
+    },
+    {
+      "id": 55,
+      "file_base": "RWS_55"
+    },
+    {
+      "id": 56,
+      "file_base": "RWS_56"
+    },
+    {
+      "id": 57,
+      "file_base": "RWS_57"
+    },
+    {
+      "id": 58,
+      "file_base": "RWS_58"
+    },
+    {
+      "id": 59,
+      "file_base": "RWS_59"
+    },
+    {
+      "id": 60,
+      "file_base": "RWS_60"
+    },
+    {
+      "id": 61,
+      "file_base": "RWS_61"
+    },
+    {
+      "id": 62,
+      "file_base": "RWS_62"
+    },
+    {
+      "id": 63,
+      "file_base": "RWS_63"
+    },
+    {
+      "id": 64,
+      "file_base": "RWS_64"
+    },
+    {
+      "id": 65,
+      "file_base": "RWS_65"
+    },
+    {
+      "id": 66,
+      "file_base": "RWS_66"
+    },
+    {
+      "id": 67,
+      "file_base": "RWS_67"
+    },
+    {
+      "id": 68,
+      "file_base": "RWS_68"
+    },
+    {
+      "id": 69,
+      "file_base": "RWS_69"
+    },
+    {
+      "id": 70,
+      "file_base": "RWS_70"
+    },
+    {
+      "id": 71,
+      "file_base": "RWS_71"
+    },
+    {
+      "id": 72,
+      "file_base": "RWS_72"
+    },
+    {
+      "id": 73,
+      "file_base": "RWS_73"
+    },
+    {
+      "id": 74,
+      "file_base": "RWS_74"
+    },
+    {
+      "id": 75,
+      "file_base": "RWS_75"
+    },
+    {
+      "id": 76,
+      "file_base": "RWS_76"
+    },
+    {
+      "id": 77,
+      "file_base": "RWS_77"
     }
   ]
 }

@@ -1,17 +1,12 @@
 import * as THREE from 'three'
 import { appState } from '../core/appState'
 
-export const cardNames = [
-    "00_fool", "01_magician", "02_high_priestess", "03_empress", "04_emperor",
-    "05_hierophant", "06_lovers", "07_chariot", "08_strength", "09_hermit",
-    "10_wheel_of_fortune", "11_justice", "12_hanged_man", "13_death", "14_temperance",
-    "15_devil", "16_tower", "17_star", "18_moon", "19_sun", "20_judgement", "21_world"
-]
+export const cardNames = Array.from({ length: 78 }, (_, i) => `RWS_${String(i).padStart(2, '0')}`)
 
 const textureLoader = new THREE.TextureLoader()
 
 export function loadTextures(onComplete, handleCardDataFn) {
-    console.log("[PRELOAD] Rozpoczynam wczytywanie 22 tekstur tarota...")
+    console.log(`[PRELOAD] Rozpoczynam wczytywanie ${cardNames.length} tekstur tarota...`)
     
     const preloadPromises = cardNames.map((name) => {
         return new Promise((resolve) => {
