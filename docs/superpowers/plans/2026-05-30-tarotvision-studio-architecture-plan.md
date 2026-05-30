@@ -6,6 +6,28 @@ Ten dokument jest planem wykonawczym dla Gemini. Celem nie jest jednorazowe dopi
 
 Najwazniejsza decyzja architektoniczna: najpierw odchudzamy entrypointy i stabilizujemy granice modulow, potem dopiero dokladamy studio. Nie wolno dopisywac rekordera, miksera audio ani YouTube uploadu bezposrednio do obecnego monolitu `app_cv/main.py` lub `app_ar/main.js`.
 
+## Session Status (2026-05-30, Gemini - Automatyczny Reżyser, Oś Czasu, timeline JSON i Walidacja, Task Studio Console 5 & 5b-fix - Zakończony)
+
+Wykonano:
+- Zrealizowano w całości **Task Studio Console 5 (Scene/director controls)** oraz poprawkowy **Task 5b-fix (Walidacja scen i timeline)**.
+- **Segmented Control w UI:** Odblokowano przycisk automatycznego reżysera (`Auto`) i dynamicznie zsynchronizowano przyciski scen manualnych (`Stół` i `WOW Mode`). Dodano luksusowe podświetlenie ramki ze złotym pulsem (`.studio-scene-btn--auto-active` w `studio.css`) dla sceny wybranej automatycznie przez system, co wizualnie informuje operatora o działaniu automatu.
+- **Automatyczny Reżyser (`src/studio/director.js`):** Silnik automatycznego montażu kadrów przełącza system w **WOW Mode** po detekcji kart na stole, a po ich zniknięciu odczekuje **1.5-sekundową histerezę czasową** przed powrotem do klatki **Stół** (`table`), co zapobiega miganiu kadrów.
+- **Manual Override:** Ręczne kliknięcie dowolnej sceny przez operatora w ułamku sekundy dezaktywuje automat (tryb przełącza się na `manual`) i ustawia wybraną scenę.
+- **Oś Czasu i Znaczniki (`src/studio/timeline.js`):** Zaawansowany tracker markerów czasu rejestruje kluczowe zdarzenia sesji: start/stop nagrania, zmiany kadrów (wraz z informacją o trybie manual/auto), wykrycie nowych kart i ręczne markery wstrzykiwane przyciskiem **➕ ADD MARKER**.
+- **Wizualny Timeline Tracker w UI:** Dolny pasek HUD otrzymał animowany pasek trackeru z ruchomym Playheadem i dynamicznym wstrzykiwaniem kolorowych, świecących kropek markerów w czasie rzeczywistym.
+- **Dwuścieżkowy Zapis offline-first:** Przy stopie nagrywania przeglądarka automatycznie pobiera plik timeline `.json` o identycznej nazwie jak plik wideo `.webm`. Dodatkowo, markers są wysyłane komendą `studio_save_timeline` i bezpiecznie zapisywane przez backend w folderze sesji.
+- **Rygorystyczna Walidacja i Rygor Techniczny (YELLOW ➔ GREEN):**
+  - Wdrożono rygorystyczny parser i walidację nazw scen na dozwolone wartości (allowlista: `table`, `wow`, `portrait_pip`, `title_card`) w `tuning_protocol.py`.
+  - Wdrożono ścisły parser markerów w `tuning_protocol.py` (ograniczenie rozmiaru do 500, każdy marker jako dict, timestamp_ms jako int >= 0 z wykluczeniem boola, dozwolone typy zdarzeń i proste typy pól dodatkowych).
+  - Wzmocniono bezpieczeństwo zapisu timeline przed atakami path-traversal przy użyciu profesjonalnego wzorca `os.path.commonpath([target_dir, target_path]) == target_dir` w `main.py`.
+  - Przeniesiono inicjalizację `initTimeline()` po ustawieniu `studioState.recordingId` w `mediaRecorderController.js` dla pełnej spójności stanu.
+- Napisano 6 nowych, rygorystycznych testów negatywnych w `test_tuning_protocol.py` (walidacja typów parametrów, błędnych struktur i limitów rozmiaru), zwiększając liczbę testów jednostkowych do **171 testów w 100% PASS**.
+- Produkcyjny build frontendu Vite z 24 modułami kończy się pełnym sukcesem w 283ms.
+- Zmiany zostały zacommitowane i wypchnięte: commit `529deb4`.
+
+Pozostało:
+- Przejść do **Task Studio Console 6: CV health minimal** w celu wdrożenia ograniczonego, czytelnego widoku metryk CV oraz ostrzeżeń operatora.
+
 ## Session Status (2026-05-30, Gemini - Wdrożenie miksera Web Audio API, efektów SFX i mierników peak, Task Studio Console 4 - Zakończony)
 
 Wykonano:
