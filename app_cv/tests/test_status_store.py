@@ -95,6 +95,26 @@ class TestStatusStore(unittest.TestCase):
         self.assertEqual(studio["director_scene"], "wow")
         self.assertEqual(studio["recording_dir_status"], dir_status)
 
+    def test_update_studio_state_audio(self):
+        # Sprawdzamy stan domyślny
+        status = self.store.get_status()
+        self.assertEqual(status["studio"]["audio"]["channels"]["bgm"]["volume"], 0.5)
+        self.assertFalse(status["studio"]["audio"]["channels"]["mic"]["muted"])
+        self.assertIsNone(status["studio"]["audio"]["peak_db"])
+        
+        # Aktualizujemy parametry audio
+        self.store.update_studio_state(
+            audio_channels={"bgm": {"volume": 0.35}, "mic": {"muted": True}},
+            audio_peak_db=-18.2
+        )
+        
+        updated_status = self.store.get_status()
+        studio = updated_status["studio"]
+        self.assertEqual(studio["audio"]["channels"]["bgm"]["volume"], 0.35)
+        self.assertTrue(studio["audio"]["channels"]["mic"]["muted"])
+        self.assertEqual(studio["audio"]["peak_db"], -18.2)
+        self.assertEqual(studio["audio_peak_db"], -18.2) # kompatybilność wsteczna
+
     def test_partial_studio_update(self):
         # Najpierw ustawiamy pełny stan
         self.store.update_studio_state(recording_state="recording", recording_id="rec_123")

@@ -39,4 +39,17 @@ export function updateStudioStateFromPayload(studioPayload) {
     studioState.droppedFrames = studioPayload.dropped_frames || 0
     studioState.audioPeakDb = studioPayload.audio_peak_db !== undefined ? studioPayload.audio_peak_db : null
     studioState.activeScene = studioPayload.director_scene || 'table'
+
+    if (studioPayload.audio && studioPayload.audio.channels) {
+        const channels = ['mic', 'bgm', 'sfx', 'master']
+        channels.forEach(ch => {
+            if (studioPayload.audio.channels[ch]) {
+                studioState[`${ch}Volume`] = studioPayload.audio.channels[ch].volume
+                studioState[`${ch}Muted`] = studioPayload.audio.channels[ch].muted
+            }
+        })
+        if (studioPayload.audio.peak_db !== undefined) {
+            studioState.audioPeakDb = studioPayload.audio.peak_db
+        }
+    }
 }

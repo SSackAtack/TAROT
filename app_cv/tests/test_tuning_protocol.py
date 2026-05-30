@@ -89,6 +89,49 @@ class TuningProtocolTest(unittest.TestCase):
         with self.assertRaises(ControlMessageError):
             parse_control_message('{"type": "studio_set_director_scene"}')
 
+    def test_parses_studio_set_audio_volume(self):
+        message = parse_control_message(
+            '{"type": "studio_set_audio_volume", "channel": "bgm", "volume": 0.45}'
+        )
+        self.assertEqual(message.type, "studio_set_audio_volume")
+        self.assertEqual(message.channel, "bgm")
+        self.assertEqual(message.volume, 0.45)
+
+    def test_rejects_studio_set_audio_volume_out_of_range(self):
+        with self.assertRaises(ControlMessageError):
+            parse_control_message('{"type": "studio_set_audio_volume", "channel": "bgm", "volume": 1.2}')
+        with self.assertRaises(ControlMessageError):
+            parse_control_message('{"type": "studio_set_audio_volume", "channel": "bgm", "volume": -0.1}')
+
+    def test_rejects_studio_set_audio_volume_invalid_channel(self):
+        with self.assertRaises(ControlMessageError):
+            parse_control_message('{"type": "studio_set_audio_volume", "channel": "invalid", "volume": 0.5}')
+
+    def test_parses_studio_set_audio_mute(self):
+        message = parse_control_message(
+            '{"type": "studio_set_audio_mute", "channel": "mic", "muted": true}'
+        )
+        self.assertEqual(message.type, "studio_set_audio_mute")
+        self.assertEqual(message.channel, "mic")
+        self.assertTrue(message.muted)
+
+    def test_rejects_studio_set_audio_mute_invalid_format(self):
+        with self.assertRaises(ControlMessageError):
+            parse_control_message('{"type": "studio_set_audio_mute", "channel": "mic", "muted": "yes"}')
+
+    def test_parses_studio_update_audio_peak(self):
+        message = parse_control_message(
+            '{"type": "studio_update_audio_peak", "peak_db": -15.6}'
+        )
+        self.assertEqual(message.type, "studio_update_audio_peak")
+        self.assertEqual(message.peak_db, -15.6)
+        
+        # Test null peak_db
+        message_null = parse_control_message(
+            '{"type": "studio_update_audio_peak", "peak_db": null}'
+        )
+        self.assertIsNone(message_null.peak_db)
+
 
 if __name__ == "__main__":
     unittest.main()

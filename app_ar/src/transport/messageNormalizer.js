@@ -47,6 +47,29 @@ export function normalizeStatusPayload(rawPayload) {
         ...payload.studio
     }
 
+    if (!payload.studio.audio) {
+        payload.studio.audio = {
+            channels: {
+                mic: { volume: 1.0, muted: false },
+                bgm: { volume: 0.5, muted: false },
+                sfx: { volume: 0.8, muted: false },
+                master: { volume: 1.0, muted: false }
+            },
+            peak_db: null
+        }
+    } else {
+        payload.studio.audio = {
+            channels: {
+                mic: { volume: 1.0, muted: false },
+                bgm: { volume: 0.5, muted: false },
+                sfx: { volume: 0.8, muted: false },
+                master: { volume: 1.0, muted: false },
+                ...(payload.studio.audio.channels || {})
+            },
+            peak_db: payload.studio.audio.peak_db !== undefined ? payload.studio.audio.peak_db : null
+        }
+    }
+
     return payload
 }
 
@@ -77,7 +100,16 @@ export function createDefaultPayload() {
             elapsed_ms: 0,
             dropped_frames: 0,
             audio_peak_db: null,
-            director_scene: 'table'
+            director_scene: 'table',
+            audio: {
+                channels: {
+                    mic: { volume: 1.0, muted: false },
+                    bgm: { volume: 0.5, muted: false },
+                    sfx: { volume: 0.8, muted: false },
+                    master: { volume: 1.0, muted: false }
+                },
+                peak_db: null
+            }
         }
     }
 }

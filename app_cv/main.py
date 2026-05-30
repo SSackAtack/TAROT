@@ -238,6 +238,24 @@ def handle_control_message(message, camera_session):
         add_operator_warning(f"Studio: Zmieniono scene rezysera na: {message.scene}")
         return
 
+    if message.type == "studio_set_audio_volume":
+        status_store.update_studio_state(
+            audio_channels={message.channel: {"volume": message.volume}}
+        )
+        add_operator_warning(f"Studio: Zmieniono glosnosc kanalu {message.channel} na {int(message.volume * 100)}%")
+        return
+
+    if message.type == "studio_set_audio_mute":
+        status_store.update_studio_state(
+            audio_channels={message.channel: {"muted": message.muted}}
+        )
+        add_operator_warning(f"Studio: {'Wyciszono' if message.muted else 'Wlaczono dzwiek'} dla kanalu {message.channel}")
+        return
+
+    if message.type == "studio_update_audio_peak":
+        status_store.update_studio_state(audio_peak_db=message.peak_db)
+        return
+
 
 def drain_control_messages(camera_session):
     with status_lock:

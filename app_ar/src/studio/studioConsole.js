@@ -271,7 +271,7 @@ function initStudioConsoleEvents() {
         })
     })
 
-    // 3. Obsługa Miksera Audio (suwaki i przyciski Mute - Mikser działa offline)
+    // 3. Obsługa Miksera Audio (wysyła komendy WebSocket na backend)
     const channels = ['mic', 'bgm', 'sfx', 'master']
     channels.forEach(ch => {
         const slider = sidebarEl.querySelector(`#slider-${ch}`)
@@ -281,25 +281,25 @@ function initStudioConsoleEvents() {
         if (slider && valLabel) {
             slider.addEventListener('input', () => {
                 const val = parseFloat(slider.value)
-                studioState[`${ch}Volume`] = val
                 valLabel.textContent = `${Math.round(val * 100)}%`
-                saveStudioVolumeSettings()
+                
+                sendControlMessage({
+                    type: "studio_set_audio_volume",
+                    channel: ch,
+                    volume: val
+                })
             })
         }
 
         if (muteBtn) {
             muteBtn.addEventListener('click', () => {
                 const muted = !studioState[`${ch}Muted`]
-                studioState[`${ch}Muted`] = muted
                 
-                if (muted) {
-                    muteBtn.textContent = '🔇'
-                    muteBtn.classList.add('studio-audio-channel__mute-btn--muted')
-                } else {
-                    muteBtn.textContent = '🔊'
-                    muteBtn.classList.remove('studio-audio-channel__mute-btn--muted')
-                }
-                saveStudioVolumeSettings()
+                sendControlMessage({
+                    type: "studio_set_audio_mute",
+                    channel: ch,
+                    muted: muted
+                })
             })
         }
     })
@@ -335,6 +335,35 @@ export function updateStudioConsole(data) {
 
     // 1. Zsynchronizuj status studia z payloadu
     updateStudioStateFromPayload(data.studio)
+
+    // 1b. Synchronizacja suwaków i wyciszeń Miksera Audio z WebSocketu
+    const audioChannels = ['mic', 'bgm', 'sfx', 'master']
+    audioChannels.forEach(ch => {
+        const slider = sidebarEl.querySelector(`#slider-${ch}`)
+        const valLabel = sidebarEl.querySelector(`#val-${ch}`)
+        const muteBtn = sidebarEl.querySelector(`#mute-${ch}`)
+        
+        const vol = studioState[`${ch}Volume`]
+        const muted = studioState[`${ch}Muted`]
+        
+        // Zaktualizuj suwak tylko gdy operator go nie przeciąga
+        if (slider && document.activeElement !== slider) {
+            slider.value = vol.toString()
+        }
+        if (valLabel) {
+            valLabel.textContent = `${Math.round(vol * 100)}%`
+        }
+        if (muteBtn) {
+            if (muted) {
+                muteBtn.textContent = '🔇'
+                muteBtn.classList.add('studio-audio-channel__mute-btn--muted')
+            } else {
+                muteBtn.textContent = '🔊'
+                muteBtn.classList.remove('studio-audio-channel__mute-btn--muted')
+            }
+        }
+    })
+    saveStudioVolumeSettings()
 
     // 2. Górny Topbar statusu systemowego
     const wsInd = topbarEl.querySelector('#indicator-ws')

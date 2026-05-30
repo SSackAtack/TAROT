@@ -18,6 +18,10 @@ class ControlMessage:
     elapsed_ms: int | None = None
     dropped_frames: int | None = None
     scene: str | None = None
+    channel: str | None = None
+    volume: float | None = None
+    muted: bool | None = None
+    peak_db: float | None = None
 
 
 ALLOWED_TYPES = {
@@ -34,6 +38,9 @@ ALLOWED_TYPES = {
     "studio_stop_recording",
     "studio_update_recording_status",
     "studio_set_director_scene",
+    "studio_set_audio_volume",
+    "studio_set_audio_mute",
+    "studio_update_audio_peak",
 }
 
 
@@ -87,5 +94,41 @@ def parse_control_message(raw_message):
         if "scene" not in payload:
             raise ControlMessageError(f"{message_type} requires scene")
         return ControlMessage(type=message_type, scene=str(payload["scene"]))
+
+    if message_type == "studio_set_audio_volume":
+        if "channel" not in payload or "volume" not in payload:
+            raise ControlMessageError(f"{message_type} requires channel and volume")
+        ch = str(payload["channel"])
+        if ch not in {"mic", "bgm", "sfx", "master"}:
+            raise ControlMessageError(f"Invalid audio channel: {ch}")
+        try:
+            vol = float(payload["volume"])
+        except (TypeError, ValueError) as exc:
+            raise ControlMessageError(f"Invalid volume format: {payload['volume']}") from exc
+        if not (0.0 <= vol <= 1.0):
+            raise ControlMessageError(f"Volume out of range [0.0, 1.0]: {vol}")
+        return ControlMessage(type=message_type, channel=ch, volume=vol)
+
+    if message_type == "studio_set_audio_mute":
+        if "channel" not in payload or "muted" not in payload:
+            raise ControlMessageError(f"{message_type} requires channel and muted")
+        ch = str(payload["channel"])
+        if ch not in {"mic", "bgm", "sfx", "master"}:
+            raise ControlMessageError(f"Invalid audio channel: {ch}")
+        muted = payload["muted"]
+        if not isinstance(muted, bool):
+            raise ControlMessageError(f"Muted must be boolean: {muted}")
+        return ControlMessage(type=message_type, channel=ch, muted=muted)
+
+    if message_type == "studio_update_audio_peak":
+        if "peak_db" not in payload:
+            raise ControlMessageError(f"{message_type} requires peak_db")
+        peak = payload["peak_db"]
+        if peak is not None:
+            try:
+                peak = float(peak)
+            except (TypeError, ValueError) as exc:
+                raise ControlMessageError(f"Invalid peak_db format: {peak}") from exc
+        return ControlMessage(type=message_type, peak_db=peak)
 
     return ControlMessage(type=message_type)

@@ -61,7 +61,9 @@ class StatusPayloadTest(unittest.TestCase):
 
     def test_studio_section_defaults(self):
         payload = build_status_payload(cards=[])
-        self.assertEqual(payload["studio"], {})
+        self.assertIn("audio", payload["studio"])
+        self.assertEqual(payload["studio"]["audio"]["channels"]["bgm"]["volume"], 0.5)
+        self.assertFalse(payload["studio"]["audio"]["channels"]["mic"]["muted"])
 
     def test_studio_section_preserved(self):
         studio = {

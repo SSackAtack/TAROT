@@ -28,6 +28,18 @@ def build_status_payload(cards, metrics=None, warnings=None,
     Returns:
         dict ready for JSON serialization.
     """
+    studio_dict = studio or {}
+    if "audio" not in studio_dict:
+        studio_dict["audio"] = {
+            "channels": {
+                "mic": {"volume": 1.0, "muted": False},
+                "bgm": {"volume": 0.5, "muted": False},
+                "sfx": {"volume": 0.8, "muted": False},
+                "master": {"volume": 1.0, "muted": False}
+            },
+            "peak_db": None
+        }
+
     return {
         "schema_version": 1,
         "detected": len(cards) > 0,
@@ -39,5 +51,5 @@ def build_status_payload(cards, metrics=None, warnings=None,
         "operator": operator or {},
         "table": table or {},
         "layout": layout or {},
-        "studio": studio or {},
+        "studio": studio_dict,
     }

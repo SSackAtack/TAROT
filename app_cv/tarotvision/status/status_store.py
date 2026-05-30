@@ -59,7 +59,7 @@ class StatusStore:
             if warnings is not None:
                 self._status["warnings"] = copy.deepcopy(warnings)
 
-    def update_studio_state(self, recording_state=_UNSET, recording_id=_UNSET, elapsed_ms=_UNSET, dropped_frames=_UNSET, audio_peak_db=_UNSET, director_scene=_UNSET, recording_dir_status=_UNSET):
+    def update_studio_state(self, recording_state=_UNSET, recording_id=_UNSET, elapsed_ms=_UNSET, dropped_frames=_UNSET, audio_peak_db=_UNSET, director_scene=_UNSET, recording_dir_status=_UNSET, audio_channels=_UNSET):
         """Aktualizuje stan nagrywania w studio nagrań."""
         with self._lock:
             if recording_state is not _UNSET:
@@ -72,10 +72,15 @@ class StatusStore:
                 self._status["studio"]["dropped_frames"] = dropped_frames
             if audio_peak_db is not _UNSET:
                 self._status["studio"]["audio_peak_db"] = audio_peak_db
+                self._status["studio"]["audio"]["peak_db"] = audio_peak_db
             if director_scene is not _UNSET:
                 self._status["studio"]["director_scene"] = director_scene
             if recording_dir_status is not _UNSET:
                 self._status["studio"]["recording_dir_status"] = copy.deepcopy(recording_dir_status)
+            if audio_channels is not _UNSET and audio_channels is not None:
+                for ch, settings in audio_channels.items():
+                    if ch in self._status["studio"]["audio"]["channels"]:
+                        self._status["studio"]["audio"]["channels"][ch].update(settings)
 
     def set_calibration_state(self, state, last_score):
         """Aktualizuje stan kalibracji operatora."""
