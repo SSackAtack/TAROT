@@ -39,6 +39,7 @@ Ten plik przedstawia aktualny status techniczny oraz architekturę projektu Taro
 
 ## 3. Ostatnie Ukończone Duże Prace
 
+* **TASK-SCAN-001 (Obróbka Skanów Premium):** Gruntowne ulepszenie skryptu masowej obróbki skanów `scripts/process_scans.py`. Wprowadzenie detekcji na obrazie roboczym z wycinaniem w pełnej rozdzielczości DPI, matematycznie stabilnego sortowania wierzchołków (Robust Corner Ordering), automatycznego maskowania alfa zaokrąglonych rogów i bezpośredniego zapisu do zoptymalizowanego formatu WebP z automatycznym nazywaniem według 22 Wielkich Arkanów.
 * **Task Studio Console 5 & 5b-fix:** Pełne wdrożenie trybu Automatycznego Reżysera z 1.5s histerezą chroniącą przed migotaniem scen, wdrożenie paska osi czasu (Timeline Tracker) z automatycznym generowaniem i eksportem pliku JSON na frontendzie i backendzie oraz rygorystyczna walidacja struktur markerów i dozwolonych scen (allowlista).
 * **Task Studio Console 6:** Zmiana szaty graficznej (akcent z jaskrawej żółci na zgaszoną miedź `#d67d3e`), podbicie czytelności czcionek diagnostyki CV Health oraz znaczne usprawnienie kontrastu i widoczności nieaktywnych (disabled) przycisków w bottombarze.
 
