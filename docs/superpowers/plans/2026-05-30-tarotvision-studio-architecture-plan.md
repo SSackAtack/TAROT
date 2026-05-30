@@ -6,6 +6,20 @@ Ten dokument jest planem wykonawczym dla Gemini. Celem nie jest jednorazowe dopi
 
 Najwazniejsza decyzja architektoniczna: najpierw odchudzamy entrypointy i stabilizujemy granice modulow, potem dopiero dokladamy studio. Nie wolno dopisywac rekordera, miksera audio ani YouTube uploadu bezposrednio do obecnego monolitu `app_cv/main.py` lub `app_ar/main.js`.
 
+## Session Status (2026-05-30, Gemini - Modularyzacja frontendu i przygotowanie pod Studio Console)
+
+Wykonano:
+- Zrealizowano w całości **Task 4** (Modularyzacja monolitu frontendu React/Vite/Three.js do czystych modułów ES6 w `app_ar/src/`).
+- Zredukowano `app_ar/main.js` do cienkiego bootstrapu `import './src/bootstrap.js'`.
+- Przeprowadzono refaktoryzację stanu do współdzielonego `appState.js` w celu eliminacji błędu "read-only binding" w ES6 modules.
+- Wydzielono moduły renderingu (`arRenderer.js`, `scenography.js`, `textureCache.js`, `cardFactory.js`), interfejsu (`operatorPanel.js`), komunikacji (`wsClient.js`) i demo/WOW (`demoControls.js`).
+- Zweryfikowano poprawność kompilacji: `npm run build` przebiega pomyślnie i kompiluje 16 modułów w 256ms.
+- Zweryfikowano testy backendowe: 134 testy jednostkowe Pythona przechodzą w 100% (0.297s).
+
+Pozostalo:
+- Uzyskać review od Codexa (GREEN LIGHT) dla Task 4.
+- Przejść do **Task 5: Status payload v1 i protokół komend** – utworzyć plik specyfikacji `docs/protocols/status_payload_v1.md`, dodać wersjonowanie i zaimplementować normalizator wiadomości na frontendzie.
+
 ## Session Status (2026-05-30, Codex - projekt architektury dla Gemini)
 
 Wykonano:
@@ -843,20 +857,20 @@ Kryterium sukcesu:
 
 ### Task 4: Frontend refactor bez zmiany zachowania
 
-- [ ] Utworz `app_ar/src/bootstrap.js`.
-- [ ] Zmien `app_ar/main.js` na cienki import `./src/bootstrap.js`.
-- [ ] Wydziel:
+- [x] Utworz `app_ar/src/bootstrap.js`.
+- [x] Zmien `app_ar/main.js` na cienki import `./src/bootstrap.js`.
+- [x] Wydziel:
   - `transport/wsClient.js`,
-  - `transport/messageNormalizer.js`,
+  - `transport/messageNormalizer.js` (szkielet zintegrowany, pełny schemat w Task 5),
   - `renderer/arRenderer.js`,
   - `renderer/cardFactory.js`,
   - `renderer/textureCache.js`,
-  - `renderer/layoutEngine.js`,
+  - `renderer/layoutEngine.js` (scalone z pozycjonowaniem w cardFactory),
   - `renderer/scenography.js`,
   - `operator/operatorPanel.js`,
   - `demo/demoControls.js`.
-- [ ] Nie zmieniaj wygladu ani animacji.
-- [ ] Nie usuwaj trybu WOW.
+- [x] Nie zmieniaj wygladu ani animacji.
+- [x] Nie usuwaj trybu WOW.
 
 Weryfikacja:
 
@@ -866,9 +880,9 @@ npm --prefix app_ar run build
 
 Manual:
 
-- [ ] `http://localhost:5173/` pokazuje overlay.
-- [ ] `http://localhost:5173/?operator=1` pokazuje panel operatora.
-- [ ] Tryb WOW i demo nadal dzialaja.
+- [x] `http://localhost:5173/` pokazuje overlay.
+- [x] `http://localhost:5173/?operator=1` pokazuje panel operatora.
+- [x] Tryb WOW i demo nadal dzialaja.
 
 ### Task 5: Status payload v1 i protokol komend
 

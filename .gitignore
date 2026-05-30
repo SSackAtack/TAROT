@@ -49,3 +49,13 @@ models/*.tflite
 # === Debugging / CV Temp ===
 app_cv/*.jpg
 logs/
+
+# === Studio recordings & secrets (za duże na Git / poufne) ===
+recordings/
+*.webm
+*.wav
+*.aac
+*.opus
+secrets/
+oauth_tokens/
+
