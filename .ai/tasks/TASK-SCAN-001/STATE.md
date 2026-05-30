@@ -19,3 +19,4 @@
 - [x] Dodanie opcji wyboru stylu nazywania (`--naming generic|arcana`)
 - [x] Weryfikacja syntetyczna dla jasnego i ciemnego tła w różnych formatach (PASS)
 - [x] Dodanie generatora skanów testowych `scripts/generate_test_scan.py` do repozytorium w celach reprodukcji testów
+- [x] Implementacja dodatkowego kroku skanowania i kadrowania rewersu (koszulki) karty na koniec procesu masowego asystenta

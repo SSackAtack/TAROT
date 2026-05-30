@@ -17,6 +17,7 @@ Wszystkie modyfikacje wprowadzone w ramach zadania **TASK-SCAN-001** w celu peł
   * Zaimplementowano pętlę masowego skanowania (arkusz po arkuszu) monitorującą całkowitą zadeklarowaną liczbę kart (`--total-cards`) i zliczającą postęp.
   * Dodano dynamiczny przyrost indeksacji plików wyjściowych w formacie `{prefix}_{numer:02d}.png` (np. `tarot_marsylski_00.png` do `tarot_marsylski_21.png`).
   * Zaimplementowano obsługę szybkiego Skanu Próbnego z prefiksem `Test_` w celach kalibracji jasności tła.
+  * **Krok dodatkowy (Skanowanie Rewersu/Koszulki):** Na koniec masowego skanowania całej talii dodano automatyczne pytanie o zeskanowanie rewersu (tyłu) karty. Rewers jest precyzyjnie kadrowany i zapisywany bezpośrednio jako `{nazwa_talii}_back.{format}` (np. `tarot_marsylski_back.png`).
 
 * **Dodano ostrzeżenia o jakości Master (WIA JPEG vs PNG/TIFF):**
   * Dodano czytelne komunikaty ostrzegawcze w konsoli: bezpośrednie skanowanie WIA w Windowsie wymusza kompresję JPEG z powodu ograniczeń systemowych COM.

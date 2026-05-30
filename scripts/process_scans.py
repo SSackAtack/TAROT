@@ -134,7 +134,7 @@ def scan_image_via_wia():
             print("Upewnij się, że skaner jest podłączony do prądu, włączony i podpięty do komputera USB.")
     return None
 
-def process_scanned_sheet(sheet_path, output_dir, args, start_index=0, custom_prefix=None):
+def process_scanned_sheet(sheet_path, output_dir, args, start_index=0, custom_prefix=None, is_back=False):
     """
     Wczytuje skan całego arkusza, wykrywa prostokąty kart w niskiej rozdzielczości roboczej,
     a następnie precyzyjnie wycina je w oryginalnej wysokiej rozdzielczości.
@@ -224,8 +224,10 @@ def process_scanned_sheet(sheet_path, output_dir, args, start_index=0, custom_pr
     for idx, cnt in enumerate(card_contours):
         card_number = start_index + saved_count
         
-        # Generowanie nazwy pliku w zależności od prefiksu lub figur
-        if custom_prefix:
+        # Generowanie nazwy pliku w zależności od prefiksu, rewersu lub figur
+        if is_back:
+            filename = f"{custom_prefix}_back.{args.format}" if custom_prefix else f"back.{args.format}"
+        elif custom_prefix:
             filename = f"{custom_prefix}_{card_number:02d}.{args.format}"
         elif args.naming == "arcana" and card_number < len(MAJOR_ARCANAS):
             filename = f"{MAJOR_ARCANAS[card_number]}.{args.format}"
@@ -418,6 +420,33 @@ def run_interactive_assistant(args):
                 print(f"\n[INFO] Skanowanie przerwane na prosbe uzytkownika. Zapisano {scanned_count} kart.")
                 break
                 
+        # Jeśli zeskanowano całą talię, dodajemy krok na skanowanie rewersu (koszulki)
+        if scanned_count >= total_cards:
+            print(f"\n=============================================================")
+            print(f"       KROK DODATKOWY: SKANOWANIE REWERSU (KOSZULKI)")
+            print(f"=============================================================")
+            print("Instrukcja:")
+            print("1. Połóż JEDNĄ dowolną kartę rewersem (tyłem) do dołu na szybie skanera.")
+            print("2. Naciśnij Enter, aby rozpocząć skanowanie rewersu...")
+            input()
+            
+            print("\n -> Uruchamianie skanowania rewersu...")
+            wia_temp_file = scan_image_via_wia()
+            if wia_temp_file is not None:
+                print(" -> Przetwarzanie skanu rewersu...")
+                # Przetwarzamy obraz z flagą is_back=True
+                process_scanned_sheet(
+                    wia_temp_file, args.output_dir, args, start_index=0, custom_prefix=deck_name, is_back=True
+                )
+                # Usuwamy plik tymczasowy
+                try:
+                    os.remove(wia_temp_file)
+                except:
+                    pass
+                print(f"\n -> [SUKCES] Rewers został pomyślnie zeskanowany i zapisany!")
+            else:
+                print("\n[INFO] Skanowanie rewersu zostało pominięte lub nie powiodło się.")
+
         # Otwieramy katalog wyjściowy
         if scanned_count > 0:
             print("\nOtwieranie folderu scans_output...")
