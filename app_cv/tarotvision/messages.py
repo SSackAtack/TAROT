@@ -11,7 +11,7 @@ The payload format is backward-compatible: the frontend uses
 
 def build_status_payload(cards, metrics=None, warnings=None,
                          debug=None, runtime=None, operator=None,
-                         table=None, layout=None):
+                         table=None, layout=None, studio=None):
     """Build a complete status payload for WebSocket broadcast.
 
     Args:
@@ -23,11 +23,13 @@ def build_status_payload(cards, metrics=None, warnings=None,
         operator:  dict of operator panel state (parameters, calibration, ...).
         table:     dict of ArUco table calibration status.
         layout:    dict of snapshot-first layout metadata.
+        studio:    dict of recording studio state.
 
     Returns:
         dict ready for JSON serialization.
     """
     return {
+        "schema_version": 1,
         "detected": len(cards) > 0,
         "cards": cards,
         "metrics": metrics or {},
@@ -37,4 +39,5 @@ def build_status_payload(cards, metrics=None, warnings=None,
         "operator": operator or {},
         "table": table or {},
         "layout": layout or {},
+        "studio": studio or {},
     }

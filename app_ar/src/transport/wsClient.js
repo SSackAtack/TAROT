@@ -2,7 +2,8 @@ import { appState } from '../core/appState'
 import { updateOperatorPanel } from '../operator/operatorPanel'
 import { handleCardData } from '../renderer/cardFactory'
 import { cardNames } from '../renderer/textureCache'
-import { scene, renderer } from '../renderer/arRenderer'
+import { scene } from '../renderer/arRenderer'
+import { normalizeStatusPayload } from './messageNormalizer'
 
 const GRID_SNAP_ENABLED = false
 const GRID_SIZE_X = 3.8
@@ -21,13 +22,16 @@ export function connectWebSocket(arSettings) {
 
     ws.onopen = () => {
         appState.controlSocket = ws
-        updateOperatorPanel(appState.latestStatus || { metrics: {}, runtime: {}, operator: {} })
+        updateOperatorPanel(appState.latestStatus || normalizeStatusPayload(null))
         wsReconnectDelay = 1000 
     }
 
     ws.onmessage = (event) => {
         try {
-            const data = JSON.parse(event.data)
+            const rawData = JSON.parse(event.data)
+            const data = normalizeStatusPayload(rawData)
+            appState.latestStatus = data
+            
             const layout = data.layout || {}
             const detectedCards = data.cards || []
             updateOperatorPanel(data)
@@ -42,12 +46,13 @@ export function connectWebSocket(arSettings) {
         }
     }
 
+
     ws.onclose = () => {
         Object.keys(appState.activeCards).forEach((name) => {
             appState.activeCards[name].targetOpacity = 0.0
         })
         if (appState.controlSocket === ws) appState.controlSocket = null
-        updateOperatorPanel(appState.latestStatus || { metrics: {}, runtime: {}, operator: {} })
+        updateOperatorPanel(appState.latestStatus || normalizeStatusPayload(null))
         setTimeout(() => connectWebSocket(arSettings), wsReconnectDelay)
         wsReconnectDelay = Math.min(wsReconnectDelay * 2, WS_MAX_DELAY)
     }

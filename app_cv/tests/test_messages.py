@@ -55,6 +55,24 @@ class StatusPayloadTest(unittest.TestCase):
         self.assertEqual(payload["layout"]["source"], "snapshot")
         self.assertEqual(payload["layout"]["state"], "holding_last_good")
 
+    def test_schema_version_is_included(self):
+        payload = build_status_payload(cards=[])
+        self.assertEqual(payload["schema_version"], 1)
+
+    def test_studio_section_defaults(self):
+        payload = build_status_payload(cards=[])
+        self.assertEqual(payload["studio"], {})
+
+    def test_studio_section_preserved(self):
+        studio = {
+            "recording_state": "recording",
+            "recording_id": "session_123",
+            "elapsed_ms": 5000,
+        }
+        payload = build_status_payload(cards=[], studio=studio)
+        self.assertEqual(payload["studio"]["recording_state"], "recording")
+        self.assertEqual(payload["studio"]["recording_id"], "session_123")
+
 
 if __name__ == "__main__":
     unittest.main()

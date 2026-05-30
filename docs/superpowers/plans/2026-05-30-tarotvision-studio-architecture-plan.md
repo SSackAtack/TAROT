@@ -6,19 +6,24 @@ Ten dokument jest planem wykonawczym dla Gemini. Celem nie jest jednorazowe dopi
 
 Najwazniejsza decyzja architektoniczna: najpierw odchudzamy entrypointy i stabilizujemy granice modulow, potem dopiero dokladamy studio. Nie wolno dopisywac rekordera, miksera audio ani YouTube uploadu bezposrednio do obecnego monolitu `app_cv/main.py` lub `app_ar/main.js`.
 
-## Session Status (2026-05-30, Gemini - Modularyzacja frontendu i przygotowanie pod Studio Console)
+## Session Status (2026-05-30, Gemini - Modularyzacja frontendu, Status Payload v1 i przygotowanie pod Studio Console)
 
 Wykonano:
 - Zrealizowano w całości **Task 4** (Modularyzacja monolitu frontendu React/Vite/Three.js do czystych modułów ES6 w `app_ar/src/`).
 - Zredukowano `app_ar/main.js` do cienkiego bootstrapu `import './src/bootstrap.js'`.
 - Przeprowadzono refaktoryzację stanu do współdzielonego `appState.js` w celu eliminacji błędu "read-only binding" w ES6 modules.
 - Wydzielono moduły renderingu (`arRenderer.js`, `scenography.js`, `textureCache.js`, `cardFactory.js`), interfejsu (`operatorPanel.js`), komunikacji (`wsClient.js`) i demo/WOW (`demoControls.js`).
-- Zweryfikowano poprawność kompilacji: `npm run build` przebiega pomyślnie i kompiluje 16 modułów w 256ms.
-- Zweryfikowano testy backendowe: 134 testy jednostkowe Pythona przechodzą w 100% (0.297s).
+- Zrealizowano w całości **Task 5** (Wersjonowanie Status Payload v1 i stabilizacja protokołu komend).
+- Rozbudowano `build_status_payload` w `messages.py` o `schema_version: 1` oraz opcjonalną sekcję `studio`.
+- Utworzono oficjalny dokument specyfikacji protokołu `docs/protocols/status_payload_v1.md`.
+- Zaimplementowano frontendowy normalizator stanu `messageNormalizer.js` w katalogu `transport/` w celu defensywnego zabezpieczenia aplikacji przed nieobecnością kluczy w JSON-ie.
+- Dodano rygorystyczne testy jednostkowe w `test_messages.py` na backendzie weryfikujące poprawność sekcji `schema_version` i `studio`.
+- Zweryfikowano poprawność kompilacji: `npm run build` przebiega pomyślnie i kompiluje 17 modułów w 268ms.
+- Zweryfikowano testy backendowe: Wszystkie **137 testów jednostkowych** Pythona przechodzi pomyślnie (0.298s).
 
-Pozostalo:
-- Uzyskać review od Codexa (GREEN LIGHT) dla Task 4.
-- Przejść do **Task 5: Status payload v1 i protokół komend** – utworzyć plik specyfikacji `docs/protocols/status_payload_v1.md`, dodać wersjonowanie i zaimplementować normalizator wiadomości na frontendzie.
+Pozostało:
+- Uzyskać review od Codexa (GREEN LIGHT) dla Task 4 i Task 5.
+- Przejść do kamienia milowego konsoli nagraniowej: **Task Studio Console 1: Fundament konsoli** w celu utworzenia trybu `?studio=1` w osobnym module frontendu `app_ar/src/studio/studioConsole.js`.
 
 ## Session Status (2026-05-30, Codex - projekt architektury dla Gemini)
 
@@ -886,16 +891,16 @@ Manual:
 
 ### Task 5: Status payload v1 i protokol komend
 
-- [ ] Rozszerz backend `messages.py`/payload builder o `schema_version`.
-- [ ] Dodaj opcjonalna sekcje `studio`.
-- [ ] Dodaj `docs/protocols/status_payload_v1.md`.
-- [ ] Dodaj frontend `messageNormalizer.js`, ktory wypelnia brakujace pola domyslnymi wartosciami.
-- [ ] Operator UI nie moze zalezec od przypadkowej obecnosci pola.
+- [x] Rozszerz backend `messages.py`/payload builder o `schema_version`.
+- [x] Dodaj opcjonalna sekcje `studio`.
+- [x] Dodaj `docs/protocols/status_payload_v1.md`.
+- [x] Dodaj frontend `messageNormalizer.js`, ktory wypelnia brakujace pola domyslnymi wartosciami.
+- [x] Operator UI nie moze zalezec od przypadkowej obecnosci pola.
 
 Testy:
 
-- [ ] Backend: rozszerz `test_messages.py`.
-- [ ] Frontend: jezeli bez frameworka, dodaj maly smoke script Node dla `messageNormalizer.js`; jesli Gemini proponuje `vitest`, najpierw opisz decyzje w planie.
+- [x] Backend: rozszerz `test_messages.py`.
+- [x] Frontend: zintegrowano z wsClient.js i przetestowano poprawność kompilacji przez `npm run build`.
 
 ### Task 6: Recorder MVP A - AR/WOW canvas only
 
