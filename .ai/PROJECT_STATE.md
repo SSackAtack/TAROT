@@ -2,6 +2,8 @@
 
 Ten plik przedstawia aktualny status techniczny oraz architekturę projektu TarotVision w pigułce. Służy jako punkt startowy dla każdego agenta AI wchodzącego do projektu.
 
+* **Ostatnia weryfikacja procesu:** 2026-05-30 (Wdrożenie AI Workflow i CI w PR #1)
+
 ---
 
 ## 1. Informacje Ogólne
