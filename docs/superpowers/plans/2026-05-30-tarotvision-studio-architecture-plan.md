@@ -6,6 +6,25 @@ Ten dokument jest planem wykonawczym dla Gemini. Celem nie jest jednorazowe dopi
 
 Najwazniejsza decyzja architektoniczna: najpierw odchudzamy entrypointy i stabilizujemy granice modulow, potem dopiero dokladamy studio. Nie wolno dopisywac rekordera, miksera audio ani YouTube uploadu bezposrednio do obecnego monolitu `app_cv/main.py` lub `app_ar/main.js`.
 
+## Session Status (2026-05-30, Gemini - Bezpieczna ścieżka zapisu, Task Studio Console 2)
+
+Wykonano:
+- Zrealizowano w całości **Task Studio Console 2** (Integracja weryfikacji i walidacji ścieżki zapisu na backendzie).
+- Utworzono [path_validator.py](file:///e:/Antigravity/Projekty/TAROT/app_cv/tarotvision/status/path_validator.py) w całości zabezpieczający system przed path traversal (`..`), plikami, katalogami systemowymi (np. `C:\Windows`) oraz sprawdzający uprawnienia zapisu (`os.access`).
+- Rozszerzono `main.py` o obsługę nowej komendy kontrolnej `studio_set_recording_dir` z dynamiczną weryfikacją i wysyłaniem statusu walidacji.
+- Zintegrowano `StatusStore` z polem stanu `recording_dir_status` z defensywnym kopiowaniem w celu ochrony przed mutacją.
+- Wdrożono na frontendzie w [studioConsole.js](file:///e:/Antigravity/Projekty/TAROT/app_ar/src/studio/studioConsole.js) wczytywanie ścieżki zapisu z WebSocketu pod warunkiem, że operator nie edytuje aktualnie pola (`document.activeElement !== pathInput`).
+- Napisano testy jednostkowe:
+  - `test_path_validator.py` (weryfikacja ścieżek bezwzględnych, niepoprawnych, traversal, systemowych, tworzenia katalogów i PermissionError).
+  - `test_tuning_protocol.py` (parsowanie i walidacja komendy `studio_set_recording_dir` z wymaganym parametrem path).
+  - `test_status_store.py` (wątkobezpieczne odczytywanie/zapisywanie stanu walidacji ścieżki zapisu).
+- Wszystkie testy jednostkowe (146 testów) przechodzą pomyślnie w czasie 0.308s.
+- Budowanie frontendu przechodzi bez błędów w 271ms.
+- Zmiany zostały zacommitowane i wypchnięte: commit `7068e7b`.
+
+Pozostało:
+- Przejść do **Task Studio Console 3: Recording controls** oraz **Task 6 (Recorder MVP A - AR/WOW canvas only)** w celu integracji nagrywania w przeglądarce za pomocą MediaRecorder API.
+
 ## Session Status (2026-05-30, Gemini - Modularyzacja frontendu, Status Payload v1, Task 5b, Task Studio Console 1 i 1b - Wydzielenie styli do offline)
 
 Wykonano:
@@ -762,11 +781,11 @@ Wymogi:
 
 ### Task Studio Console 2: Sciezka zapisu
 
-- [ ] Backend: dodaj walidator sciezki katalogu nagran.
-- [ ] Frontend: dodaj pole sciezki i status walidacji.
-- [ ] Backend: dodaj control message `studio_set_recording_dir`.
-- [ ] Backend: dodaj response status w `studio.recording_dir_status`.
-- [ ] Testy backendu: poprawna sciezka, pusta sciezka, plik zamiast katalogu, path traversal, brak uprawnien.
+- [x] Backend: dodaj walidator sciezki katalogu nagran.
+- [x] Frontend: dodaj pole sciezki i status walidacji.
+- [x] Backend: dodaj control message `studio_set_recording_dir`.
+- [x] Backend: dodaj response status w `studio.recording_dir_status`.
+- [x] Testy backendu: poprawna sciezka, pusta sciezka, plik zamiast katalogu, path traversal, brak uprawnien.
 
 ### Task Studio Console 3: Recording controls
 
