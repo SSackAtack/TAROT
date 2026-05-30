@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from .base import VisionPipeline
 from .snapshot_first import SnapshotFirstPipeline
+from .state_first_legacy import StateFirstLegacyPipeline
 
-__all__ = ["VisionPipeline", "SnapshotFirstPipeline"]
+__all__ = ["VisionPipeline", "SnapshotFirstPipeline", "StateFirstLegacyPipeline"]

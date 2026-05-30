@@ -31,7 +31,7 @@ from tarotvision.snapshot_quality import choose_best_snapshot
 from tarotvision.snapshot_analyzer import SnapshotAnalyzer
 from tarotvision.camera import CameraSession
 from tarotvision.preview import OpenCvPreview
-from tarotvision.pipelines import SnapshotFirstPipeline
+from tarotvision.pipelines import SnapshotFirstPipeline, StateFirstLegacyPipeline
 
 # Konfiguracja
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -255,112 +255,7 @@ def start_websocket_server():
 ws_thread = threading.Thread(target=start_websocket_server, daemon=True)
 ws_thread.start()
 
-def validate_quadrilateral(dst):
-    """Walidacja geometryczna czworokata: proporcje bokow, katy wewnetrzne i aspect ratio karty."""
-    # dst ma ksztalt (4, 1, 2)
-    p0 = dst[0][0] # Gorny-lewy (TL)
-    p1 = dst[1][0] # Dolny-lewy (BL)
-    p2 = dst[2][0] # Dolny-prawy (BR)
-    p3 = dst[3][0] # Gorny-prawy (TR)
-    
-    # 1. Obliczamy dlugosci czterech bokow
-    side_left = np.linalg.norm(p1 - p0)
-    side_bottom = np.linalg.norm(p2 - p1)
-    side_right = np.linalg.norm(p3 - p2)
-    side_top = np.linalg.norm(p0 - p3)
-    
-    # Zabezpieczenie przed mikroskopijnymi szumami
-    if min(side_left, side_bottom, side_right, side_top) < 25.0:
-        return False
-        
-    # 2. Sprawdzamy stosunek dlugosci naprzeciwleglych bokow (lewy vs prawy, gora vs dol)
-    # W rzucie perspektywicznym dopuszczamy drobne zwezenia, ale nie drastyczne kliny/trojkaty
-    ratio_lr = side_left / side_right if side_left > side_right else side_right / side_left
-    ratio_tb = side_top / side_bottom if side_top > side_bottom else side_bottom / side_top
-    
-    if ratio_lr > 1.95 or ratio_tb > 1.95:
-        return False
-        
-    # 3. Sprawdzamy katy wewnetrzne przy uzyciu cosinusow (szukamy zblizonych do 90 stopni)
-    def get_cos_angle(a, b, c):
-        ba = a - b
-        bc = c - b
-        norm_ba = np.linalg.norm(ba)
-        norm_bc = np.linalg.norm(bc)
-        if norm_ba == 0 or norm_bc == 0:
-            return 1.0
-        return np.dot(ba, bc) / (norm_ba * norm_bc)
-        
-    cos_0 = abs(get_cos_angle(p3, p0, p1))
-    cos_1 = abs(get_cos_angle(p0, p1, p2))
-    cos_2 = abs(get_cos_angle(p1, p2, p3))
-    cos_3 = abs(get_cos_angle(p2, p3, p0))
-    
-    # Prog 0.82 odrzuca katy ostrzejsze niz ~35 i rozwarte powyzej ~145 stopni
-    MAX_COS = 0.82
-    if cos_0 > MAX_COS or cos_1 > MAX_COS or cos_2 > MAX_COS or cos_3 > MAX_COS:
-        return False
-    
-    # 4. Sprawdzamy aspect ratio czworokata (karty tarota maja proporcje ~1.72)
-    avg_height = (side_left + side_right) / 2.0
-    avg_width = (side_top + side_bottom) / 2.0
-    if avg_width > 0:
-        detected_ratio = avg_height / avg_width
-        if abs(detected_ratio - CARD_ASPECT_RATIO) > CARD_ASPECT_TOLERANCE:
-            return False
-        
-    return True
 
-
-
-def polygon_iou(poly_a, poly_b):
-    """Liczy IoU dwoch wypuklych czworokatow OpenCV w formacie (4, 1, 2)."""
-    area_a = cv2.contourArea(poly_a)
-    area_b = cv2.contourArea(poly_b)
-    if area_a <= 0 or area_b <= 0:
-        return 0.0
-    
-    try:
-        intersection_area, _ = cv2.intersectConvexConvex(
-            np.float32(poly_a).reshape(-1, 2),
-            np.float32(poly_b).reshape(-1, 2)
-        )
-    except cv2.error:
-        return 0.0
-    
-    union_area = area_a + area_b - intersection_area
-    if union_area <= 0:
-        return 0.0
-    return float(intersection_area / union_area)
-
-def deduplicate_detections(candidates):
-    """Zostawia najlepsze dopasowanie dla nakladajacych sie detekcji tej samej fizycznej karty."""
-    selected = []
-    sorted_candidates = sorted(
-        candidates,
-        key=lambda item: (item["count"], item["inlier_ratio"], item["area"]),
-        reverse=True
-    )
-    
-    for candidate in sorted_candidates:
-        overlaps_existing = any(
-            polygon_iou(candidate["dst"], accepted["dst"]) > DETECTION_IOU_THRESHOLD
-            for accepted in selected
-        )
-        if not overlaps_existing:
-            selected.append(candidate)
-    
-    return {candidate["name"]: candidate for candidate in selected}
-
-
-def quad_to_box(quad):
-    xs = quad[:, 0, 0]
-    ys = quad[:, 0, 1]
-    x_min = int(np.min(xs))
-    y_min = int(np.min(ys))
-    x_max = int(np.max(xs))
-    y_max = int(np.max(ys))
-    return (x_min, y_min, max(1, x_max - x_min), max(1, y_max - y_min))
 
 log_event("========================================")
 log_event("[TAROT VISION] Computer Vision Module v2.0 (Audited)")
@@ -470,6 +365,8 @@ def recognize_snapshot_crop(gray_crop):
     }
 
 
+runtime_metrics = RuntimeMetrics(maxlen=60)
+
 snapshot_gate = SnapshotGate(SnapshotGateConfig(
     settle_seconds=SNAPSHOT_SETTLE_SECONDS,
     sample_count=SNAPSHOT_SAMPLE_COUNT,
@@ -493,6 +390,25 @@ snapshot_pipeline = SnapshotFirstPipeline(
 snapshot_pipeline.snapshot_sample_count = SNAPSHOT_SAMPLE_COUNT
 snapshot_pipeline.snapshot_sample_interval_ms = SNAPSHOT_SAMPLE_INTERVAL_MS
 
+legacy_pipeline = StateFirstLegacyPipeline(
+    camera_session=camera_session,
+    opencv_preview=opencv_preview,
+    status_store=status_store,
+    diagnostics_writer=diagnostics_writer,
+    table_calibration=table_calibration,
+    table_state=table_state,
+    runtime_metrics=runtime_metrics,
+    runtime_config=runtime_config,
+    build_operator_snapshot_fn=build_operator_snapshot,
+    operator_warnings=operator_warnings,
+    log_dir=LOG_DIR,
+    reference_cards=reference_cards,
+    orb=orb,
+    flann=flann,
+    clahe=clahe,
+    runtime_profile=RUNTIME_PROFILE
+)
+
 # 3. Inicjalizacja Kamery — jawnie ustawiamy 720p (1280x720) dla wiecej cech ORB z wiekszej odleglosci
 log_event("[KAMERA] Uruchamianie kamery... (Wcisnij 'q' by zamknac, cyfry '0'-'9' by przelaczac kamery w locie!)")
 if not camera_session.open(0):
@@ -501,33 +417,13 @@ if not camera_session.open(0):
 frame_width, frame_height = camera_session.frame_width, camera_session.frame_height
 log_event(f"[KAMERA] Rozdzielczosc: {frame_width}x{frame_height}")
 
-# Parametry stabilizacji detekcji (debouncing) dla wielu kart
-debounce_state = {}
-DEBOUNCE_FRAMES = 3  # Karta musi byc stabilnie wykryta przez 3 klatki z rzedu
-LOSS_FRAMES = 8      # Karta musi zniknac na 8 klatek z rzedu, aby zostala schowana
-
-# Zoptymalizowana kolejka round-robin do sprawdzania nieaktywnych kart
-inactive_index = 0
-prev_time = time.time()  # Do pomiaru FPS
-runtime_metrics = RuntimeMetrics(maxlen=60)
-last_diagnostics_time = 0.0
-frame_counter = 0
-boost_frames_remaining = 0
-previous_active_card_names = set()
-schedule_mode_name = "empty_scan"
 motion_detector = MotionDetector(min_changed_ratio=0.02, settle_frames=2)
-tracked_boxes_by_name = {}
 
 # Petla glowna (Live feed)
 while True:
-    frame_counter += 1
+    frame_loop_start = time.perf_counter()
     drain_control_messages(camera_session)
     config_values = runtime_config.values
-    
-    # Aktywne, dynamiczne parametry dla trybu snapshot-first (ORB i RANSAC)
-    min_match_count = int(config_values.get("MIN_MATCH_COUNT", 12.0))
-    ratio_thresh = config_values.get("RATIO_THRESH", 0.79)
-    min_inlier_ratio = config_values.get("MIN_INLIER_RATIO", 0.25)
     
     # Dynamiczna aktualizacja parametrów detektora ruchu i bramki snapshotu
     motion_detector.min_changed_ratio = config_values.get("MOTION_CHANGED_RATIO", 0.02)
@@ -539,15 +435,6 @@ while True:
             sample_count=snapshot_gate.config.sample_count,
             sample_interval_ms=snapshot_gate.config.sample_interval_ms
         )
-
-    # Archiwalne wartości dla starej pętli ciągłego śledzenia (backward compatibility)
-    ema_alpha = 0.4
-    boost_after_layout_change_frames = 12
-    reverify_interval_frames = 180
-    tracking_iou_threshold = 0.35
-    lock_dead_zone_pos = 3.0
-    lock_dead_zone_angle = 0.5
-    frame_loop_start = time.perf_counter()
     camera_read_start = time.perf_counter()
     ret, frame = camera_session.read()
     runtime_metrics.add("camera_read_ms", (time.perf_counter() - camera_read_start) * 1000.0)
@@ -624,517 +511,25 @@ while True:
         continue
     
     # ==========================================================================
-    # STATE-FIRST OPTIMIZATION (Task 10, Opus 2026-05-29)
-    # Serce optymalizacji: karty LOCKED sledzone tanio po konturze/IoU,
-    # pelne ORB/FLANN tylko dla NEEDS_REVERIFY i nowych kandydatow.
-    # Dlaczego: matching ORB = ~60ms/karte, contour tracking IoU = ~0.01ms/karte.
+    # STATE-FIRST OPTIMIZATION (Task 10, Opus 2026-05-29) -> Hermetyzowane w legacy_pipeline
     # ==========================================================================
-
-    # Lista kandydatow wykrytych w tej klatce; po petli usuwamy duplikaty przestrzenne
-    detection_candidates = []
-    detected_this_frame = {}
-    
-    all_card_names = list(reference_cards.keys())
-    candidate_card_names = table_state.available_card_ids
-    runtime_metrics.add("available_card_count", len(candidate_card_names))
-    runtime_metrics.add("tracked_card_count", len(table_state.cards))
-    runtime_metrics.add("boost_frames_remaining", boost_frames_remaining)
-
-    # --- KROK 1: Contour tracking PRZED matchingiem ORB ---
-    # Karty LOCKED z dobrym IoU sa podtrzymywane tanio — nie potrzebuja ORB.
-    # Przenosimy tracking tutaj, zeby wiedziec KTORE karty mozna pominac.
-    tracked_boxes = {name: box for name, box in tracked_boxes_by_name.items() if name in table_state.cards}
-    locked_tracked_this_frame = {}  # Karty LOCKED utrzymane przez contour tracking
-    orb_skipped_locked = 0
-    tracking_reverify_count = 0
-
-    if gray_frame is not None and tracked_boxes:
-        # Prosty contour tracking: szukamy konturow prostokatnych w klatce
-        # i dopasowujemy je do znanych pozycji LOCKED kart po IoU.
-        # Unikamy kosztownego ORB/FLANN — to jest ~1000x tansze.
-        _, thresh = cv2.threshold(gray_frame, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-        contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        
-        # Filtrujemy kontury do rozsadnych rozmiarow kart
-        min_contour_area = frame_width * frame_height * 0.005
-        max_contour_area = frame_width * frame_height * 0.5
-        contour_boxes = []
-        for cnt in contours:
-            area = cv2.contourArea(cnt)
-            if min_contour_area <= area <= max_contour_area:
-                contour_boxes.append(cv2.boundingRect(cnt))
-        
-        assigned_tracked = assign_boxes_to_cards(
-            tracked_boxes,
-            contour_boxes,
-            min_iou=tracking_iou_threshold,
-        )
-        runtime_metrics.add("tracked_assignments", len(assigned_tracked))
-        
-        # Dla kazdej LOCKED karty z dobrym IoU: podtrzymaj pozycje BEZ ORB
-        for card_id, matched_box in assigned_tracked.items():
-            tracked_card = table_state.cards.get(card_id)
-            if tracked_card is None:
-                continue
-            
-            phase = debounce_state.get(card_id, {}).get("phase", "DETECTING")
-            
-            if phase == "LOCKED" and tracked_card.phase == PHASE_LOCKED:
-                # Karta LOCKED z dobrym IoU — podtrzymujemy tanio!
-                tracked_card.last_seen_frame = frame_counter
-                # NIE nadpisujemy tracked_boxes_by_name — zachowujemy precyzyjny bbox z ORB.
-                # Konturowy bbox zawiera cienie i blat, wiec jest za duzy.
-                orb_skipped_locked += 1
-                
-                # Obliczamy nowa pozycje na stole na podstawie centroidu rzeczywistego konturu
-                bx, by, bw, bh = matched_box
-                cx = bx + bw / 2.0
-                cy = by + bh / 2.0
-                contour_x = float((cx / frame_width * 2.0 - 1.0) * 13.0)
-                contour_y = float((1.0 - (cy / frame_height) * 2.0) * 7.8)
-
-                # Wstrzykujemy "tracking detection" do detected_this_frame
-                # uzywajac nowej pozycji konturu, aby umozliwic detekcje ruchu!
-                locked_tracked_this_frame[card_id] = {
-                    "name": card_id,
-                    "x": contour_x,
-                    "y": contour_y,
-                    "angle": debounce_state[card_id].get("locked_angle", tracked_card.angle),
-                    # Syntetyczne wartosci — karta nie byla matchowana ORB
-                    "count": 0,
-                    "inlier_ratio": 1.0,
-                    "area": bw * bh,
-                    "dst": None,  # Brak quada z ORB — uzywamy bbox
-                    "tracked_by_contour": True,  # Flaga diagnostyczna
-                }
-            else:
-                # Karta w innej fazie — tracking OK, ale nadal moze isc do ORB
-                tracked_card.last_seen_frame = frame_counter
-                # NIE nadpisujemy tracked_boxes_by_name — j.w.
-        
-        # Karty LOCKED bez przypisania IoU — wymagaja reweryfikacji
-        for card_id, tracked_card in table_state.cards.items():
-            if card_id in assigned_tracked:
-                continue
-            if frame_counter - tracked_card.last_seen_frame >= TRACKING_REVERIFY_GAP_FRAMES:
-                table_state.mark_needs_reverify(card_id, "tracking_gap")
-                tracking_reverify_count += 1
-    else:
-        runtime_metrics.add("tracked_assignments", 0)
-
-    runtime_metrics.add("tracking_reverify_count", tracking_reverify_count)
-    runtime_metrics.add("orb_skipped_locked", orb_skipped_locked)
-
-    # --- KROK 2: Budowa listy kart do ORB matchingu ---
-    # Tylko: nowe kandydaty (available) + karty NEEDS_REVERIFY
-    # LOCKED karty juz utrzymane przez contour tracking — pomijamy!
-    reverify_card_names = [
-        card_id for card_id, tracked_card in table_state.cards.items()
-        if tracked_card.phase == PHASE_NEEDS_REVERIFY
-        or should_reverify(
-            frame_index=frame_counter,
-            last_verified_frame=tracked_card.last_seen_frame,
-            interval_frames=reverify_interval_frames,
-            suspicious=False,
-        )
-    ]
-    runtime_metrics.add("reverify_due_count", len(reverify_card_names))
-
-    # Pula do matchingu = nowe (available) + wymagajace reweryfikacji
-    # Karty LOCKED z dobrym IoU NIE trafiaja tutaj — to jest serce optymalizacji.
-    orb_candidate_names = list(dict.fromkeys(candidate_card_names + reverify_card_names))
-
-    active_count = sum(
-        1
-        for state in debounce_state.values()
-        if state.get("stable_count", 0) > 0
+    pipeline_result = legacy_pipeline.process_frame(
+        frame=frame,
+        gray_frame=gray_frame,
+        motion_result=motion_result,
+        des_frame=des_frame,
+        kp_frame=kp_frame,
+        frame_width=frame_width,
+        frame_height=frame_height,
+        frame_loop_start=frame_loop_start
     )
-    schedule_mode = get_schedule_mode(
-        active_count=active_count,
-        boost_frames_remaining=boost_frames_remaining,
-        inactive_per_frame_empty=INACTIVE_PER_FRAME_EMPTY,
-        inactive_per_frame_active=INACTIVE_PER_FRAME_ACTIVE,
-        inactive_per_frame_boost=INACTIVE_PER_FRAME_BOOST,
-    )
-    schedule_mode_name = schedule_mode.name
-    inactive_per_frame = schedule_mode.inactive_per_frame
-    matching_selection = choose_cards_to_match(
-        all_card_names=orb_candidate_names,
-        debounce_state=debounce_state,
-        inactive_index=inactive_index,
-        frame_counter=frame_counter,
-        locked_refresh_interval=LOCKED_REFRESH_INTERVAL,
-        inactive_per_frame=inactive_per_frame,
-    )
-    active_names = matching_selection.active_names
-    inactive_names = matching_selection.inactive_names
-    inactive_index = matching_selection.next_inactive_index
-    cards_to_check = matching_selection.names
-    runtime_metrics.add("cards_checked", len(cards_to_check))
-
-    # --- KROK 3: Matching ORB/FLANN — tylko dla wybranych kart ---
-    # Strategia: probuj upright NAJPIERW. Jesli przejdzie — pomijaj reversed.
-    # Reversed jest fallbackiem, nie defaultem. To oszczedza ~50% czasu matchingu.
-    matching_start = time.perf_counter()
-    if des_frame is not None and len(des_frame) > min_match_count:
-        # Iterujemy TYLKO po kartach wymagajacych pelnego rozpoznawania
-        for name in cards_to_check:
-            ref_data = reference_cards.get(name)
-            if ref_data is None:
-                continue
-
-            # Upright najpierw, reversed tylko jako fallback
-            best_orientation_result = None
-
-            for orientation, des_key, kp_key, img_key in [
-                ("upright", "descriptors", "keypoints", "image"),
-                ("reversed", "reversed_descriptors", "reversed_keypoints", "reversed_image"),
-            ]:
-                des_ref = ref_data.get(des_key)
-                if des_ref is None:
-                    continue
-
-                # FLANN-LSH knnMatch — 2-5x szybszy niz BruteForce
-                try:
-                    matches = flann.knnMatch(des_ref, des_frame, k=2)
-                except cv2.error:
-                    continue
-
-                good_matches = []
-                # Lowe's ratio test (odrzuca niepewne i bledne dopasowania szumu)
-                for match_pair in matches:
-                    if len(match_pair) == 2:
-                        m, n = match_pair
-                        if m.distance < ratio_thresh * n.distance:
-                            good_matches.append(m)
-
-                if len(good_matches) < min_match_count:
-                    if frame_counter % 60 == 0:
-                        logging.debug(
-                            "MATCH_REJECT %s[%s]: good_matches=%d < min=%d (total_raw=%d)",
-                            name, orientation, len(good_matches), min_match_count, len(matches)
-                        )
-                    continue
-
-                # Karta ma duzo punktow! Liczymy homografie i sprawdzamy geometrie
-                ref_kp = ref_data[kp_key]
-                src_pts = np.float32([ref_kp[m.queryIdx].pt for m in good_matches]).reshape(-1, 1, 2)
-                dst_pts = np.float32([kp_frame[m.trainIdx].pt for m in good_matches]).reshape(-1, 1, 2)
-
-                M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
-
-                if M is None or mask is None:
-                    continue
-
-                inlier_ratio = np.sum(mask) / len(mask)
-                if inlier_ratio < min_inlier_ratio:
-                    if frame_counter % 60 == 0:
-                        logging.debug(
-                            "INLIER_REJECT %s[%s]: inlier_ratio=%.3f < min=%.3f (matches=%d)",
-                            name, orientation, inlier_ratio, min_inlier_ratio, len(good_matches)
-                        )
-                    continue
-
-                ref_img = ref_data[img_key]
-                h, w = ref_img.shape
-                pts = np.float32([[0, 0], [0, h-1], [w-1, h-1], [w-1, 0]]).reshape(-1, 1, 2)
-                dst = cv2.perspectiveTransform(pts, M)
-
-                is_convex = cv2.isContourConvex(np.int32(dst))
-                area = cv2.contourArea(dst)
-                max_area = frame_width * frame_height * 0.9
-                min_area = frame_width * frame_height * 0.008
-                is_reasonable_size = (min_area <= area <= max_area)
-
-                if is_convex and is_reasonable_size and validate_quadrilateral(dst):
-                    # Ten orientation przeszedl — porownaj z dotychczasowym najlepszym
-                    score = len(good_matches) * inlier_ratio
-                    if best_orientation_result is None or score > best_orientation_result["score"]:
-                        cx = float(np.mean(dst[:, 0, 0]))
-                        cy = float(np.mean(dst[:, 0, 1]))
-                        pos_x = float((cx / frame_width * 2.0 - 1.0) * 13.0)
-                        pos_y = float((1.0 - (cy / frame_height) * 2.0) * 7.8)
-                        x0, y0 = dst[0][0][0], dst[0][0][1]
-                        x3, y3 = dst[3][0][0], dst[3][0][1]
-                        angle = -float(math.atan2(y3 - y0, x3 - x0))
-
-                        # Jesli karta jest odwrocona do gory nogami (reversed), dodajemy 180 stopni (pi) do kata
-                        if orientation == "reversed":
-                            angle += math.pi
-                            if angle > math.pi:
-                                angle -= 2 * math.pi
-
-                        best_orientation_result = {
-                            "name": name,
-                            "count": len(good_matches),
-                            "inlier_ratio": float(inlier_ratio),
-                            "area": float(area),
-                            "dst": dst,
-                            "x": pos_x,
-                            "y": pos_y,
-                            "angle": angle,
-                            "orientation": orientation,
-                            "score": score,
-                        }
-                    # Jesli upright przeszedl — nie sprawdzaj reversed (oszczednosc ~50ms/karte)
-                    if orientation == "upright":
-                        break
-                else:
-                    if frame_counter % 60 == 0:
-                        logging.debug(
-                            "GEOM_REJECT %s[%s]: convex=%s size=%s area=%.0f (matches=%d inlier=%.3f)",
-                            name, orientation, is_convex, is_reasonable_size, area,
-                            len(good_matches), inlier_ratio
-                        )
-
-            # Najlepsza orientacja wygrywa
-            if best_orientation_result is not None:
-                detection_candidates.append(best_orientation_result)
-        
-        detected_this_frame = deduplicate_detections(detection_candidates)
-
-    # --- KROK 4: Scalenie wynikow ORB + contour tracking ---
-    # Karty LOCKED utrzymane tanio przez contour tracking dokladamy do detected_this_frame,
-    # zeby debounce_state utrzymal ich stable_count (nie zaczal loss_count).
-    for card_id, tracked_data in locked_tracked_this_frame.items():
-        if card_id not in detected_this_frame:
-            detected_this_frame[card_id] = tracked_data
-    runtime_metrics.add("locked_tracked_count", len(locked_tracked_this_frame))
-
-    # Track how many observed boxes are potentially "new space" outside occupied tracked areas.
-    observed_boxes = [
-        quad_to_box(item["dst"]) for item in detected_this_frame.values()
-        if item.get("dst") is not None
-    ]
-    unoccupied_observed_boxes = filter_boxes_outside_occupied(
-        observed_boxes,
-        list(tracked_boxes.values()),
-        max_iou=0.1,
-    )
-    runtime_metrics.add("unoccupied_observed_boxes", len(unoccupied_observed_boxes))
-
-    runtime_metrics.add("matching_ms", (time.perf_counter() - matching_start) * 1000.0)
-                
-    # 6. Dwufazowa stabilizacja: DETECTING -> LOCKED ("Zlap i Zamroz")
-    # Faza DETECTING: pelna moc ORB, szybka identyfikacja, EMA wygladzanie
-    # Faza LOCKED: pozycja zamrozona, aktualizacja TYLKO gdy karta ruszy sie o wiecej niz LOCK_DEAD_ZONE
-    active_detected_cards = []
-    
-    for name in reference_cards.keys():
-        if name not in debounce_state:
-            debounce_state[name] = {
-                "stable_count": 0, 
-                "loss_count": 0,
-                "phase": "DETECTING"  # DETECTING lub LOCKED
-            }
-            
-        if name in detected_this_frame:
-            debounce_state[name]["stable_count"] += 1
-            debounce_state[name]["loss_count"] = 0
-            
-            new_x = detected_this_frame[name]["x"]
-            new_y = detected_this_frame[name]["y"]
-            new_angle = detected_this_frame[name]["angle"]
-            
-            phase = debounce_state[name]["phase"]
-            
-            if phase == "DETECTING":
-                # Faza wykrywania — EMA wygladzanie, szybka konwergencja
-                old_x = debounce_state[name].get("last_x", new_x)
-                old_y = debounce_state[name].get("last_y", new_y)
-                old_angle = debounce_state[name].get("last_angle", new_angle)
-                
-                debounce_state[name]["last_x"] = ema_alpha * new_x + (1 - ema_alpha) * old_x
-                debounce_state[name]["last_y"] = ema_alpha * new_y + (1 - ema_alpha) * old_y
-                
-                # Zabezpieczenie przed dryfem kata przy skoku orientacji (np. upright <-> reversed):
-                # Obliczamy najkrotszy dystans katowy. Jesli zmiana jest duza (> 1.0 rad = ~57 stopni),
-                # natychmiast resetujemy EMA i przyjmujemy nowy kat, zapobiegajac "zawisaniu" karty bokiem (90 stopni).
-                diff_angle = abs(new_angle - old_angle)
-                if diff_angle > math.pi:
-                    diff_angle = 2 * math.pi - diff_angle
-                
-                if diff_angle > 1.0:
-                    debounce_state[name]["last_angle"] = new_angle
-                else:
-                    debounce_state[name]["last_angle"] = ema_alpha * new_angle + (1 - ema_alpha) * old_angle
-                
-                # Po LOCK_AFTER_FRAMES stabilnych klatkach — zamrazamy pozycje
-                if debounce_state[name]["stable_count"] >= LOCK_AFTER_FRAMES:
-                    debounce_state[name]["phase"] = "LOCKED"
-                    debounce_state[name]["locked_x"] = debounce_state[name]["last_x"]
-                    debounce_state[name]["locked_y"] = debounce_state[name]["last_y"]
-                    debounce_state[name]["locked_angle"] = debounce_state[name]["last_angle"]
-                    
-            elif phase == "LOCKED":
-                # Faza zamrozona — ignorujemy drobne wahania ORB
-                locked_x = debounce_state[name]["locked_x"]
-                locked_y = debounce_state[name]["locked_y"]
-                locked_angle = debounce_state[name]["locked_angle"]
-                
-                # Sprawdzamy czy karta NAPRAWDE sie ruszyla (duzy ruch)
-                dx = abs(new_x - locked_x)
-                dy = abs(new_y - locked_y)
-                
-                # Najkrotszy dystans katowy (uwzglednia okresowosc [-pi, pi])
-                d_angle = abs(new_angle - locked_angle)
-                if d_angle > math.pi:
-                    d_angle = 2 * math.pi - d_angle
-                
-                if dx > lock_dead_zone_pos or dy > lock_dead_zone_pos or d_angle > lock_dead_zone_angle:
-                    # Karta sie ruszyla! Odblokowujemy i wracamy do fazy wykrywania
-                    debounce_state[name]["phase"] = "DETECTING"
-                    debounce_state[name]["stable_count"] = 0
-                    debounce_state[name]["last_x"] = new_x
-                    debounce_state[name]["last_y"] = new_y
-                    debounce_state[name]["last_angle"] = new_angle
-                    boost_frames_remaining = max(boost_frames_remaining, boost_after_layout_change_frames)
-                    # Zgłaszamy ruch do table_state, aby karta została zweryfikowana przez ORB w nowym miejscu
-                    table_state.mark_needs_reverify(name, "motion_detected")
-                    log_event(f"[RUCH] Karta {name} przesunela sie (dx={dx:.2f}, dy={dy:.2f}). Odblokowanie i zgloszenie do ORB.")
-                else:
-                    # Karta statyczna — uzywamy zamrozonej pozycji (ZERO jitteru)
-                    debounce_state[name]["last_x"] = locked_x
-                    debounce_state[name]["last_y"] = locked_y
-                    debounce_state[name]["last_angle"] = locked_angle
-        elif name in cards_to_check:
-            debounce_state[name]["loss_count"] += 1
-            if debounce_state[name]["loss_count"] >= LOSS_FRAMES:
-                debounce_state[name]["stable_count"] = 0
-                debounce_state[name]["phase"] = "DETECTING"  # Reset do fazy wykrywania
-        else:
-            # Karta nie byla matchowana w tej klatce (np. LOCKED czeka na okresowy refresh),
-            # wiec nie traktujemy braku detekcji jako realnej utraty.
-            pass
-                
-        # Karta jest uznana za aktywnie wykryta, jesli osiagnela prog stabilnosci
-        if debounce_state[name]["stable_count"] >= DEBOUNCE_FRAMES:
-            active_detected_cards.append({
-                "name": name,
-                "x": round(debounce_state[name].get("last_x", 0.0), 4),
-                "y": round(debounce_state[name].get("last_y", 0.0), 4),
-                "angle": round(debounce_state[name].get("last_angle", 0.0), 4)
-            })
-
-    active_card_names = {card["name"] for card in active_detected_cards}
-    for card in active_detected_cards:
-        table_state.upsert_locked(
-            card_id=card["name"],
-            x=card["x"],
-            y=card["y"],
-            angle=card["angle"],
-            confidence=1.0,
-            frame_index=frame_counter,
-        )
-    # Usuwamy nieaktywne karty z table_state, które naprawde zniknely ze stolu (potwierdzone przez LOSS_FRAMES)
-    for name in list(table_state.cards.keys()):
-        if name in debounce_state and debounce_state[name]["loss_count"] >= LOSS_FRAMES:
-            table_state.remove_card(name)
-            log_event(f"[USUNIECIE] Karta {name} zniknela ze stolu. Usuniecie ze stanu i powrot do puli dostepnych.")
-    for name, item in detected_this_frame.items():
-        # Karty sledzone przez contour tracking maja dst=None — nie nadpisujemy ich bbox
-        if item.get("dst") is not None:
-            tracked_boxes_by_name[name] = quad_to_box(item["dst"])
-    newly_active_cards = active_card_names - previous_active_card_names
-    if newly_active_cards:
-        boost_frames_remaining = max(boost_frames_remaining, boost_after_layout_change_frames)
-        previous_active_card_names = active_card_names
-    elif active_card_names != previous_active_card_names:
-        previous_active_card_names = active_card_names
-    elif boost_frames_remaining > 0:
-        boost_frames_remaining -= 1
-            
-    # Aktualizujemy wspoldzielony stan (bezpieczna gleboka kopia wewnatrz locka)
-    metrics_snapshot = runtime_metrics.snapshot()
-    runtime_snapshot = {
-        "profile": RUNTIME_PROFILE,
-        "camera_index": camera_session.camera_index,
-        "capture_width": frame_width,
-        "capture_height": frame_height,
-        "camera_focus_locked": CAMERA_FOCUS_LOCKED,
-        "camera_exposure_locked": CAMERA_EXPOSURE_LOCKED
-    }
-    runtime_snapshot["schedule_mode"] = schedule_mode_name
-    runtime_snapshot["boost_frames_remaining"] = boost_frames_remaining
-    runtime_snapshot["available_card_count"] = len(table_state.available_card_ids)
-    runtime_snapshot["tracked_card_count"] = len(table_state.cards)
-    runtime_snapshot["reverify_interval_frames"] = reverify_interval_frames
-    runtime_snapshot["tracking_iou_threshold"] = tracking_iou_threshold
-    runtime_snapshot["table"] = table_calibration.status()
-    status_update_start = time.perf_counter()
-    status_store.update_cv_state(
-        cards=active_detected_cards,
-        metrics=metrics_snapshot,
-        runtime=runtime_snapshot,
-        operator=build_operator_snapshot(),
-        warnings=list(operator_warnings[-8:])
-    )
-    runtime_metrics.add("status_update_ms", (time.perf_counter() - status_update_start) * 1000.0)
-
-    diagnostics_time = time.time()
-    if diagnostics_time - last_diagnostics_time >= 1.0:
-        append_diagnostics(metrics_snapshot, runtime_snapshot, active_detected_cards)
-        last_diagnostics_time = diagnostics_time
-
-    # 7. Rysowanie ramek — kolor zalezy od fazy:
-    # ZIELONA = DETECTING, NIEBIESKO-ZLOTA = LOCKED (ORB), TURKUSOWA = LOCKED (contour tracking)
-    for name, data in detected_this_frame.items():
-        dst = data.get("dst")
-        match_count = data["count"]
-        is_contour_tracked = data.get("tracked_by_contour", False)
-        
-        # Sprawdzamy faze karty
-        phase = debounce_state.get(name, {}).get("phase", "DETECTING")
-        
-        if is_contour_tracked:
-            box_color = (200, 200, 0)   # Turkusowa (BGR) — tracking bez ORB
-            text_color = (200, 200, 0)
-            status_text = "TRACKED"
-        elif phase == "LOCKED":
-            box_color = (255, 180, 0)   # Niebiesko-zlota (BGR) — zamrozona
-            text_color = (255, 180, 0)
-            status_text = "LOCKED"
-        else:
-            box_color = (0, 255, 0)     # Zielona — aktywne wykrywanie
-            text_color = (0, 0, 255)
-            status_text = "DETECTING"
-        
-        # Karty sledzone przez contour tracking nie maja quada ORB — rysujemy bbox
-        if dst is not None:
-            display_frame = cv2.polylines(display_frame, [np.int32(dst)], True, box_color, 3, cv2.LINE_AA)
-            top_y = min([pt[0][1] for pt in dst])
-            top_x = min([pt[0][0] for pt in dst])
-        elif name in tracked_boxes_by_name:
-            bx, by, bw, bh = tracked_boxes_by_name[name]
-            cv2.rectangle(display_frame, (bx, by), (bx + bw, by + bh), box_color, 3, cv2.LINE_AA)
-            top_y = by
-            top_x = bx
-        else:
-            continue
-        
-        cv2.putText(display_frame, f"{name.upper()} ({match_count} pkt) [{status_text}]", 
-                    (int(top_x), int(top_y) - 10), cv2.FONT_HERSHEY_SIMPLEX, 
-                    0.7, text_color, 2, cv2.LINE_AA)
-
-    # Obliczanie i rysowanie FPS na żywo (pomaga w weryfikacji wydajności)
-    current_time = time.time()
-    time_diff = current_time - prev_time
-    fps = 1.0 / time_diff if time_diff > 0 else 0.0
-    prev_time = current_time
-    runtime_metrics.add("fps", fps)
-    runtime_metrics.add("frame_loop_ms", (time.perf_counter() - frame_loop_start) * 1000.0)
-    
-    aruco_label = "TAK" if table_calibration.calibrated else "NIE"
-    status_line = f"ORB: {len(cards_to_check)} | IoU: {orb_skipped_locked} | Pula: {len(inactive_names)} | ArUco: {aruco_label}"
-    opencv_preview.draw_hud(display_frame, fps, status_line)
-    opencv_preview.show(display_frame)
-
-    key_action = opencv_preview.handle_keyboard(camera_session)
-    if key_action == "quit":
+    if pipeline_result["action"] == "quit":
         break
-    elif key_action == "switch":
-        frame_width, frame_height = camera_session.frame_width, camera_session.frame_height
+    elif pipeline_result["action"] == "switch":
+        frame_width = pipeline_result["frame_width"]
+        frame_height = pipeline_result["frame_height"]
         log_event(f"[KAMERA] Nowa rozdzielczosc: {frame_width}x{frame_height}")
+    continue
 
 camera_session.close()
 opencv_preview.close()
