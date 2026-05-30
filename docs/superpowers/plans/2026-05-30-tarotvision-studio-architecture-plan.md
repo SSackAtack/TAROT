@@ -6,7 +6,7 @@ Ten dokument jest planem wykonawczym dla Gemini. Celem nie jest jednorazowe dopi
 
 Najwazniejsza decyzja architektoniczna: najpierw odchudzamy entrypointy i stabilizujemy granice modulow, potem dopiero dokladamy studio. Nie wolno dopisywac rekordera, miksera audio ani YouTube uploadu bezposrednio do obecnego monolitu `app_cv/main.py` lub `app_ar/main.js`.
 
-## Session Status (2026-05-30, Gemini - Modularyzacja frontendu, Status Payload v1 i przygotowanie pod Studio Console)
+## Session Status (2026-05-30, Gemini - Modularyzacja frontendu, Status Payload v1, Task 5b i przygotowanie pod Studio Console)
 
 Wykonano:
 - Zrealizowano w całości **Task 4** (Modularyzacja monolitu frontendu React/Vite/Three.js do czystych modułów ES6 w `app_ar/src/`).
@@ -18,11 +18,14 @@ Wykonano:
 - Utworzono oficjalny dokument specyfikacji protokołu `docs/protocols/status_payload_v1.md`.
 - Zaimplementowano frontendowy normalizator stanu `messageNormalizer.js` w katalogu `transport/` w celu defensywnego zabezpieczenia aplikacji przed nieobecnością kluczy w JSON-ie.
 - Dodano rygorystyczne testy jednostkowe w `test_messages.py` na backendzie weryfikujące poprawność sekcji `schema_version` i `studio`.
+- Zrealizowano w całości **Task 5b** (Architektoniczna spójność protokołu).
+- Zintegrowano `StatusStore` z `build_status_payload` z messages.py w celu automatycznego egzekwowania schematu Payload v1 we wszystkich kluczach stanu.
+- Dodano test jednostkowy `test_get_status_returns_complete_v1_schema` weryfikujący obecność wszystkich sekcji top-level w payloadzie.
 - Zweryfikowano poprawność kompilacji: `npm run build` przebiega pomyślnie i kompiluje 17 modułów w 268ms.
-- Zweryfikowano testy backendowe: Wszystkie **137 testów jednostkowych** Pythona przechodzi pomyślnie (0.298s).
+- Zweryfikowano testy backendowe: Wszystkie **138 testów jednostkowych** Pythona przechodzi pomyślnie (0.316s).
 
 Pozostało:
-- Uzyskać review od Codexa (GREEN LIGHT) dla Task 4 i Task 5.
+- Uzyskać review od Codexa (GREEN LIGHT) dla Task 5 (w tym poprawki 5b).
 - Przejść do kamienia milowego konsoli nagraniowej: **Task Studio Console 1: Fundament konsoli** w celu utworzenia trybu `?studio=1` w osobnym module frontendu `app_ar/src/studio/studioConsole.js`.
 
 ## Session Status (2026-05-30, Codex - projekt architektury dla Gemini)
