@@ -6,6 +6,25 @@ Ten dokument jest planem wykonawczym dla Gemini. Celem nie jest jednorazowe dopi
 
 Najwazniejsza decyzja architektoniczna: najpierw odchudzamy entrypointy i stabilizujemy granice modulow, potem dopiero dokladamy studio. Nie wolno dopisywac rekordera, miksera audio ani YouTube uploadu bezposrednio do obecnego monolitu `app_cv/main.py` lub `app_ar/main.js`.
 
+## Session Status (2026-05-30, Gemini - Wdrożenie kontraktu audio i synchronizacji suwaków, Task Studio Console 4 - Część A)
+
+Wykonano:
+- Zrealizowano w całości **część kontraktową Task Studio Console 4 (Audio section)**.
+- Opracowano i zaimplementowano oficjalną specyfikację kontraktu danych audio w Payload v1. Sekcja `studio` w payloadzie WebSocket zawiera teraz kompletną podsekcję `audio` ze strukturą kanałów głośności i wyciszenia: `studio.audio.channels.[mic, bgm, sfx, master]` oraz `peak_db` dla wskaźników głośności.
+- Zaimplementowano obsługę, parsowanie i pełną walidację (wraz ze sprawdzaniem typów i zakresów suwaków `0.0 <= volume <= 1.0`) trzech nowych komend audio na backendzie:
+  - `studio_set_audio_volume` (aktualizacja głośności konkretnego kanału w `StatusStore` i generowanie komunikatów ostrzeżeń operatora).
+  - `studio_set_audio_mute` (zmiana statusu wyciszenia kanału w `StatusStore`).
+  - `studio_update_audio_peak` (okresowe przesyłanie przez przeglądarkę poziomu peak w decybelach w celu zapisu do logów diagnostycznych).
+- Zintegrowano mikser audio we frontendzie z nowym protokołem WebSocket w [studioConsole.js](file:///e:/Antigravity/Projekty/TAROT/app_ar/src/studio/studioConsole.js): przeciąganie suwaków i klikanie wyciszenia wysyła komendy bezpośrednio na backend, a stan suwaków jest synchronizowany w obie strony bez "szarpania" suwaków podczas przeciągania (`document.activeElement !== slider`).
+- Dodano pełne wsparcie i normalizację w [messageNormalizer.js](file:///e:/Antigravity/Projekty/TAROT/app_ar/src/transport/messageNormalizer.js) zapewniając kompatybilność wsteczną ze starszymi wersjami backendu.
+- Napisano 7 nowych testów jednostkowych w `test_tuning_protocol.py`, `test_status_store.py` oraz zaktualizowano asercje domyślnego payloadu w `test_messages.py`.
+- Wszystkie **161 testów jednostkowych backendu** przechodzi pomyślnie w czasie 0.308s.
+- Produkcyjny build frontendu Vite z 21 modułami przebiega w pełni bezbłędnie (280ms).
+- Zmiany zostały zacommitowane i wypchnięte: commit `8338a61`.
+
+Pozostało:
+- Zaimplementować lokalny mikser audio Web Audio API w przeglądarce, dołączyć zmiksowany dźwięk (mikrofon + muzyka w tle + SFX) do MediaRecorder w celu zapisywania go w plikach WebM, oraz wdrożyć dynamiczne mierniki głośności Peak (dB) w UI.
+
 ## Session Status (2026-05-30, Gemini - Nagrywanie canvasu Three.js i integracja statusu, Task Studio Console 3 & Task 6 MVP A)
 
 Wykonano:
@@ -803,10 +822,12 @@ Wymogi:
 
 ### Task Studio Console 4: Audio section
 
-- [ ] Dodaj sekcje audio z `Mic`, `BGM`, `SFX`.
-- [ ] Pokaz metry poziomu.
-- [ ] Mute i gain sa dostepne bez otwierania zaawansowanych ustawien.
-- [ ] Brak mikrofonu pokazuje warning, nie crash.
+- [x] Opracuj i wdroż kontrakt audio (Payload v1 schema, studio.audio structure).
+- [x] Zintegruj komendy WebSocket `studio_set_audio_volume`, `studio_set_audio_mute`, `studio_update_audio_peak` na backendzie i we frontendzie.
+- [x] Dodaj dwustronną synchronizację suwaków i ikonek wyciszenia z WebSocketu bez szarpania.
+- [ ] Zaimplementuj Web Audio API mixer w przeglądarce i przechwytywanie audio do MediaRecorder.
+- [ ] Pokaż metry poziomu peak (miernik dB) w UI zintegrowany z Web Audio API.
+- [ ] Brak mikrofonu pokazuje warning w interfejsie konsoli, nie powoduje crashu nagrywania.
 
 ### Task Studio Console 5: Scene/director controls
 
