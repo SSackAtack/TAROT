@@ -13,6 +13,15 @@ MAJOR_ARCANAS = [
     "15_devil", "16_tower", "17_star", "18_moon", "19_sun", "20_judgement", "21_world"
 ]
 
+# Próba importu pywin32 do sprzętowej obsługi skanera na Windowsie
+HAS_WIA = False
+if sys.platform == "win32":
+    try:
+        import win32com.client
+        HAS_WIA = True
+    except ImportError:
+        HAS_WIA = False
+
 def order_points(pts):
     """
     Porządkuje 4 punkty wierzchołkowe w stałej kolejności:
@@ -68,6 +77,60 @@ def detect_background_dark(img_gray):
     
     median_val = np.median(border_pixels)
     return median_val < 100
+
+def scan_image_via_wia():
+    """
+    Uruchamia fizyczne skanowanie za pomocą systemowego okna dialogowego WIA na Windowsie.
+    Zapisuje obraz tymczasowy w scans_input i zwraca jego ścieżkę.
+    """
+    if not HAS_WIA:
+        print("\n[BŁĄD] Bezpośrednia obsługa skanera jest niedostępna!")
+        print("Powody:")
+        print("1. Nie pracujesz na systemie Windows (WIA działa tylko na Windows).")
+        print("2. Brak biblioteki pywin32. Uruchom 'install_dependencies.bat', aby ją zainstalować.")
+        return None
+
+    print("\n[WIA] Inicjalizacja sprzętowa skanera...")
+    try:
+        # Tworzymy systemowy obiekt dialogu skanowania WIA
+        dialog = win32com.client.Dispatch("WIA.CommonDialog")
+        
+        print(" -> Oczekiwanie na interakcję w systemowym oknie skanowania...")
+        
+        # Otwieramy systemowe okno dialogowe wyboru i skanowania obrazu
+        image = dialog.ShowAcquireImage(
+            1, # DeviceType (ScannerDeviceType)
+            0, # Intent (UnspecifiedIntent, pozwala wybrać profil w UI)
+            16384, # Bias (MaximizeQuality)
+            "{B96B3CAF-0728-11D3-9D7B-0000F81EF32E}", # FormatID (JPEG)
+            False, # AlwaysSelectDevice
+            True, # UseCommonUI
+            True # CancelError
+        )
+        
+        if image:
+            temp_filename = f"scan_wia_{int(time.time())}.jpg"
+            scans_input_dir = os.path.abspath("scans_input")
+            os.makedirs(scans_input_dir, exist_ok=True)
+            temp_path = os.path.join(scans_input_dir, temp_filename)
+            
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+                
+            image.SaveFile(temp_path)
+            print("[SUKCES] Fizyczne skanowanie ukończone!")
+            print(f" -> Zapisano plik tymczasowy: {temp_filename}")
+            return temp_path
+            
+    except Exception as e:
+        err_str = str(e)
+        # Sprawdzamy czy użytkownik po prostu kliknął 'Anuluj'
+        if "0x800704c7" in err_str.lower() or "anulowano" in err_str.lower() or "canceled" in err_str.lower():
+            print("\n[WIA] Skanowanie zostało anulowane przez użytkownika.")
+        else:
+            print(f"\n[BŁĄD] Wystąpił błąd komunikacji WIA ze skanerem: {e}")
+            print("Upewnij się, że skaner jest podłączony do prądu, włączony i podpięty kablem USB do komputera.")
+    return None
 
 def process_scanned_sheet(sheet_path, output_dir, args, start_index=0):
     """
@@ -146,7 +209,6 @@ def process_scanned_sheet(sheet_path, output_dir, args, start_index=0):
     corner_radius = int(args.target_width * 0.07)
     alpha_mask = create_rounded_mask(args.target_width, args.target_height, corner_radius)
 
-    # Tworzymy obraz podglądowy debugowania, jeśli zaznaczono opcję
     img_debug = None
     if args.debug_overlay:
         img_debug = img_work.copy()
@@ -154,22 +216,19 @@ def process_scanned_sheet(sheet_path, output_dir, args, start_index=0):
     for idx, cnt in enumerate(card_contours):
         card_number = start_index + saved_count
         
-        # Generowanie nazwy pliku w zależności od trybu
+        # Generowanie nazwy pliku
         if args.naming == "arcana" and card_number < len(MAJOR_ARCANAS):
             filename = f"{MAJOR_ARCANAS[card_number]}.{args.format}"
         else:
             filename = f"card_{card_number:02d}.{args.format}"
 
-        # Znajdujemy obrócony prostokąt o minimalnej powierzchni
+        # Znajdujemy obrócony prostokąt
         rect = cv2.minAreaRect(cnt)
         box = cv2.boxPoints(rect)
         
-        # Dodajemy informacje o wykrytej karcie do obrazu debugowania
+        # Dodajemy informacje debugowania
         if args.debug_overlay:
-            # Obrysowujemy kartę na zielono na obrazie roboczym
             cv2.drawContours(img_debug, [cnt], -1, (0, 255, 0), 3)
-            
-            # Obliczamy środek konturu, aby nanieść numer
             M_moment = cv2.moments(cnt)
             if M_moment["m00"] != 0:
                 cX = int(M_moment["m10"] / M_moment["m00"])
@@ -177,22 +236,16 @@ def process_scanned_sheet(sheet_path, output_dir, args, start_index=0):
             else:
                 bx, by, bw, bh = cv2.boundingRect(cnt)
                 cX, cY = bx + bw // 2, by + bh // 2
-            
-            # Rysujemy numer czerwonym kolorem z obwódką
             cv2.putText(img_debug, f"#{card_number:02d}", (cX - 35, cY), cv2.FONT_HERSHEY_SIMPLEX, 1.1, (0, 0, 0), 5, cv2.LINE_AA)
             cv2.putText(img_debug, f"#{card_number:02d}", (cX - 35, cY), cv2.FONT_HERSHEY_SIMPLEX, 1.1, (0, 0, 255), 2, cv2.LINE_AA)
 
-        # PRZELICZENIE PUNKTÓW NA PEŁNĄ ROZDZIELCZOŚĆ ORYGINALNĄ
+        # PRZELICZENIE PUNKTÓW
         box_orig = box / scale
-
-        # Deterministyczne sortowanie wierzchołków
         ordered_box = order_points(box_orig)
 
-        # Szerokość i wysokość obróconego prostokąta w oryginalnej skali
         width = int(rect[1][0] / scale)
         height = int(rect[1][1] / scale)
 
-        # Upewniamy się, że orientacja to portrait (pionowa)
         if width > height:
             src_pts = ordered_box
             dst_pts = np.array([
@@ -210,7 +263,6 @@ def process_scanned_sheet(sheet_path, output_dir, args, start_index=0):
                 [0, args.target_height - 1]
             ], dtype="float32")
 
-        # Obliczanie homografii i wycięcie karty z pełnego obrazu
         M = cv2.getPerspectiveTransform(src_pts, dst_pts)
         warped = cv2.warpPerspective(img, M, (args.target_width, args.target_height), flags=cv2.INTER_CUBIC)
 
@@ -219,17 +271,14 @@ def process_scanned_sheet(sheet_path, output_dir, args, start_index=0):
         if args.dry_run:
             print(f"   [DRY-RUN] Wykryto i dopasowano: {filename} ({args.target_width}x{args.target_height} px)")
         else:
-            # Obsługa formatów zapisu
             if args.format in ["png", "webp"]:
-                # Dodanie przezroczystych zaokrąglonych rogów (Kanał Alfa)
                 bgra = cv2.cvtColor(warped, cv2.COLOR_BGR2BGRA)
                 bgra[:, :, 3] = alpha_mask
-                
                 if args.format == "webp":
                     cv2.imwrite(out_path, bgra, [int(cv2.IMWRITE_WEBP_QUALITY), args.quality])
-                else:  # png
+                else:
                     cv2.imwrite(out_path, bgra)
-            else:  # jpg
+            else:
                 bg_color = (0, 0, 0) if is_dark else (255, 255, 255)
                 mask_3d = np.repeat(alpha_mask[:, :, np.newaxis], 3, axis=2)
                 bg_fill = np.ones_like(warped) * bg_color
@@ -240,7 +289,6 @@ def process_scanned_sheet(sheet_path, output_dir, args, start_index=0):
         
         saved_count += 1
 
-    # Zapis obrazu podglądowego debugowania
     if args.debug_overlay and len(card_contours) > 0:
         debug_filename = f"debug_{os.path.splitext(os.path.basename(sheet_path))[0]}.jpg"
         debug_path = os.path.join(output_dir, debug_filename)
@@ -253,15 +301,16 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Ultra-precyzyjny skrypt do masowej obróbki i autokadrowania skanów kart tarota (OpenCV).")
     parser.add_argument("scans_dir", nargs="?", default="scans_input", help="Katalog wejściowy ze skanami (domyślnie: scans_input)")
     parser.add_argument("output_dir", nargs="?", default="scans_output", help="Katalog wyjściowy dla wyciętych kart (domyślnie: scans_output)")
+    parser.add_argument("--scan", action="store_true", help="Uruchamia fizyczne skanowanie za pomocą systemowego WIA przed kadrowaniem")
     parser.add_argument("--background", choices=["dark", "light", "auto"], default="dark", help="Typ tła skanera (domyślnie: dark)")
     parser.add_argument("--format", choices=["png", "jpg", "webp"], default="webp", help="Format zapisu wyjściowego kart (domyślnie: webp)")
-    parser.add_argument("--naming", choices=["arcana", "generic"], default="arcana", help="Styl nazywania kart: arcana (Wielkie Arkana) lub generic (card_XX) (domyślnie: arcana)")
+    parser.add_argument("--naming", choices=["arcana", "generic"], default="arcana", help="Styl nazywania kart: arcana lub generic (domyślnie: arcana)")
     parser.add_argument("--start-index", type=int, choices=[0, 1], default=0, help="Indeks startowy numeracji kart (domyślnie: 0)")
     parser.add_argument("--target-width", type=int, default=600, help="Szerokość docelowa karty w px (domyślnie: 600)")
     parser.add_argument("--target-height", type=int, default=1032, help="Wysokość docelowa karty w px (domyślnie: 1032)")
     parser.add_argument("--quality", type=int, default=95, help="Jakość kompresji JPG/WebP (0-100, domyślnie: 95)")
     parser.add_argument("--debug-overlay", action="store_true", help="Generuje obraz z narysowanymi konturami i indeksami kart")
-    parser.add_argument("--dry-run", action="store_true", help="Analizuje skany bez fizycznego zapisu wyciętych kart na dysku")
+    parser.add_argument("--dry-run", action="store_true", help="Analizuje skany bez zapisu kart na dysk")
 
     args = parser.parse_args()
 
@@ -271,6 +320,23 @@ if __name__ == "__main__":
     start_time = time.time()
 
     print("=== ULTRA-PRECYZYJNA OBRÓBKA I PROSTOWANIE SKANÓW (OPENCV) ===")
+    
+    files = []
+    
+    # Krok A: Sprawdzamy czy włączono skanowanie bezpośrednie ze sprzętu
+    if args.scan:
+        wia_temp_file = scan_image_via_wia()
+        if wia_temp_file is None:
+            print("[INFO] Skanowanie bezpośrednie nie powiodło się lub zostało anulowane. Zamykam program.")
+            sys.exit(0)
+        # Przekazujemy nowo utworzony plik do dalszej analizy
+        args.scans_dir = os.path.dirname(wia_temp_file)
+        files = [os.path.basename(wia_temp_file)]
+    else:
+        # Krok B: Klasyczne wyszukiwanie plików graficznych w katalogu scans_dir
+        extensions = (".jpg", ".jpeg", ".png", ".tiff", ".tif")
+        files = [f for f in os.listdir(args.scans_dir) if f.lower().endswith(extensions)]
+
     if args.dry_run:
         print(" [TRYB DRY-RUN: Symulacja bez zapisu kart produkcyjnych]")
     print(f"Katalog wejściowy : {args.scans_dir}")
@@ -281,13 +347,9 @@ if __name__ == "__main__":
     print(f"Indeks startowy   : {args.start_index}")
     print("="*70)
 
-    # Szukamy plików graficznych
-    extensions = (".jpg", ".jpeg", ".png", ".tiff", ".tif")
-    files = [f for f in os.listdir(args.scans_dir) if f.lower().endswith(extensions)]
-
     if not files:
         print(f"\n[INFO] Brak skanów w katalogu '{args.scans_dir}'.")
-        print("Umieść tam pliki skanera i uruchom skrypt ponownie.")
+        print("Umieść tam pliki skanera lub uruchom skrypt z flagą --scan.")
         sys.exit(0)
 
     scan_stats = {}

@@ -1,16 +1,60 @@
 @echo off
-title TarotVision - Automatyczna Obrobka Skanow
+title TarotVision - Centrum Obrobki i Skanowania Kart
 chcp 65001 >nul
 
+:MENU
+cls
 echo =======================================================================
-echo              TarotVision - Automatyczny Procesor Skanow
+echo              TarotVision - Centrum Skanowania i Obrobki
 echo =======================================================================
 echo.
-echo Ten skrypt automatycznie wytnie, wyprostuje i przygotuje Twoje karty.
+echo Wybierz, co chcesz zrobic:
+echo.
+echo   [1] SKANUJ I OBROB - Bezposrednie skanowanie z Twojego skanera
+echo       (Karty leza na szybie skanera, skrypt sam wywola skanowanie)
+echo.
+echo   [2] OBROB GOTOWE PLIKI - Obrabia obrazy z folderu scans_input
+echo.
+echo   [3] GENERUJ TESTY - Tworzy syntetyczne karty testowe
+echo.
+echo   [4] ZAKONCZ
 echo.
 echo =======================================================================
-echo KROK 1: Sprawdzanie plików wejsciowych w scans_input...
-echo -----------------------------------------------------------------------
+set /p "choice=Wpisz numer (1-4) i nacisnij Enter: "
+
+if "%choice%"=="1" goto HARDWARE_SCAN
+if "%choice%"=="2" goto PROCESS_FILES
+if "%choice%"=="3" goto GENERATE_TESTS
+if "%choice%"=="4" exit /b
+goto MENU
+
+:HARDWARE_SCAN
+cls
+echo =======================================================================
+echo      [1] SKANUJ I OBROB - Bezposrednia komunikacja ze skanerem
+echo =======================================================================
+echo.
+echo Instrukcja:
+echo 1. Poloz karty na szybie skanera (zalecana czarna podkladka / tlo).
+echo 2. Po nacisnieciu klawisza pojawi sie systemowe okienko Windows.
+echo 3. Wybierz swoj skaner, ustaw parametry i kliknij "Skanuj".
+echo.
+pause
+
+echo Inicjowanie skanowania WIA...
+python scripts/process_scans.py --scan --background auto --format png --naming generic --debug-overlay
+
+if errorlevel 1 goto ERROR_OCCURRED
+goto PROCESS_SUCCESS
+
+:PROCESS_FILES
+cls
+echo =======================================================================
+echo      [2] OBROB GOTOWE PLIKI - Przetwarzanie folderu scans_input
+echo =======================================================================
+echo.
+echo Sprawdzanie plików wejsciowych w scans_input...
+echo.
 
 set "has_files=0"
 if not exist scans_input mkdir scans_input
@@ -21,59 +65,51 @@ for %%i in (scans_input\*.jpg scans_input\*.jpeg scans_input\*.png scans_input\*
 
 if "%has_files%"=="1" (
     echo [SUKCES] Znaleziono Twoje pliki skanow w scans_input.
-    goto PROCESS_NOW
+    goto DO_PROCESS
 )
 
-echo [INFO] Brak plików skanow w scans_input!
+echo [INFO] Brak plikow w scans_input!
+echo Umiesc tam najpierw pliki ze swojego skanera.
 echo.
-echo Czy chcesz wygenerowac syntetyczne skany testowe (Fool, Magician itd.),
-echo aby od razu przetestowac dzialanie i zobaczyc jak wyglada podglad?
-echo.
-set /p "choice=Wpisz T (Tak) lub N (Nie) i nacisnij Enter: "
+pause
+goto MENU
 
-if /i "%choice%"=="T" (
-    echo.
-    echo Generowanie syntetycznego zestawu testowego...
-    python scripts/generate_test_scan.py
-    goto PROCESS_NOW
-) else (
-    echo.
-    echo [INFO] Umiesc pliki ze skanera w scans_input i uruchom ten skrypt ponownie.
-    pause
-    exit /b
-)
-
-:PROCESS_NOW
-echo.
-echo =======================================================================
-echo KROK 2: Uruchamianie ultra-precyzyjnej obrobki...
-echo -----------------------------------------------------------------------
-echo Parametry: Autodetekcja tla, bezstratny PNG, podglad debug_*.jpg
-echo.
-
+:DO_PROCESS
+echo Uruchamianie ultra-precyzyjnej obrobki...
 python scripts/process_scans.py scans_input scans_output --background auto --format png --naming generic --debug-overlay
+if errorlevel 1 goto ERROR_OCCURRED
+goto PROCESS_SUCCESS
 
-if %errorlevel% neq 0 (
-    echo.
-    echo [BLAD] Wystapil problem podczas przetwarzania skanow!
-    echo Upewnij sie, ze zainstalowales biblioteki uruchamiajac install_dependencies.bat
-    pause
-    exit /b
-)
-
-echo.
+:GENERATE_TESTS
+cls
 echo =======================================================================
-echo KROK 3: Otwieranie katalogu z wycietymi kartami...
-echo -----------------------------------------------------------------------
-echo Za chwile otworzy sie folder scans_output.
-echo Zobaczysz tam wyciete karty oraz obrazy debug_*.jpg z podgladem detekcji!
+echo      [3] GENERUJ TESTY - Tworzenie syntetycznych plikow testowych
+echo =======================================================================
 echo.
+echo Tworzenie syntetycznych skanow testowych (Fool, Magician itd.)
+echo w folderze scans_input...
+echo.
+python scripts/generate_test_scan.py
+echo.
+pause
+goto MENU
 
-explorer scans_output
-
+:PROCESS_SUCCESS
+echo.
 echo =======================================================================
 echo              PROCES ZAKONCZONY POWODZENIEM!
 echo =======================================================================
-echo Zrobione! Karty zostaly wyciete. Nacisnij klawisz, aby zamknac...
-echo =======================================================================
-pause >nul
+echo Za chwile otworzy sie folder scans_output.
+echo Zobaczysz tam wyciete karty oraz pliki debug_*.jpg z podgladem detekcji!
+echo.
+explorer scans_output
+pause
+goto MENU
+
+:ERROR_OCCURRED
+echo.
+echo [BLAD] Wystapil problem podczas przetwarzania skanow!
+echo Upewnij sie, ze zainstalowales biblioteki uruchamiajac install_dependencies.bat.
+echo.
+pause
+goto MENU
