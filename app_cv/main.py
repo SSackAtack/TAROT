@@ -29,6 +29,8 @@ from tarotvision.card_recognition import recognize_card_crop
 from tarotvision.snapshot_gate import SnapshotGate, SnapshotGateConfig
 from tarotvision.snapshot_quality import choose_best_snapshot
 from tarotvision.snapshot_analyzer import SnapshotAnalyzer
+from tarotvision.camera import CameraSession
+from tarotvision.preview import OpenCvPreview
 
 # Konfiguracja
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -77,15 +79,15 @@ control_messages = []
 config_session = RuntimeConfigSession()
 runtime_config = config_session.config
 operator_warnings = []
-supported_camera_controls = {}
-camera_set_cache = {}
 calibration_state = {"state": "idle", "last_score": None}
 profile_store = ProfileStore(os.path.join(LOG_DIR, "calibration_profiles"))
 active_tuning_profile = "default"
 
-# Inicjalizacja DiagnosticsWriter
+# Inicjalizacja DiagnosticsWriter, CameraSession i OpenCvPreview
 reset_logs = os.environ.get("TAROTVISION_RESET_LOGS") == "1"
 diagnostics_writer = DiagnosticsWriter(LOG_DIR, filename="cv_metrics.jsonl", reset_on_start=reset_logs)
+camera_session = CameraSession(LOG_DIR, camera_width=1280, camera_height=720)
+opencv_preview = OpenCvPreview("TarotVision - AI Detection (Wcisnij Q by wyjsc)")
 
 
 logging.basicConfig(
@@ -107,7 +109,7 @@ def build_operator_snapshot():
         "parameters": copy.deepcopy(runtime_config.values),
         "parameter_metadata": runtime_config.metadata(),
         "pending_changes": copy.deepcopy(config_session.pending_changes),
-        "supported_camera_controls": copy.deepcopy(supported_camera_controls),
+        "supported_camera_controls": copy.deepcopy(camera_session.supported_camera_controls),
         "calibration": copy.deepcopy(calibration_state),
         "warnings": list(operator_warnings[-8:]),
     }
@@ -118,93 +120,7 @@ def add_operator_warning(message):
     log_event(f"[OPERATOR] {message}")
 
 
-CAMERA_SETTINGS_FILE = os.path.join(LOG_DIR, "camera_settings.json")
-
-
-def save_camera_settings(capture):
-    try:
-        settings = {}
-        probes = {
-            "CAP_PROP_FOCUS": cv2.CAP_PROP_FOCUS,
-            "CAP_PROP_AUTOFOCUS": cv2.CAP_PROP_AUTOFOCUS,
-            "CAP_PROP_EXPOSURE": cv2.CAP_PROP_EXPOSURE,
-            "CAP_PROP_AUTO_EXPOSURE": cv2.CAP_PROP_AUTO_EXPOSURE,
-            "CAP_PROP_BRIGHTNESS": cv2.CAP_PROP_BRIGHTNESS,
-            "CAP_PROP_CONTRAST": cv2.CAP_PROP_CONTRAST,
-        }
-        for name, prop_id in probes.items():
-            val = capture.get(prop_id)
-            if val is not None and val != -1.0:
-                settings[name] = float(val)
-        
-        with open(CAMERA_SETTINGS_FILE, "w", encoding="utf-8") as f:
-            json.dump(settings, f, indent=2)
-        log_event("[KAMERA] Zapisano sprzętowe ustawienia kamery.")
-    except Exception as exc:
-        log_event(f"[OSTRZEZENIE] Nie udalo sie zapisac ustawien kamery: {exc}")
-
-
-def restore_camera_settings(capture):
-    global camera_set_cache
-    if not os.path.exists(CAMERA_SETTINGS_FILE):
-        return
-    try:
-        with open(CAMERA_SETTINGS_FILE, "r", encoding="utf-8") as f:
-            settings = json.load(f)
-        
-        # Aktualizujemy lokalny cache wartościami z pliku
-        camera_set_cache.update(settings)
-        
-        probes = {
-            "CAP_PROP_FOCUS": cv2.CAP_PROP_FOCUS,
-            "CAP_PROP_AUTOFOCUS": cv2.CAP_PROP_AUTOFOCUS,
-            "CAP_PROP_EXPOSURE": cv2.CAP_PROP_EXPOSURE,
-            "CAP_PROP_AUTO_EXPOSURE": cv2.CAP_PROP_AUTO_EXPOSURE,
-            "CAP_PROP_BRIGHTNESS": cv2.CAP_PROP_BRIGHTNESS,
-            "CAP_PROP_CONTRAST": cv2.CAP_PROP_CONTRAST,
-        }
-        
-        # Wyłączamy automaty najpierw
-        for name in ["CAP_PROP_AUTOFOCUS", "CAP_PROP_AUTO_EXPOSURE"]:
-            if name in settings and name in probes:
-                capture.set(probes[name], settings[name])
-                
-        for name, val in settings.items():
-            if name not in ["CAP_PROP_AUTOFOCUS", "CAP_PROP_AUTO_EXPOSURE"] and name in probes:
-                capture.set(probes[name], val)
-                
-        log_event("[KAMERA] Przywrocono sprzetowe ustawienia kamery z ostatniej sesji.")
-    except Exception as exc:
-        log_event(f"[OSTRZEZENIE] Nie udalo sie przywrocic ustawien kamery: {exc}")
-
-
-def probe_camera_controls(capture):
-    global camera_set_cache
-    probes = {
-        "CAP_PROP_FOCUS": cv2.CAP_PROP_FOCUS,
-        "CAP_PROP_AUTOFOCUS": cv2.CAP_PROP_AUTOFOCUS,
-        "CAP_PROP_EXPOSURE": cv2.CAP_PROP_EXPOSURE,
-        "CAP_PROP_AUTO_EXPOSURE": cv2.CAP_PROP_AUTO_EXPOSURE,
-        "CAP_PROP_BRIGHTNESS": cv2.CAP_PROP_BRIGHTNESS,
-        "CAP_PROP_CONTRAST": cv2.CAP_PROP_CONTRAST,
-    }
-    results = {}
-    for name, prop_id in probes.items():
-        if name in camera_set_cache:
-            readback = camera_set_cache[name]
-        else:
-            probe = read_camera_control(capture, prop_id)
-            readback = probe.readback_value
-            
-        results[name] = {
-            "supported": True if readback != -1.0 else False,
-            "readback_value": readback,
-        }
-    return results
-
-
-def handle_control_message(message, capture):
-    global supported_camera_controls
+def handle_control_message(message, camera_session):
     global calibration_state
     global active_tuning_profile
 
@@ -242,36 +158,15 @@ def handle_control_message(message, capture):
         return
 
     if message.type == "camera_probe":
-        supported_camera_controls = probe_camera_controls(capture)
+        camera_session.probe_controls()
         add_operator_warning("Odczytano parametry kamery bez zmiany focus/exposure")
         return
 
     if message.type == "camera_set":
-        CAMERA_PROP_IDS = {
-            "CAP_PROP_FOCUS": cv2.CAP_PROP_FOCUS,
-            "CAP_PROP_AUTOFOCUS": cv2.CAP_PROP_AUTOFOCUS,
-            "CAP_PROP_EXPOSURE": cv2.CAP_PROP_EXPOSURE,
-            "CAP_PROP_AUTO_EXPOSURE": cv2.CAP_PROP_AUTO_EXPOSURE,
-            "CAP_PROP_BRIGHTNESS": cv2.CAP_PROP_BRIGHTNESS,
-            "CAP_PROP_CONTRAST": cv2.CAP_PROP_CONTRAST,
-        }
-        if message.param in CAMERA_PROP_IDS:
-            prop_id = CAMERA_PROP_IDS[message.param]
-            val = float(message.value)
-            capture.set(prop_id, val)
-            log_event(f"[OPERATOR] Ustawiono parametr kamery {message.param} = {val}")
-            add_operator_warning(f"Ustawiono {message.param} = {val}")
-            
-            # Zapisujemy w cache naszą zadaną wartość
-            camera_set_cache[message.param] = val
-            
-            # Automatyczny zapis po zmianie
-            save_camera_settings(capture)
-            
-            # Aktualizacja odczytu w UI operatora
-            supported_camera_controls = probe_camera_controls(capture)
+        if camera_session.set_control(message.param, message.value):
+            add_operator_warning(f"Ustawiono {message.param} = {message.value}")
         else:
-            add_operator_warning(f"Nieznany parametr sprzetowy kamery: {message.param}")
+            add_operator_warning(f"Nieznany lub nieobsługiwany parametr kamery: {message.param}")
         return
 
     if message.type == "calibration_start":
@@ -295,13 +190,13 @@ def handle_control_message(message, capture):
         add_operator_warning("Anulowano kalibracje")
 
 
-def drain_control_messages(capture):
+def drain_control_messages(camera_session):
     with status_lock:
         queued_messages = list(control_messages)
         control_messages.clear()
     for message in queued_messages:
         try:
-            handle_control_message(message, capture)
+            handle_control_message(message, camera_session)
         except Exception as exc:
             add_operator_warning(f"Blad obslugi {message.type}: {exc}")
 
@@ -415,13 +310,7 @@ def validate_quadrilateral(dst):
         
     return True
 
-def configure_camera_capture(capture):
-    """Wymusza docelowa rozdzielczosc kamery i zwraca faktycznie ustawiony rozmiar."""
-    capture.set(cv2.CAP_PROP_FRAME_WIDTH, CAMERA_WIDTH)
-    capture.set(cv2.CAP_PROP_FRAME_HEIGHT, CAMERA_HEIGHT)
-    width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH)) or CAMERA_WIDTH
-    height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT)) or CAMERA_HEIGHT
-    return width, height
+
 
 def polygon_iou(poly_a, poly_b):
     """Liczy IoU dwoch wypuklych czworokatow OpenCV w formacie (4, 1, 2)."""
@@ -592,18 +481,11 @@ last_motion_started_ms = None
 
 # 3. Inicjalizacja Kamery — jawnie ustawiamy 720p (1280x720) dla wiecej cech ORB z wiekszej odleglosci
 log_event("[KAMERA] Uruchamianie kamery... (Wcisnij 'q' by zamknac, cyfry '0'-'9' by przelaczac kamery w locie!)")
-camera_index = 0
-cap = cv2.VideoCapture(camera_index)
-
-if not cap.isOpened():
+if not camera_session.open(0):
     log_event("[OSTRZEZENIE] Brak kamery pod indeksem 0. Wcisnij np. 1 lub 2 by zmienic.")
 
-frame_width, frame_height = configure_camera_capture(cap)
+frame_width, frame_height = camera_session.frame_width, camera_session.frame_height
 log_event(f"[KAMERA] Rozdzielczosc: {frame_width}x{frame_height}")
-
-# Przywrócenie i próbkowanie ustawień kamery z poprzedniej sesji
-restore_camera_settings(cap)
-supported_camera_controls = probe_camera_controls(cap)
 
 # Parametry stabilizacji detekcji (debouncing) dla wielu kart
 debounce_state = {}
@@ -625,7 +507,7 @@ tracked_boxes_by_name = {}
 # Petla glowna (Live feed)
 while True:
     frame_counter += 1
-    drain_control_messages(cap)
+    drain_control_messages(camera_session)
     config_values = runtime_config.values
     
     # Aktywne, dynamiczne parametry dla trybu snapshot-first (ORB i RANSAC)
@@ -653,14 +535,14 @@ while True:
     lock_dead_zone_angle = 0.5
     frame_loop_start = time.perf_counter()
     camera_read_start = time.perf_counter()
-    ret, frame = cap.read()
+    ret, frame = camera_session.read()
     runtime_metrics.add("camera_read_ms", (time.perf_counter() - camera_read_start) * 1000.0)
 
     preprocess_start = time.perf_counter()
     if not ret:
         # Zastepcze okno ostrzegawcze
         display_frame = np.zeros((480, 640, 3), dtype=np.uint8)
-        cv2.putText(display_frame, f"Brak wideo pod portem: {camera_index}", (50, 200), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+        cv2.putText(display_frame, f"Brak wideo pod portem: {camera_session.camera_index}", (50, 200), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
         cv2.putText(display_frame, f"Wcisnij inna cyfre (0-5) by szukac.", (50, 250), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
         gray_frame = None
     else:
@@ -738,16 +620,13 @@ while True:
                 target_wait = SNAPSHOT_SAMPLE_INTERVAL_MS / 1000.0
                 last_read_frame = None
                 while time.perf_counter() - start_wait < target_wait:
-                    ok, temp_frame = cap.read()
+                    ok, temp_frame = camera_session.read()
                     if ok:
                         last_read_frame = temp_frame.copy()
                         display_temp = temp_frame.copy()
-                        cv2.putText(display_temp, f"FPS: {fps:.1f}", (20, 40),
-                                    cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 255), 2, cv2.LINE_AA)
-                        cv2.putText(display_temp, f"ZBIERANIE SNAPSHOTA ({i+2}/{SNAPSHOT_SAMPLE_COUNT})...",
-                                    (20, 75), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2, cv2.LINE_AA)
-                        cv2.imshow('TarotVision - AI Detection (Wcisnij Q by wyjsc)', display_temp)
-                    cv2.waitKey(1)
+                        opencv_preview.draw_hud(display_temp, fps, f"ZBIERANIE SNAPSHOTA ({i+2}/{SNAPSHOT_SAMPLE_COUNT})...")
+                        opencv_preview.show(display_temp)
+                    opencv_preview.handle_keyboard(camera_session)
                 if last_read_frame is not None:
                     samples.append(last_read_frame)
 
@@ -763,12 +642,9 @@ while True:
                 
                 # Szybki podgląd stanu analizy przed uruchomieniem ciężkich obliczeń ORB
                 display_analysis = selected.frame.copy()
-                cv2.putText(display_analysis, f"FPS: {fps:.1f}", (20, 40),
-                            cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 255), 2, cv2.LINE_AA)
-                cv2.putText(display_analysis, "ANALIZOWANIE SNAPSHOTA...",
-                            (20, 75), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 2, cv2.LINE_AA)
-                cv2.imshow('TarotVision - AI Detection (Wcisnij Q by wyjsc)', display_analysis)
-                cv2.waitKey(1)
+                opencv_preview.draw_hud(display_analysis, fps, "ANALIZOWANIE SNAPSHOTA...")
+                opencv_preview.show(display_analysis)
+                opencv_preview.handle_keyboard(camera_session)
                 
                 analysis_start = time.perf_counter()
                 result = snapshot_analyzer.analyze(selected.frame)
@@ -837,22 +713,15 @@ while True:
         runtime_metrics.add("fps", fps)
         runtime_metrics.add("frame_loop_ms", (time.perf_counter() - frame_loop_start) * 1000.0)
 
-        cv2.putText(display_frame, f"FPS: {fps:.1f}", (20, 40),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 255), 2, cv2.LINE_AA)
-        cv2.putText(display_frame, f"SNAPSHOT: {layout_snapshot['state']} | stable {gate_decision.stable_for_ms} ms | cards {len(last_snapshot_cards)}",
-                    (20, 75), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (200, 200, 200), 1, cv2.LINE_AA)
-        cv2.imshow('TarotVision - AI Detection (Wcisnij Q by wyjsc)', display_frame)
+        status_line = f"SNAPSHOT: {layout_snapshot['state']} | stable {gate_decision.stable_for_ms} ms | cards {len(last_snapshot_cards)}"
+        opencv_preview.draw_hud(display_frame, fps, status_line)
+        opencv_preview.show(display_frame)
 
-        key = cv2.waitKey(1) & 0xFF
-        if key == ord('q'):
+        key_action = opencv_preview.handle_keyboard(camera_session)
+        if key_action == "quit":
             break
-        elif ord('0') <= key <= ord('5'):
-            new_index = key - ord('0')
-            log_event(f"Zmiana kamery na indeks: {new_index}")
-            cap.release()
-            cap = cv2.VideoCapture(new_index)
-            camera_index = new_index
-            frame_width, frame_height = configure_camera_capture(cap)
+        elif key_action == "switch":
+            frame_width, frame_height = camera_session.frame_width, camera_session.frame_height
             log_event(f"[KAMERA] Nowa rozdzielczosc: {frame_width}x{frame_height}")
         continue
     
@@ -1356,27 +1225,17 @@ while True:
     prev_time = current_time
     runtime_metrics.add("fps", fps)
     
-    cv2.putText(display_frame, f"FPS: {fps:.1f}", (20, 40), 
-                cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 255), 2, cv2.LINE_AA)
     aruco_label = "TAK" if table_calibration.calibrated else "NIE"
-    aruco_color = (0, 255, 0) if table_calibration.calibrated else (0, 0, 200)
-    cv2.putText(display_frame, f"ORB: {len(cards_to_check)} | IoU: {orb_skipped_locked} | Pula: {len(inactive_names)} | ArUco: {aruco_label}", 
-                (20, 75), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (200, 200, 200), 1, cv2.LINE_AA)
-    runtime_metrics.add("frame_loop_ms", (time.perf_counter() - frame_loop_start) * 1000.0)
+    status_line = f"ORB: {len(cards_to_check)} | IoU: {orb_skipped_locked} | Pula: {len(inactive_names)} | ArUco: {aruco_label}"
+    opencv_preview.draw_hud(display_frame, fps, status_line)
+    opencv_preview.show(display_frame)
 
-    cv2.imshow('TarotVision - AI Detection (Wcisnij Q by wyjsc)', display_frame)
-    
-    key = cv2.waitKey(1) & 0xFF
-    if key == ord('q'):
+    key_action = opencv_preview.handle_keyboard(camera_session)
+    if key_action == "quit":
         break
-    elif ord('0') <= key <= ord('5'):
-        new_index = key - ord('0')
-        log_event(f"Zmiana kamery na indeks: {new_index}")
-        cap.release()
-        cap = cv2.VideoCapture(new_index)
-        camera_index = new_index
-        frame_width, frame_height = configure_camera_capture(cap)
+    elif key_action == "switch":
+        frame_width, frame_height = camera_session.frame_width, camera_session.frame_height
         log_event(f"[KAMERA] Nowa rozdzielczosc: {frame_width}x{frame_height}")
 
-cap.release()
-cv2.destroyAllWindows()
+camera_session.close()
+opencv_preview.close()

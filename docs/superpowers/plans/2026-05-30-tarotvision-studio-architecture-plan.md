@@ -50,21 +50,22 @@ Weryfikacja:
 
 - Dodano obraz koncepcyjny i doprecyzowano plan. Nie zmieniano kodu runtime.
 
-## Session Status (2026-05-30, Gemini - Refaktoryzacja stanu i logowania)
+## Session Status (2026-05-30, Gemini - Wydzielenie kamery i podglądu)
 
 Wykonano:
+- Zrealizowano w całości **Task 2** (obiektowa enkapsulacja obsługi kamery oraz okna podglądu).
 - Zrealizowano w całości **Task 1** (bezinwazyjny refaktor backendu).
-- Utworzono puste struktury pakietu `tarotvision.runtime` (`__init__.py`, `app.py`).
-- Utworzono pakiet `tarotvision.status` z modułami `status_store.py` (klasa `StatusStore`) oraz `diagnostics_writer.py` (klasa `DiagnosticsWriter`).
-- Przeniesiono globalny stan `current_status` i `status_lock` do klasy `StatusStore` z zachowaniem pełnej thread-safety.
-- Wydzielono logowanie diagnostyczne `cv_metrics.jsonl` do dedykowanej klasy `DiagnosticsWriter`.
-- Wprowadzono bezinwazyjne zmiany w `app_cv/main.py` – entrypoint działa dokładnie tak samo, bez regresji w algorytmach CV i AR.
-- Zaimplementowano kompleksowe testy jednostkowe w `app_cv/tests/test_status_store.py` oraz `app_cv/tests/test_diagnostics_writer.py`.
-- **Poprawki po review (YELLOW LIGHT):** Wdrożono defensywne głębokie kopiowanie (`copy.deepcopy`) dla wszystkich parametrów w metodzie `StatusStore.update_cv_state()` w celu ochrony przed mutacją stanu z zewnątrz. Dodano dedykowany test jednostkowy `test_update_cv_state_defensive_copy` weryfikujący to zachowanie.
+- Utworzono pakiet `tarotvision.camera` z modułem `camera_session.py` (klasa `CameraSession` zarządzająca otwieraniem, dynamicznym przełączaniem, odpytywaniem o parametry, cache'owaniem i automatycznym zapisem sprzętowym ustawień kamery).
+- Utworzono pakiet `tarotvision.preview` z modułem `opencv_preview.py` (klasa `OpenCvPreview` enkapsulująca `cv2.imshow`, rysowanie HUD diagnostycznego oraz bezpieczną obsługę zdarzeń klawiatury).
+- Zrefaktoryzowano entrypoint `app_cv/main.py` – całkowicie usunięto globalne i surowe odniesienia do OpenCV `VideoCapture`, `imshow` i `waitKey` na rzecz eleganckich i czystych wywołań obiektów `CameraSession` i `OpenCvPreview`.
+- Napisano kompleksowe testy jednostkowe:
+  - `app_cv/tests/test_camera_session.py` (weryfikacja otwierania, odczytu, zamykania, przełączania i konfiguracji kamery z mockowaniem `cv2.VideoCapture`).
+  - `app_cv/tests/test_opencv_preview.py` (weryfikacja rysowania HUD, wyświetlania klatek, zamykania okien i obsługi klawiatury z mockowaniem funkcji OpenCV).
+- Zaimplementowano defensywne głębokie kopiowanie (`copy.deepcopy`) w `StatusStore` po poprawkach jakościowych z review (YELLOW LIGHT) w celu ochrony stanu przed zewnętrzną mutacją.
 
 Weryfikacja:
-- Wszystkie 118 testów jednostkowych przechodzi pomyślnie w czasie 0.26s (w tym nowy test defensywnego kopiowania).
-- `py_compile app_cv/main.py` kompiluje się bez żadnych błędów.
+- Wszystkie **130 testów jednostkowych** (w tym 12 zupełnie nowych testów dla kamery, podglądu, store i diagnostyki) przechodzi w 100% pomyślnie w czasie 0.3s.
+- `py_compile app_cv/main.py app_cv/tarotvision/camera/camera_session.py app_cv/tarotvision/preview/opencv_preview.py` kompiluje się bez żadnych błędów.
 - `npm --prefix app_ar run build` kończy się pełnym sukcesem.
 
 ## Stan aktualny
@@ -782,15 +783,15 @@ python -m py_compile app_cv\main.py
 
 ### Task 2: CameraSession i OpenCvPreview
 
-- [ ] Utworz `camera/camera_session.py`.
-- [ ] Przenies otwieranie, switch kamery, `configure_camera_capture`, restore/save settings do klasy lub wspolpracujacych helperow.
-- [ ] Utworz `preview/opencv_preview.py` dla `cv2.imshow`, HUD i obslugi klawiatury.
-- [ ] Zachowaj mozliwosc przelaczania kamer klawiszami `0-5`.
-- [ ] Nie zmieniaj payloadu WebSocket.
+- [x] Utworz `camera/camera_session.py`.
+- [x] Przenies otwieranie, switch kamery, `configure_camera_capture`, restore/save settings do klasy lub wspolpracujacych helperow.
+- [x] Utworz `preview/opencv_preview.py` dla `cv2.imshow`, HUD i obslugi klawiatury.
+- [x] Zachowaj mozliwosc przelaczania kamer klawiszami `0-5`.
+- [x] Nie zmieniaj payloadu WebSocket.
 
 Testy:
 
-- [ ] Testy jednostkowe dla logiki switch bez realnego `cv2.VideoCapture` przez fake capture.
+- [x] Testy jednostkowe dla logiki switch bez realnego `cv2.VideoCapture` przez fake capture.
 
 ### Task 3: Pipeline boundary
 
