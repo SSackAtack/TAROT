@@ -65,6 +65,51 @@ Jesli napotkasz problem lub niejasnosc w kodzie innego modelu:
 2. **Dodaj komentarz** wyjasniajacy problem (np. `# TODO(zespol): ten prog moze byc za niski — do weryfikacji w Task 8`).
 3. **Opisz w planie** co wymaga dyskusji.
 
+### 3.6 Workflow Gemini -> Codex Review
+
+Docelowy model pracy przy wiekszych etapach:
+
+- **Gemini jest wykonawca tokenochlonnych dzialan**: moze robic szerokie analizy, czytac duze fragmenty repozytorium, uruchamiac pelne testy, budowac frontend, porownywac warianty i przygotowywac obszerne notatki robocze.
+- **Codex jest kuratorem i audytorem jakosci**: po zakonczonym tasku robi niezalezny review zmian, weryfikuje ryzyka regresji, sprawdza zgodnosc z planem i wydaje decyzje `green/yellow/red light`.
+- **Michal podejmuje decyzje produktowe i architektoniczne**: modele moga rekomendowac, ale srednie i duze decyzje nadal wymagaja akceptacji Michala zgodnie z sekcja 3.4.
+
+Gemini po kazdym tasku przekazuje Codexowi krotki pakiet review, zamiast pelnego strumienia rozumowania:
+
+```markdown
+Review Task X: <nazwa>
+Base: <commit przed taskiem>
+Head: <commit po tasku>
+Zakres:
+- <najwazniejsza zmiana 1>
+- <najwazniejsza zmiana 2>
+
+Weryfikacja wykonana przez Gemini:
+- <komenda testowa> => PASS/FAIL
+- <komenda build/compile> => PASS/FAIL
+
+Pliki zmienione:
+- <sciezka 1>
+- <sciezka 2>
+
+Znane ryzyka / decyzje do review:
+- <ryzyko albo "brak">
+```
+
+Codex odpowiada w stalym, oszczednym formacie:
+
+```markdown
+LIGHT: GREEN | YELLOW | RED
+BLOCKERS: <tylko problemy blokujace>
+VERIFY: <co Codex faktycznie sprawdzil>
+NEXT: <kolejny bezpieczny krok>
+```
+
+Zasady optymalizacji tokenow:
+- Gemini wykonuje szerokie, tokenochlonne sprawdzenia i streszcza wynik.
+- Codex w pierwszej kolejnosci analizuje `git diff`, nowe/zmienione testy, punkty integracji i ryzyka runtime.
+- Pelny opis zmian jest wymagany tylko przy `RED light`, zmianie architektury, zmianie publicznego API albo gdy testy nie pokrywaja ryzyka.
+- Nie duplikujemy dlugich opisow w czacie, jesli sa juz zapisane w planie wykonawczym lub commitach.
+
 ---
 
 ## 4. Struktura Planow i Dokumentacji
@@ -115,5 +160,5 @@ Natychmiastowe nastepne dzialanie dla nastepnego modelu.
 
 ---
 
-*Ostatnia aktualizacja: 2026-05-29 | Autor: Opus (Anthropic Claude)*
+*Ostatnia aktualizacja: 2026-05-30 | Autorzy: Opus (Anthropic Claude), Codex (OpenAI)*
 *Zatwierdzil: Michal*
