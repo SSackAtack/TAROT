@@ -51,3 +51,15 @@ Wszystkie modyfikacje wprowadzone w ramach zadania **TASK-SCAN-001** w celu peł
 
 ## [MODIFY] `requirements.txt`
 * Dodano paczkę `pywin32` ograniczoną warunkiem `sys_platform=='win32'`, co stabilizuje instalację w środowiskach CI GitHub Actions.
+
+---
+
+## [INTEGRATION] Wdrożenie standaryzacji (RWS_XX) w repozytorium (2026-05-30)
+
+* **Ustandaryzowane nazewnictwo i zastąpienie assetów:**
+  * Usunięto całkowicie stare 22 internetowe pliki awersów o tradycyjnych nazwach postaci.
+  * Zaimplementowano nową standaryzację dla całego zestawu **78 fizycznie zeskanowanych kart (RWS_00 do RWS_77) oraz rewersu (RWS_back)** we wszystkich 5 katalogach docelowych (w sumie 79 plików per katalog w `mastery/`, `produkcja/karty/`, `produkcja/wzorce_cv/`, `produkcja/miniatury/` oraz `app_ar/public/karty/`).
+  * Zaktualizowano kod preloadera frontendu AR w `app_ar/src/renderer/textureCache.js` (dynamiczne ładowanie 78 kart o ustandardyzowanych nazwach).
+  * Zaktualizowano plik metadanych `rider-waite-smith/info.json` do pełnej 78-kartowej struktury z nazwami bazowymi `RWS_XX`.
+  * Zweryfikowano poprawność kompilacji frontendu (Vite build OK) oraz testów jednostkowych backendu CV (171 testów zielonych).
+  * Zmiany zostały oficjalnie zacommitowane i wypchnięte (push) na zdalną gałąź `master`, udostępniając kompletną, 78-kartową fizyczną talię na serwerze i u użytkownika.
