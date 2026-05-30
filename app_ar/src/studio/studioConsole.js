@@ -206,8 +206,8 @@ export function createStudioConsole() {
             </button>
         </div>
         
-        <div class="studio-timeline-box" style="flex: 1; margin: 0 24px; padding: 6px 12px; background: rgba(15, 23, 42, 0.4); border: 1px solid rgba(139, 92, 246, 0.2); border-radius: 6px; display: flex; flex-direction: column; justify-content: center; gap: 6px; min-width: 250px;">
-            <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 500; color: #a78bfa; letter-spacing: 0.5px;">
+        <div class="studio-timeline-box" style="flex: 1; margin: 0 24px; padding: 6px 12px; background: rgba(15, 23, 42, 0.4); border: 1px solid rgba(212, 175, 55, 0.25); border-radius: 6px; display: flex; flex-direction: column; justify-content: center; gap: 6px; min-width: 250px;">
+            <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 500; color: #ffd700; letter-spacing: 0.5px;">
                 <span>STUDIO TIMELINE TRACKER</span>
                 <span id="studio-timeline-counter" style="color: #94a3b8;">0 markers</span>
             </div>
