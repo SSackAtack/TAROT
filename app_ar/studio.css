@@ -50,25 +50,25 @@ body.studio-mode-active {
     width: 10px;
     height: 10px;
     border-radius: 50%;
-    background-color: #ffd700;
-    box-shadow: 0 0 10px #ffd700;
-    animation: pulse-gold 2s infinite alternate;
+    background-color: #d67d3e;
+    box-shadow: 0 0 10px #d67d3e;
+    animation: pulse-bronze 2s infinite alternate;
 }
 
 .studio-logo__text {
     font-size: 18px;
     font-weight: 700;
     letter-spacing: 0.05em;
-    background: linear-gradient(135deg, #fff 0%, #ffd700 100%);
+    background: linear-gradient(135deg, #fff 0%, #d67d3e 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
 
 .studio-logo__badge {
     font-family: 'Consolas', 'Courier New', Courier, monospace;
-    background: rgba(212, 175, 55, 0.15);
-    border: 1px solid rgba(212, 175, 55, 0.4);
-    color: #ffd700;
+    background: rgba(214, 125, 62, 0.15);
+    border: 1px solid rgba(214, 125, 62, 0.4);
+    color: #d67d3e;
     font-size: 11px;
     padding: 2px 8px;
     border-radius: 4px;
@@ -94,14 +94,14 @@ body.studio-mode-active {
 }
 
 .studio-indicator--active {
-    color: #ffd700;
-    border-color: rgba(212, 175, 55, 0.35);
-    background: rgba(212, 175, 55, 0.05);
+    color: #d67d3e;
+    border-color: rgba(214, 125, 62, 0.45);
+    background: rgba(214, 125, 62, 0.08);
 }
 
 .studio-indicator--active .dot {
-    background-color: #ffd700;
-    box-shadow: 0 0 8px #ffd700;
+    background-color: #d67d3e;
+    box-shadow: 0 0 8px #d67d3e;
 }
 
 .studio-indicator--rec {
@@ -188,7 +188,7 @@ body.studio-mode-active {
     border-radius: 8px;
     font-size: 11px;
     font-family: 'Consolas', 'Courier New', Courier, monospace;
-    color: #ffd700;
+    color: #d67d3e;
     letter-spacing: 0.1em;
     text-transform: uppercase;
 }
@@ -221,8 +221,8 @@ body.studio-mode-active {
 }
 
 .studio-card:hover {
-    border-color: rgba(212, 175, 55, 0.35);
-    box-shadow: inset 0 0 20px rgba(212, 175, 55, 0.06), 0 4px 12px rgba(0,0,0,0.25);
+    border-color: rgba(214, 125, 62, 0.4);
+    box-shadow: inset 0 0 20px rgba(214, 125, 62, 0.08), 0 4px 12px rgba(0,0,0,0.25);
 }
 
 .studio-card__header {
@@ -238,13 +238,13 @@ body.studio-mode-active {
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: #ffd700;
+    color: #d67d3e;
 }
 
 .studio-card__subtitle {
     font-family: 'Consolas', 'Courier New', Courier, monospace;
     font-size: 11px;
-    color: #94a3b8;
+    color: #cbd5e1; /* Poprawiony kontrast z #94a3b8 */
 }
 
 /* Sekcja nagrywania */
@@ -279,7 +279,7 @@ body.studio-mode-active {
 
 .studio-rec-item__value--time {
     font-size: 16px;
-    color: #ffd700;
+    color: #d67d3e;
 }
 
 /* Ścieżka zapisu */
@@ -308,14 +308,14 @@ body.studio-mode-active {
 }
 
 .studio-path-input:focus {
-    border-color: #ffd700;
-    box-shadow: 0 0 8px rgba(212, 175, 55, 0.2);
+    border-color: #d67d3e;
+    box-shadow: 0 0 8px rgba(214, 125, 62, 0.2);
 }
 
 .studio-btn-action {
-    background: rgba(212, 175, 55, 0.15);
-    border: 1px solid rgba(212, 175, 55, 0.4);
-    color: #ffd700;
+    background: rgba(214, 125, 62, 0.15);
+    border: 1px solid rgba(214, 125, 62, 0.4);
+    color: #d67d3e;
     padding: 6px 12px;
     border-radius: 6px;
     font-size: 11px;
@@ -325,14 +325,22 @@ body.studio-mode-active {
 }
 
 .studio-btn-action:hover {
-    background: rgba(212, 175, 55, 0.3);
+    background: rgba(214, 125, 62, 0.3);
     color: #fff;
+}
+
+.studio-btn-action:disabled {
+    opacity: 0.85 !important;
+    cursor: not-allowed !important;
+    border-color: rgba(148, 163, 184, 0.12) !important;
+    background: rgba(30, 41, 59, 0.25) !important;
+    color: #64748b !important;
 }
 
 .studio-path-status {
     font-size: 10px;
     font-weight: 600;
-    color: #94a3b8;
+    color: #cbd5e1; /* Poprawiona jasność z #94a3b8 */
 }
 
 /* Sekcja wyboru scen (Director) */
@@ -359,32 +367,32 @@ body.studio-mode-active {
 }
 
 .studio-scene-btn:hover {
-    background: rgba(212, 175, 55, 0.1);
-    border-color: rgba(212, 175, 55, 0.35);
+    background: rgba(214, 125, 62, 0.1);
+    border-color: rgba(214, 125, 62, 0.35);
     color: #fff;
     transform: translateY(-1px);
 }
 
 .studio-scene-btn--active {
-    background: linear-gradient(135deg, rgba(212, 175, 55, 0.4) 0%, rgba(180, 140, 30, 0.55) 100%);
-    border-color: #ffd700;
+    background: linear-gradient(135deg, rgba(214, 125, 62, 0.4) 0%, rgba(180, 100, 30, 0.55) 100%);
+    border-color: #d67d3e;
     color: #fff;
-    box-shadow: 0 0 12px rgba(212, 175, 55, 0.3);
+    box-shadow: 0 0 12px rgba(214, 125, 62, 0.3);
     font-weight: 700;
 }
 
 .studio-scene-btn--auto-active {
     background: rgba(13, 18, 28, 0.9);
-    border: 1px solid #ffd700;
-    color: #ffd700;
-    box-shadow: 0 0 10px rgba(255, 215, 0, 0.25);
+    border: 1px solid #d67d3e;
+    color: #d67d3e;
+    box-shadow: 0 0 10px rgba(214, 125, 62, 0.25);
     font-weight: 600;
     animation: pulse-auto-active 1.5s infinite alternate;
 }
 
 @keyframes pulse-auto-active {
-    0% { border-color: rgba(255, 215, 0, 0.4); box-shadow: 0 0 5px rgba(255, 215, 0, 0.15); }
-    100% { border-color: rgba(255, 215, 0, 1.0); box-shadow: 0 0 12px rgba(255, 215, 0, 0.45); }
+    0% { border-color: rgba(214, 125, 62, 0.4); box-shadow: 0 0 5px rgba(214, 125, 62, 0.15); }
+    100% { border-color: rgba(214, 125, 62, 1.0); box-shadow: 0 0 12px rgba(214, 125, 62, 0.45); }
 }
 
 .studio-scene-btn .icon {
@@ -426,9 +434,9 @@ body.studio-mode-active {
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    background: #ffd700;
+    background: #d67d3e;
     cursor: pointer;
-    box-shadow: 0 0 5px #ffd700;
+    box-shadow: 0 0 5px #d67d3e;
     transition: transform 0.1s ease;
 }
 
@@ -439,7 +447,7 @@ body.studio-mode-active {
 .studio-audio-channel__val {
     font-family: 'Consolas', 'Courier New', Courier, monospace;
     font-size: 11px;
-    color: #94a3b8;
+    color: #cbd5e1; /* Zwiekszona jasnosc z #94a3b8 */
     text-align: right;
 }
 
@@ -457,7 +465,7 @@ body.studio-mode-active {
 }
 
 .studio-audio-channel__mute-btn:hover {
-    color: #ffd700;
+    color: #d67d3e;
 }
 
 .studio-audio-channel__mute-btn--muted {
@@ -479,13 +487,14 @@ body.studio-mode-active {
 }
 
 .studio-cv-item__label {
-    color: #94a3b8;
+    color: #cbd5e1; /* Zwiekszona jasnosc czcionki z #94a3b8 */
+    font-weight: 500;
 }
 
 .studio-cv-item__value {
     font-family: 'Consolas', 'Courier New', Courier, monospace;
-    color: #cbd5e1;
-    font-weight: 600;
+    color: #ffffff; /* Podbicie jasnosci do czystej bieli dla maksymalnej widocznosci */
+    font-weight: 700;
 }
 
 /* Dolny panel transportu (Bottombar) */
@@ -511,8 +520,8 @@ body.studio-mode-active {
 .studio-btn-transport {
     height: 38px;
     background: rgba(13, 18, 28, 0.75);
-    border: 1px solid rgba(148, 163, 184, 0.25);
-    color: #cbd5e1;
+    border: 1px solid rgba(148, 163, 184, 0.35); /* Zwiekszony kontrast krawedzi */
+    color: #e2e8f0; /* Zwiekszona jasnosc tekstu */
     border-radius: 8px;
     padding: 0 16px;
     font-size: 12px;
@@ -525,18 +534,18 @@ body.studio-mode-active {
 }
 
 .studio-btn-transport:hover {
-    background: rgba(212, 175, 55, 0.1);
-    border-color: #ffd700;
+    background: rgba(214, 125, 62, 0.12);
+    border-color: #d67d3e;
     color: #fff;
-    box-shadow: 0 0 10px rgba(212, 175, 55, 0.15);
+    box-shadow: 0 0 10px rgba(214, 125, 62, 0.15);
 }
 
 .studio-btn-transport:disabled {
-    opacity: 0.5 !important;
+    opacity: 0.85 !important; /* Zwiekszona widocznosc tekstu/ikon zablokowanych przyciskow z 0.5 */
     cursor: not-allowed !important;
-    border-color: rgba(148, 163, 184, 0.15) !important;
-    background: rgba(13, 18, 28, 0.3) !important;
-    color: #64748b !important;
+    border-color: rgba(148, 163, 184, 0.12) !important;
+    background: rgba(30, 41, 59, 0.25) !important; /* Jaśniejsze, wyrazniejsze tło dla disabled */
+    color: #8ba1b8 !important; /* Zgaszony, ale wyrazny i czytelny niebiesko-szary */
     box-shadow: none !important;
     transform: none !important;
 }
@@ -573,9 +582,9 @@ body.studio-mode-active {
 }
 
 /* Animacje */
-@keyframes pulse-gold {
-    0% { transform: scale(1.0); opacity: 0.7; box-shadow: 0 0 5px #ffd700; }
-    100% { transform: scale(1.2); opacity: 1.0; box-shadow: 0 0 12px #ffd700; }
+@keyframes pulse-bronze {
+    0% { transform: scale(1.0); opacity: 0.7; box-shadow: 0 0 5px #d67d3e; }
+    100% { transform: scale(1.2); opacity: 1.0; box-shadow: 0 0 12px #d67d3e; }
 }
 
 @keyframes pulse-red-border {
@@ -598,3 +607,4 @@ body.studio-mode-active {
     0% { opacity: 0.2; }
     100% { opacity: 1.0; }
 }
+

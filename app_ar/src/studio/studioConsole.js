@@ -155,9 +155,9 @@ export function createStudioConsole() {
                 </div>
                 <!-- Kanał Master -->
                 <div class="studio-audio-channel" style="border-top: 1px solid rgba(139, 92, 246, 0.15); padding-top: 8px;">
-                    <div class="studio-audio-channel__name" style="color: #ffd700;">Master</div>
+                    <div class="studio-audio-channel__name" style="color: #d67d3e;">Master</div>
                     <input type="range" min="0" max="1" step="0.01" class="studio-audio-channel__slider" id="slider-master" value="1.0">
-                    <div class="studio-audio-channel__val" id="val-master" style="color: #ffd700;">100%</div>
+                    <div class="studio-audio-channel__val" id="val-master" style="color: #d67d3e;">100%</div>
                     <button class="studio-audio-channel__mute-btn" id="mute-master">🔊</button>
                 </div>
             </div>
@@ -206,13 +206,13 @@ export function createStudioConsole() {
             </button>
         </div>
         
-        <div class="studio-timeline-box" style="flex: 1; margin: 0 24px; padding: 6px 12px; background: rgba(15, 23, 42, 0.4); border: 1px solid rgba(212, 175, 55, 0.25); border-radius: 6px; display: flex; flex-direction: column; justify-content: center; gap: 6px; min-width: 250px;">
-            <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 500; color: #ffd700; letter-spacing: 0.5px;">
+        <div class="studio-timeline-box" style="flex: 1; margin: 0 24px; padding: 6px 12px; background: rgba(15, 23, 42, 0.4); border: 1px solid rgba(214, 125, 62, 0.25); border-radius: 6px; display: flex; flex-direction: column; justify-content: center; gap: 6px; min-width: 250px;">
+            <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 500; color: #d67d3e; letter-spacing: 0.5px;">
                 <span>STUDIO TIMELINE TRACKER</span>
-                <span id="studio-timeline-counter" style="color: #94a3b8;">0 markers</span>
+                <span id="studio-timeline-counter" style="color: #cbd5e1;">0 markers</span>
             </div>
             <div class="studio-timeline-track" id="studio-timeline-track" style="height: 8px; background: rgba(30, 41, 59, 0.8); border-radius: 4px; position: relative; overflow: visible; border: 1px solid rgba(255,255,255,0.05);">
-                <div class="studio-timeline-playhead" id="studio-timeline-playhead" style="position: absolute; left: 0%; top: -2px; width: 4px; height: 12px; background: #ffd700; border-radius: 2px; transition: left 0.1s linear; display: none;"></div>
+                <div class="studio-timeline-playhead" id="studio-timeline-playhead" style="position: absolute; left: 0%; top: -2px; width: 4px; height: 12px; background: #d67d3e; border-radius: 2px; transition: left 0.1s linear; display: none;"></div>
             </div>
             <div id="studio-timeline-latest-marker" style="font-size: 10px; color: rgba(255,255,255,0.4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; font-family: monospace;">Timeline idle</div>
         </div>
@@ -388,7 +388,7 @@ function initStudioConsoleEvents() {
                 
                 if (marker.type === 'recording_started') dot.style.background = '#10b981'
                 else if (marker.type === 'scene_changed') dot.style.background = '#8b5cf6'
-                else if (marker.type === 'card_revealed') dot.style.background = '#ffd700'
+                else if (marker.type === 'card_revealed') dot.style.background = '#d67d3e'
                 else if (marker.type === 'operator_marker') dot.style.background = '#ef4444'
                 else dot.style.background = '#ffffff'
                 
