@@ -48,7 +48,7 @@ def create_rounded_mask(width, height, radius):
     cv2.circle(mask, (radius, height - radius), radius, 255, -1)
     cv2.circle(mask, (width - radius, height - radius), radius, 255, -1)
     
-    # Dodajemy delikatne rozmycie Gaussowskie na masce, aby wygładzić krawędzie (antyaliasing)
+    # Dodajemy delikatne rozmycie Gaussowskie na masce, aby wygładzić krawędzie
     mask_blurred = cv2.GaussianBlur(mask, (3, 3), 0)
     return mask_blurred
 
@@ -67,14 +67,12 @@ def detect_background_dark(img_gray):
     border_pixels.extend(img_gray[:, w-15:w].flatten())
     
     median_val = np.median(border_pixels)
-    # Ciemne tło zazwyczaj ma jasność < 100, jasne > 150
     return median_val < 100
 
 def process_scanned_sheet(sheet_path, output_dir, args, start_index=0):
     """
     Wczytuje skan całego arkusza, wykrywa prostokąty kart w niskiej rozdzielczości roboczej,
-    a następnie precyzyjnie wycina je w oryginalnej wysokiej rozdzielczości,
-    obsługując wybrane formaty zapisu, zaokrąglanie rogów oraz parametry jakości.
+    a następnie precyzyjnie wycina je w oryginalnej wysokiej rozdzielczości.
     """
     if not os.path.exists(sheet_path):
         print(f"[BŁĄD] Plik skanu nie istnieje: {sheet_path}")
@@ -89,7 +87,7 @@ def process_scanned_sheet(sheet_path, output_dir, args, start_index=0):
     h_orig, w_orig = img.shape[:2]
     print(f"\nPrzetwarzam arkusz: {os.path.basename(sheet_path)} ({w_orig}x{h_orig} px)...")
 
-    # Krok 1: Przeskalowanie robocze do wykrywania konturów (optymalizacja wydajności)
+    # Krok 1: Przeskalowanie robocze do wykrywania konturów
     WORK_WIDTH = 1600
     scale = WORK_WIDTH / w_orig
     work_height = int(h_orig * scale)
@@ -110,20 +108,18 @@ def process_scanned_sheet(sheet_path, output_dir, args, start_index=0):
 
     # Progowanie w zależności od tła
     if is_dark:
-        # Progowanie Otsu dla ciemnego tła
         _, thresh = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
     else:
-        # Progowanie Otsu dla jasnego tła (odwrócone)
         _, thresh = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
 
-    # Czyszczenie morfologiczne (zamknięcie), aby usunąć szum i zamknąć obrysy kart
+    # Czyszczenie morfologiczne (zamknięcie)
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
     thresh = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)
 
     # Detekcja konturów
     contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     
-    # Filtrowanie konturów pod kątem rozmiaru kart (od 1.5% do 30% powierzchni arkusza roboczego)
+    # Filtrowanie konturów pod kątem rozmiaru kart
     min_area = WORK_WIDTH * work_height * 0.015
     max_area = WORK_WIDTH * work_height * 0.30
     
@@ -147,25 +143,45 @@ def process_scanned_sheet(sheet_path, output_dir, args, start_index=0):
     card_contours = sorted(card_contours, key=get_contour_precedence)
 
     saved_count = 0
-    # Generujemy maskę zaokrąglonych rogów dla rozmiaru docelowego
-    # Promień zaokrąglenia ustawiamy na ok. 7% szerokości (np. 600 * 0.07 = 42 px)
     corner_radius = int(args.target_width * 0.07)
     alpha_mask = create_rounded_mask(args.target_width, args.target_height, corner_radius)
+
+    # Tworzymy obraz podglądowy debugowania, jeśli zaznaczono opcję
+    img_debug = None
+    if args.debug_overlay:
+        img_debug = img_work.copy()
 
     for idx, cnt in enumerate(card_contours):
         card_number = start_index + saved_count
         
-        # Generowanie nazwy pliku
-        if card_number < len(MAJOR_ARCANAS):
+        # Generowanie nazwy pliku w zależności od trybu
+        if args.naming == "arcana" and card_number < len(MAJOR_ARCANAS):
             filename = f"{MAJOR_ARCANAS[card_number]}.{args.format}"
         else:
-            # Dla nadmiarowych kart używamy generycznego card_XX
             filename = f"card_{card_number:02d}.{args.format}"
 
         # Znajdujemy obrócony prostokąt o minimalnej powierzchni
         rect = cv2.minAreaRect(cnt)
         box = cv2.boxPoints(rect)
         
+        # Dodajemy informacje o wykrytej karcie do obrazu debugowania
+        if args.debug_overlay:
+            # Obrysowujemy kartę na zielono na obrazie roboczym
+            cv2.drawContours(img_debug, [cnt], -1, (0, 255, 0), 3)
+            
+            # Obliczamy środek konturu, aby nanieść numer
+            M_moment = cv2.moments(cnt)
+            if M_moment["m00"] != 0:
+                cX = int(M_moment["m10"] / M_moment["m00"])
+                cY = int(M_moment["m01"] / M_moment["m00"])
+            else:
+                bx, by, bw, bh = cv2.boundingRect(cnt)
+                cX, cY = bx + bw // 2, by + bh // 2
+            
+            # Rysujemy numer czerwonym kolorem z obwódką
+            cv2.putText(img_debug, f"#{card_number:02d}", (cX - 35, cY), cv2.FONT_HERSHEY_SIMPLEX, 1.1, (0, 0, 0), 5, cv2.LINE_AA)
+            cv2.putText(img_debug, f"#{card_number:02d}", (cX - 35, cY), cv2.FONT_HERSHEY_SIMPLEX, 1.1, (0, 0, 255), 2, cv2.LINE_AA)
+
         # PRZELICZENIE PUNKTÓW NA PEŁNĄ ROZDZIELCZOŚĆ ORYGINALNĄ
         box_orig = box / scale
 
@@ -200,41 +216,52 @@ def process_scanned_sheet(sheet_path, output_dir, args, start_index=0):
 
         out_path = os.path.join(output_dir, filename)
 
-        # Obsługa formatów zapisu
-        if args.format in ["png", "webp"]:
-            # Dodanie przezroczystych zaokrąglonych rogów (Kanał Alfa)
-            bgra = cv2.cvtColor(warped, cv2.COLOR_BGR2BGRA)
-            bgra[:, :, 3] = alpha_mask
-            
-            if args.format == "webp":
-                cv2.imwrite(out_path, bgra, [int(cv2.IMWRITE_WEBP_QUALITY), args.quality])
-            else:  # png
-                cv2.imwrite(out_path, bgra)
-        else:  # jpg
-            # Pliki JPG nie obsługują kanału alfa.
-            # Rogi karty (poza maską) wypełniamy kolorem tła (czarnym dla ciemnego, białym dla jasnego tła)
-            bg_color = (0, 0, 0) if is_dark else (255, 255, 255)
-            mask_3d = np.repeat(alpha_mask[:, :, np.newaxis], 3, axis=2)
-            bg_fill = np.ones_like(warped) * bg_color
-            warped_jpg = np.where(mask_3d == 255, warped, bg_fill).astype(np.uint8)
-            cv2.imwrite(out_path, warped_jpg, [int(cv2.IMWRITE_JPEG_QUALITY), args.quality])
+        if args.dry_run:
+            print(f"   [DRY-RUN] Wykryto i dopasowano: {filename} ({args.target_width}x{args.target_height} px)")
+        else:
+            # Obsługa formatów zapisu
+            if args.format in ["png", "webp"]:
+                # Dodanie przezroczystych zaokrąglonych rogów (Kanał Alfa)
+                bgra = cv2.cvtColor(warped, cv2.COLOR_BGR2BGRA)
+                bgra[:, :, 3] = alpha_mask
+                
+                if args.format == "webp":
+                    cv2.imwrite(out_path, bgra, [int(cv2.IMWRITE_WEBP_QUALITY), args.quality])
+                else:  # png
+                    cv2.imwrite(out_path, bgra)
+            else:  # jpg
+                bg_color = (0, 0, 0) if is_dark else (255, 255, 255)
+                mask_3d = np.repeat(alpha_mask[:, :, np.newaxis], 3, axis=2)
+                bg_fill = np.ones_like(warped) * bg_color
+                warped_jpg = np.where(mask_3d == 255, warped, bg_fill).astype(np.uint8)
+                cv2.imwrite(out_path, warped_jpg, [int(cv2.IMWRITE_JPEG_QUALITY), args.quality])
 
-        print(f"   -> Wycięto i zapisano: {filename} ({args.target_width}x{args.target_height} px)")
+            print(f"   -> Wycięto i zapisano: {filename} ({args.target_width}x{args.target_height} px)")
+        
         saved_count += 1
+
+    # Zapis obrazu podglądowego debugowania
+    if args.debug_overlay and len(card_contours) > 0:
+        debug_filename = f"debug_{os.path.splitext(os.path.basename(sheet_path))[0]}.jpg"
+        debug_path = os.path.join(output_dir, debug_filename)
+        cv2.imwrite(debug_path, img_debug)
+        print(f" -> [DEBUG] Zapisano obraz podglądu detekcji: {debug_filename}")
 
     return start_index + saved_count, saved_count
 
 if __name__ == "__main__":
-    # Definiujemy parser argumentów CLI
     parser = argparse.ArgumentParser(description="Ultra-precyzyjny skrypt do masowej obróbki i autokadrowania skanów kart tarota (OpenCV).")
     parser.add_argument("scans_dir", nargs="?", default="scans_input", help="Katalog wejściowy ze skanami (domyślnie: scans_input)")
     parser.add_argument("output_dir", nargs="?", default="scans_output", help="Katalog wyjściowy dla wyciętych kart (domyślnie: scans_output)")
-    parser.add_argument("--background", choices=["dark", "light", "auto"], default="dark", help="Typ tła skanera: dark (czarne/otwarte), light (białe/zamknięte), auto (autodetekcja) (domyślnie: dark)")
+    parser.add_argument("--background", choices=["dark", "light", "auto"], default="dark", help="Typ tła skanera (domyślnie: dark)")
     parser.add_argument("--format", choices=["png", "jpg", "webp"], default="webp", help="Format zapisu wyjściowego kart (domyślnie: webp)")
-    parser.add_argument("--start-index", type=int, choices=[0, 1], default=0, help="Indeks startowy numeracji kart: 0 lub 1 (domyślnie: 0)")
+    parser.add_argument("--naming", choices=["arcana", "generic"], default="arcana", help="Styl nazywania kart: arcana (Wielkie Arkana) lub generic (card_XX) (domyślnie: arcana)")
+    parser.add_argument("--start-index", type=int, choices=[0, 1], default=0, help="Indeks startowy numeracji kart (domyślnie: 0)")
     parser.add_argument("--target-width", type=int, default=600, help="Szerokość docelowa karty w px (domyślnie: 600)")
     parser.add_argument("--target-height", type=int, default=1032, help="Wysokość docelowa karty w px (domyślnie: 1032)")
-    parser.add_argument("--quality", type=int, default=95, help="Jakość kompresji JPG/WebP od 0 do 100 (domyślnie: 95)")
+    parser.add_argument("--quality", type=int, default=95, help="Jakość kompresji JPG/WebP (0-100, domyślnie: 95)")
+    parser.add_argument("--debug-overlay", action="store_true", help="Generuje obraz z narysowanymi konturami i indeksami kart")
+    parser.add_argument("--dry-run", action="store_true", help="Analizuje skany bez fizycznego zapisu wyciętych kart na dysku")
 
     args = parser.parse_args()
 
@@ -244,20 +271,23 @@ if __name__ == "__main__":
     start_time = time.time()
 
     print("=== ULTRA-PRECYZYJNA OBRÓBKA I PROSTOWANIE SKANÓW (OPENCV) ===")
+    if args.dry_run:
+        print(" [TRYB DRY-RUN: Symulacja bez zapisu kart produkcyjnych]")
     print(f"Katalog wejściowy : {args.scans_dir}")
     print(f"Katalog wyjściowy : {args.output_dir}")
     print(f"Docelowy format   : {args.format.upper()} (jakość: {args.quality}%)")
+    print(f"Styl nazywania    : {args.naming.upper()}")
     print(f"Rozmiar karty     : {args.target_width}x{args.target_height} px")
     print(f"Indeks startowy   : {args.start_index}")
     print("="*70)
 
-    # Szukamy plików graficznych w katalogu wejściowym
+    # Szukamy plików graficznych
     extensions = (".jpg", ".jpeg", ".png", ".tiff", ".tif")
     files = [f for f in os.listdir(args.scans_dir) if f.lower().endswith(extensions)]
 
     if not files:
         print(f"\n[INFO] Brak skanów w katalogu '{args.scans_dir}'.")
-        print("Umieść tam pliki skanera (np. scan1.jpg) i uruchom skrypt ponownie.")
+        print("Umieść tam pliki skanera i uruchom skrypt ponownie.")
         sys.exit(0)
 
     scan_stats = {}
@@ -274,18 +304,20 @@ if __name__ == "__main__":
 
     elapsed_time = time.time() - start_time
 
-    # Raport końcowy w konsoli (Premium!)
     print("\n" + "="*70)
     print("=== RAPORT KOŃCOWY PRZETWARZANIA SKANÓW ===")
     print("="*70)
     print(f"Łączna liczba przeanalizowanych arkuszy : {len(files)}")
-    print(f"Całkowita liczba wyciętych kart         : {total_extracted}")
+    if args.dry_run:
+        print(f"Całkowita liczba wykrytych kart (dry)   : {total_extracted}")
+    else:
+        print(f"Całkowita liczba wyciętych kart         : {total_extracted}")
     print(f"Czas operacji                           : {elapsed_time:.2f} s")
-    print(f"Zapisano w lokalizacji                  : {args.output_dir}")
+    print(f"Lokalizacja plików                      : {args.output_dir}")
     print("-"*70)
     print("Szczegóły detekcji per arkusz:")
     for file, count in scan_stats.items():
-        print(f" -> {file:<30} : Wykryto i wycięto {count} kart")
+        print(f" -> {file:<30} : Wykryto {count} kart")
     print("="*70)
     print("[SUKCES] Masowa obróbka zakończona powodzeniem!")
     print("="*70)
