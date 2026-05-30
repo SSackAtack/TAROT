@@ -361,6 +361,10 @@ def run_interactive_assistant(args):
             deck_name = "talia"
         deck_name = deck_name.replace(" ", "_") # Bezpieczeństwo nazw plików
         
+        # Określamy dedykowany katalog wyjściowy dla danej talii
+        deck_output_dir = os.path.join(args.output_dir, deck_name)
+        os.makedirs(deck_output_dir, exist_ok=True)
+        
         total_cards_str = input("[2/2] Podaj calkowita ilosc kart w tej talii (np. 22 lub 78): ").strip()
         try:
             total_cards = int(total_cards_str)
@@ -369,7 +373,7 @@ def run_interactive_assistant(args):
             print(f" -> [INFO] Niepoprawna liczba. Ustawiono domyslnie: {total_cards} kart.")
             
         print(f"\n -> Rozpoczynamy skanowanie calej talii '{deck_name}' ({total_cards} kart).")
-        print(f" -> Pliki beda zapisywane pod nazwami: scans_output/{deck_name}_XX.{args.format}")
+        print(f" -> Pliki beda zapisywane w dedykowanym folderze: {deck_output_dir}/{deck_name}_XX.{args.format}")
         
         scanned_count = 0
         sheet_index = 1
@@ -395,7 +399,7 @@ def run_interactive_assistant(args):
             
             # Przetwarzamy skan z poprawnym dynamicznym indeksem startowym
             next_idx, extracted_count = process_scanned_sheet(
-                wia_temp_file, args.output_dir, args, start_index=scanned_count, custom_prefix=deck_name
+                wia_temp_file, deck_output_dir, args, start_index=scanned_count, custom_prefix=deck_name
             )
             
             scanned_count += extracted_count
@@ -410,7 +414,7 @@ def run_interactive_assistant(args):
             if scanned_count >= total_cards:
                 print(f"\n=============================================================")
                 print(f" [SUKCES] BRAWO! ZESKANOWANO CALA TALIE! ({scanned_count}/{total_cards} kart)")
-                print(f" Wszystkie pliki znajdziesz w scans_output z przedrostkiem {deck_name}_")
+                print(f" Wszystkie pliki znajdziesz w folderze: {deck_output_dir}")
                 print("=============================================================")
                 break
                 
@@ -436,7 +440,7 @@ def run_interactive_assistant(args):
                 print(" -> Przetwarzanie skanu rewersu...")
                 # Przetwarzamy obraz z flagą is_back=True
                 process_scanned_sheet(
-                    wia_temp_file, args.output_dir, args, start_index=0, custom_prefix=deck_name, is_back=True
+                    wia_temp_file, deck_output_dir, args, start_index=0, custom_prefix=deck_name, is_back=True
                 )
                 # Usuwamy plik tymczasowy
                 try:
@@ -449,9 +453,9 @@ def run_interactive_assistant(args):
 
         # Otwieramy katalog wyjściowy
         if scanned_count > 0:
-            print("\nOtwieranie folderu scans_output...")
+            print(f"\nOtwieranie folderu {deck_output_dir}...")
             try:
-                os.system("explorer scans_output")
+                os.system(f"explorer {os.path.abspath(deck_output_dir)}")
             except:
                 pass
     else:
