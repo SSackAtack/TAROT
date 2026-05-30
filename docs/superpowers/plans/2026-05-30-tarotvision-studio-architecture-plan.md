@@ -6,24 +6,25 @@ Ten dokument jest planem wykonawczym dla Gemini. Celem nie jest jednorazowe dopi
 
 Najwazniejsza decyzja architektoniczna: najpierw odchudzamy entrypointy i stabilizujemy granice modulow, potem dopiero dokladamy studio. Nie wolno dopisywac rekordera, miksera audio ani YouTube uploadu bezposrednio do obecnego monolitu `app_cv/main.py` lub `app_ar/main.js`.
 
-## Session Status (2026-05-30, Gemini - Bezpieczna ścieżka zapisu, Task Studio Console 2)
+## Session Status (2026-05-30, Gemini - Nagrywanie canvasu Three.js i integracja statusu, Task Studio Console 3 & Task 6 MVP A)
 
 Wykonano:
-- Zrealizowano w całości **Task Studio Console 2** (Integracja weryfikacji i walidacji ścieżki zapisu na backendzie).
-- Utworzono [path_validator.py](file:///e:/Antigravity/Projekty/TAROT/app_cv/tarotvision/status/path_validator.py) w całości zabezpieczający system przed path traversal (`..`), plikami, katalogami systemowymi (np. `C:\Windows`) oraz sprawdzający uprawnienia zapisu (`os.access`).
-- Rozszerzono `main.py` o obsługę nowej komendy kontrolnej `studio_set_recording_dir` z dynamiczną weryfikacją i wysyłaniem statusu walidacji.
-- Zintegrowano `StatusStore` z polem stanu `recording_dir_status` z defensywnym kopiowaniem w celu ochrony przed mutacją.
-- Wdrożono na frontendzie w [studioConsole.js](file:///e:/Antigravity/Projekty/TAROT/app_ar/src/studio/studioConsole.js) wczytywanie ścieżki zapisu z WebSocketu pod warunkiem, że operator nie edytuje aktualnie pola (`document.activeElement !== pathInput`).
-- Napisano testy jednostkowe:
-  - `test_path_validator.py` (weryfikacja ścieżek bezwzględnych, niepoprawnych, traversal, systemowych, tworzenia katalogów i PermissionError).
-  - `test_tuning_protocol.py` (parsowanie i walidacja komendy `studio_set_recording_dir` z wymaganym parametrem path).
-  - `test_status_store.py` (wątkobezpieczne odczytywanie/zapisywanie stanu walidacji ścieżki zapisu).
-- Wszystkie testy jednostkowe (146 testów) przechodzą pomyślnie w czasie 0.308s.
-- Budowanie frontendu przechodzi bez błędów w 271ms.
-- Zmiany zostały zacommitowane i wypchnięte: commit `7068e7b`.
+- Zrealizowano w całości **Task Studio Console 3** oraz **Task 6 MVP A** (Nagrywanie w przeglądarce za pomocą MediaRecorder).
+- Utworzono moduł frontendu [mediaRecorderController.js](file:///e:/Antigravity/Projekty/TAROT/app_ar/src/studio/mediaRecorderController.js) hermetyzujący logikę MediaRecorder, automatyczną detekcję optymalnego formatu MIME w przeglądarce (VP9/VP8/WebM/MP4) oraz nagrywanie strumienia z canvasu Three.js w chunkach co 1 sekundę.
+- Zaimplementowano dynamiczną walidację przycisku nagrywania w Bottombarze: przycisk `btn-studio-rec` jest odblokowany i gotowy do kliknięcia tylko wtedy, gdy katalog zapisu na backendzie został zweryfikowany jako poprawny (`data.studio.recording_dir_status.valid === true`).
+- Zintegrowano stany nagrywania (`recording`, `stopping`, `idle`) ze wskaźnikami wizualnymi konsoli (pulsowanie wskaźnika REC w topbarze, pulsujący czerwony styl przycisku nagrywania `.studio-btn-transport--rec` w trakcie nagrywania, oraz żółty styl `.studio-btn-transport--stopping` oznaczający zapisywanie filmu).
+- Dodano obsługę nowych komend sterowania nagrywaniem na backendzie:
+  - `studio_start_recording` (zapis ID nagrania, zmiana statusu w `StatusStore` i generowanie ostrzeżeń operatora).
+  - `studio_stop_recording` (zerowanie stanu i komunikat o zakończeniu zapisu).
+  - `studio_update_recording_status` (okresowe raportowanie licznika czasu `elapsedMs` i klatek `droppedFrames` do `StatusStore` w celu pełnej synchronizacji diagnostycznej WebSocket).
+- Zintegrowano obsługę parsowania i walidacji tych trzech nowych komend w `tuning_protocol.py`.
+- Napisano 5 nowych testów jednostkowych w `test_tuning_protocol.py` w pełni weryfikujących parsowanie i walidację nowych poleceń nagrywania na backendzie.
+- Wszystkie 151 testów jednostkowych backendu przechodzi pomyślnie w czasie 0.333s.
+- Produkcyjny build frontendu Vite z 21 przetransformowanymi modułami kończy się pełnym sukcesem w 273ms.
+- Zmiany zostały zacommitowane i wypchnięte: commit `176cd3d`.
 
 Pozostało:
-- Przejść do **Task Studio Console 3: Recording controls** oraz **Task 6 (Recorder MVP A - AR/WOW canvas only)** w celu integracji nagrywania w przeglądarce za pomocą MediaRecorder API.
+- Przejść do **Task Studio Console 4: Audio section** w celu dodania miksera audio i dynamicznych wskaźników dźwięku.
 
 ## Session Status (2026-05-30, Gemini - Modularyzacja frontendu, Status Payload v1, Task 5b, Task Studio Console 1 i 1b - Wydzielenie styli do offline)
 
@@ -789,11 +790,11 @@ Wymogi:
 
 ### Task Studio Console 3: Recording controls
 
-- [ ] Dodaj UI record/stop/timer/format.
-- [ ] Podlacz do `MediaRecorderController`.
-- [ ] Status rekordera trafia do `studio` w app state.
-- [ ] Brak poprawnej sciezki blokuje start nagrania docelowego do backendu.
-- [ ] Dla MVP A dopuszczalny jest download z przegladarki, ale UI juz ma pokazywac docelowa sciezke.
+- [x] Dodaj UI record/stop/timer/format.
+- [x] Podlacz do `MediaRecorderController` (przechwytywanie z canvasu Three.js).
+- [x] Status rekordera trafia do `studio` w app state i na backend za pomocą WebSocketu.
+- [x] Brak poprawnej sciezki blokuje start nagrania docelowego do backendu.
+- [x] Dla MVP A dopuszczalny jest download z przegladarki, ale UI juz ma pokazywac docelowa sciezke.
 
 ### Task Studio Console 4: Audio section
 
