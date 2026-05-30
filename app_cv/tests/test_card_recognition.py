@@ -1,5 +1,6 @@
 import unittest
 import os
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 
@@ -10,6 +11,7 @@ from tarotvision.card_recognition import (
     deskew_card_crop,
     recognize_card_crop,
     load_reference_cards,
+    resolve_orientation_with_margin,
 )
 
 
@@ -21,6 +23,35 @@ class VariantNamesTest(unittest.TestCase):
     def test_builds_for_any_card_name(self):
         variants = build_variant_names("00_fool")
         self.assertEqual(variants, ["00_fool:upright", "00_fool:reversed"])
+
+
+class ResolveOrientationWithMarginTest(unittest.TestCase):
+    def test_defaults_to_upright_when_reversed_score_is_only_slightly_better(self):
+        orientation = resolve_orientation_with_margin(
+            upright_score=100.0,
+            reversed_score=104.0,
+            margin_ratio=0.10,
+        )
+
+        self.assertEqual(orientation, "upright")
+
+    def test_reports_reversed_when_reversed_score_has_clear_margin(self):
+        orientation = resolve_orientation_with_margin(
+            upright_score=100.0,
+            reversed_score=125.0,
+            margin_ratio=0.10,
+        )
+
+        self.assertEqual(orientation, "reversed")
+
+    def test_reports_reversed_when_no_upright_match_exists(self):
+        orientation = resolve_orientation_with_margin(
+            upright_score=0.0,
+            reversed_score=12.0,
+            margin_ratio=0.10,
+        )
+
+        self.assertEqual(orientation, "reversed")
 
 
 class NormalizedSizeTest(unittest.TestCase):
@@ -102,6 +133,180 @@ class LoadReferenceCardsTest(unittest.TestCase):
         result = load_reference_cards("/nonexistent/path", orb, clahe)
 
         self.assertEqual(result, {})
+
+
+class HomographyOrientationTest(unittest.TestCase):
+    @patch("cv2.findHomography")
+    def test_homography_keeps_upright_when_no_rotation(self, mock_find_homography):
+        try:
+            import cv2
+        except ImportError:
+            self.skipTest("cv2 not available")
+
+        H_identity = np.eye(3, dtype=np.float32)
+        mock_find_homography.return_value = (H_identity, np.ones(20, dtype=np.uint8))
+
+        ref_cards = {
+            "15_devil": {
+                "keypoints": [cv2.KeyPoint(0, 0, 1)] * 20,
+                "descriptors": np.zeros((20, 32), dtype=np.uint8),
+                "reversed_keypoints": [cv2.KeyPoint(0, 0, 1)] * 20,
+                "reversed_descriptors": np.zeros((20, 32), dtype=np.uint8),
+            }
+        }
+
+        mock_orb = MagicMock()
+        mock_orb.detectAndCompute.return_value = (
+            [cv2.KeyPoint(0, 0, 1)] * 20,
+            np.zeros((20, 32), dtype=np.uint8),
+        )
+
+        mock_matcher = MagicMock()
+        mock_matcher.knnMatch.return_value = [
+            [cv2.DMatch(i, i, 1.0), cv2.DMatch(i, i, 10.0)] for i in range(20)
+        ]
+
+        crop = np.zeros((516, 300), dtype=np.uint8)
+        result = recognize_card_crop(crop, ref_cards, mock_orb, mock_matcher)
+
+        self.assertIsNotNone(result)
+        self.assertEqual(result["name"], "15_devil")
+        self.assertEqual(result["orientation"], "upright")
+        self.assertEqual(result["homography_angle_deg"], 0.0)
+
+    @patch("cv2.findHomography")
+    def test_homography_flips_to_reversed_when_180_rotation(self, mock_find_homography):
+        try:
+            import cv2
+        except ImportError:
+            self.skipTest("cv2 not available")
+
+        H_reversed = np.array([
+            [-1.0, 0.0, 100.0],
+            [0.0, -1.0, 200.0],
+            [0.0, 0.0, 1.0]
+        ], dtype=np.float32)
+        mock_find_homography.return_value = (H_reversed, np.ones(20, dtype=np.uint8))
+
+        ref_cards = {
+            "15_devil": {
+                "keypoints": [cv2.KeyPoint(0, 0, 1)] * 20,
+                "descriptors": np.zeros((20, 32), dtype=np.uint8),
+                "reversed_keypoints": [cv2.KeyPoint(0, 0, 1)] * 20,
+                "reversed_descriptors": np.zeros((20, 32), dtype=np.uint8),
+            }
+        }
+
+        mock_orb = MagicMock()
+        mock_orb.detectAndCompute.return_value = (
+            [cv2.KeyPoint(0, 0, 1)] * 20,
+            np.zeros((20, 32), dtype=np.uint8),
+        )
+
+        mock_matcher = MagicMock()
+        mock_matcher.knnMatch.return_value = [
+            [cv2.DMatch(i, i, 1.0), cv2.DMatch(i, i, 10.0)] for i in range(20)
+        ]
+
+        crop = np.zeros((516, 300), dtype=np.uint8)
+        result = recognize_card_crop(crop, ref_cards, mock_orb, mock_matcher)
+
+        self.assertIsNotNone(result)
+        self.assertEqual(result["name"], "15_devil")
+        self.assertEqual(result["orientation"], "reversed")
+        self.assertAlmostEqual(abs(result["homography_angle_deg"]), 180.0, places=1)
+
+
+class FastMatcherHomographyTest(unittest.TestCase):
+    @patch("cv2.findHomography")
+    def test_fast_path_keeps_upright_when_no_rotation(self, mock_find_homography):
+        try:
+            import cv2
+        except ImportError:
+            self.skipTest("cv2 not available")
+
+        H_identity = np.eye(3, dtype=np.float32)
+        mock_find_homography.return_value = (H_identity, np.ones(20, dtype=np.uint8))
+
+        mock_card_matcher = MagicMock()
+        mock_card_matcher.knnMatch.return_value = [
+            [cv2.DMatch(i, i, 1.0), cv2.DMatch(i, i, 10.0)] for i in range(20)
+        ]
+
+        ref_cards = {
+            "15_devil": {
+                "keypoints": [cv2.KeyPoint(0, 0, 1)] * 20,
+                "descriptors": np.zeros((20, 32), dtype=np.uint8),
+                "matcher": mock_card_matcher,
+            }
+        }
+
+        mock_orb = MagicMock()
+        mock_orb.detectAndCompute.return_value = (
+            [cv2.KeyPoint(0, 0, 1)] * 20,
+            np.zeros((20, 32), dtype=np.uint8),
+        )
+
+        # Global matcher passed in is not used in fast path
+        mock_global_matcher = MagicMock()
+
+        crop = np.zeros((516, 300), dtype=np.uint8)
+        result = recognize_card_crop(crop, ref_cards, mock_orb, mock_global_matcher)
+
+        self.assertIsNotNone(result)
+        self.assertEqual(result["name"], "15_devil")
+        self.assertEqual(result["orientation"], "upright")
+        self.assertEqual(result["homography_angle_deg"], 0.0)
+        
+        # Verify card matcher was called, and global matcher was NOT called
+        mock_card_matcher.knnMatch.assert_called_once()
+        mock_global_matcher.knnMatch.assert_not_called()
+
+    @patch("cv2.findHomography")
+    def test_fast_path_flips_to_reversed_when_180_rotation(self, mock_find_homography):
+        try:
+            import cv2
+        except ImportError:
+            self.skipTest("cv2 not available")
+
+        H_reversed = np.array([
+            [-1.0, 0.0, 100.0],
+            [0.0, -1.0, 200.0],
+            [0.0, 0.0, 1.0]
+        ], dtype=np.float32)
+        mock_find_homography.return_value = (H_reversed, np.ones(20, dtype=np.uint8))
+
+        mock_card_matcher = MagicMock()
+        mock_card_matcher.knnMatch.return_value = [
+            [cv2.DMatch(i, i, 1.0), cv2.DMatch(i, i, 10.0)] for i in range(20)
+        ]
+
+        ref_cards = {
+            "15_devil": {
+                "keypoints": [cv2.KeyPoint(0, 0, 1)] * 20,
+                "descriptors": np.zeros((20, 32), dtype=np.uint8),
+                "matcher": mock_card_matcher,
+            }
+        }
+
+        mock_orb = MagicMock()
+        mock_orb.detectAndCompute.return_value = (
+            [cv2.KeyPoint(0, 0, 1)] * 20,
+            np.zeros((20, 32), dtype=np.uint8),
+        )
+
+        mock_global_matcher = MagicMock()
+
+        crop = np.zeros((516, 300), dtype=np.uint8)
+        result = recognize_card_crop(crop, ref_cards, mock_orb, mock_global_matcher)
+
+        self.assertIsNotNone(result)
+        self.assertEqual(result["name"], "15_devil")
+        self.assertEqual(result["orientation"], "reversed")
+        self.assertAlmostEqual(abs(result["homography_angle_deg"]), 180.0, places=1)
+        
+        mock_card_matcher.knnMatch.assert_called_once()
+        mock_global_matcher.knnMatch.assert_not_called()
 
 
 if __name__ == "__main__":

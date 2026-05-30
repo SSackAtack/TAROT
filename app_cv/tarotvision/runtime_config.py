@@ -16,15 +16,12 @@ class TunableParameter:
 
 
 PARAMETERS = {
-    "LOCK_DEAD_ZONE_POS": TunableParameter("LOCK_DEAD_ZONE_POS", 3.0, 1.5, 6.0, True),
-    "LOCK_DEAD_ZONE_ANGLE": TunableParameter("LOCK_DEAD_ZONE_ANGLE", 0.5, 0.1, 1.2, True),
-    "TRACKING_IOU_THRESHOLD": TunableParameter("TRACKING_IOU_THRESHOLD", 0.35, 0.1, 0.8, True),
-    "REVERIFY_INTERVAL_FRAMES": TunableParameter("REVERIFY_INTERVAL_FRAMES", 180.0, 30.0, 600.0, True),
-    "BOOST_AFTER_LAYOUT_CHANGE_FRAMES": TunableParameter("BOOST_AFTER_LAYOUT_CHANGE_FRAMES", 12.0, 0.0, 60.0, True),
-    "EMA_ALPHA": TunableParameter("EMA_ALPHA", 0.4, 0.05, 1.0, False),
-    "MIN_MATCH_COUNT": TunableParameter("MIN_MATCH_COUNT", 14.0, 8.0, 60.0, False),
-    "RATIO_THRESH": TunableParameter("RATIO_THRESH", 0.75, 0.6, 0.95, False),
-    "MIN_INLIER_RATIO": TunableParameter("MIN_INLIER_RATIO", 0.18, 0.1, 0.8, False),
+    "SNAPSHOT_SETTLE_SECONDS": TunableParameter("SNAPSHOT_SETTLE_SECONDS", 0.5, 0.1, 2.5, True),
+    "MOTION_CHANGED_RATIO": TunableParameter("MOTION_CHANGED_RATIO", 0.02, 0.005, 0.10, True),
+    "MIN_MATCH_COUNT": TunableParameter("MIN_MATCH_COUNT", 12.0, 8.0, 40.0, False),
+    "RATIO_THRESH": TunableParameter("RATIO_THRESH", 0.79, 0.50, 0.95, False),
+    "MIN_INLIER_RATIO": TunableParameter("MIN_INLIER_RATIO", 0.25, 0.10, 0.80, False),
+    "WORKSPACE_INFLATE_PERCENT": TunableParameter("WORKSPACE_INFLATE_PERCENT", 0.0, -10.0, 30.0, True),
 }
 
 

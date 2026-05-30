@@ -96,7 +96,7 @@ def extract_workspace_corners(corners, ids):
 
 
 def compute_table_homography(workspace_corners, table_width=TABLE_WIDTH,
-                             table_height=TABLE_HEIGHT):
+                             table_height=TABLE_HEIGHT, workspace_inflate_percent=0.0):
     """Compute a 3x3 perspective transform from workspace corners to a
     top-down rectangle of size (table_width x table_height).
 
@@ -104,17 +104,30 @@ def compute_table_homography(workspace_corners, table_width=TABLE_WIDTH,
         workspace_corners: dict from extract_workspace_corners().
         table_width:  output width in pixels.
         table_height: output height in pixels.
+        workspace_inflate_percent: percentage to inflate corners outwards from centroid.
 
     Returns:
         3x3 numpy matrix suitable for cv2.warpPerspective.
     """
     # Source points: the four inner corners detected in the camera frame
-    src = np.array([
+    src_pts = [
         workspace_corners[MARKER_ID_TOP_LEFT],
         workspace_corners[MARKER_ID_TOP_RIGHT],
         workspace_corners[MARKER_ID_BOTTOM_RIGHT],
         workspace_corners[MARKER_ID_BOTTOM_LEFT],
-    ], dtype=np.float32)
+    ]
+
+    # Jeśli poszerzanie obszaru jest włączone, przesuwamy wierzchołki od centroidu
+    if abs(workspace_inflate_percent) > 1e-5:
+        centroid = np.mean(src_pts, axis=0)
+        inflated_pts = []
+        for pt in src_pts:
+            vector = pt - centroid
+            inflated_pt = pt + vector * (workspace_inflate_percent / 100.0)
+            inflated_pts.append(inflated_pt)
+        src_pts = inflated_pts
+
+    src = np.array(src_pts, dtype=np.float32)
 
     # Destination points: a flat rectangle
     dst = np.array([
@@ -178,6 +191,7 @@ class TableCalibration:
         self._last_corners = None
         self._last_ids = None
         self._frames_since_detect = 0
+        self.workspace_inflate_percent = 0.0
         # Cache detector — tworzenie obiektu co klatke jest kosztowne
         self._dictionary = cv2.aruco.getPredefinedDictionary(ARUCO_DICT)
         self._parameters = cv2.aruco.DetectorParameters()
@@ -185,7 +199,7 @@ class TableCalibration:
             self._dictionary, self._parameters
         )
 
-    def update(self, gray_frame):
+    def update(self, gray_frame, workspace_inflate_percent=0.0):
         """Detect markers and recompute homography if all 4 are found.
 
         When already calibrated, skips ArUco detection for
@@ -195,9 +209,22 @@ class TableCalibration:
         """
         self._frames_since_detect += 1
 
+        # Jeśli zmieniła się wartość poszerzenia, to wymuszamy przeliczenie homografii
+        inflate_changed = workspace_inflate_percent != self.workspace_inflate_percent
+        self.workspace_inflate_percent = workspace_inflate_percent
+
+        # Jeśli zmienił się tylko suwak poszerzenia, przeliczamy homografię z cache rogów
+        if inflate_changed and self.calibrated and self._last_corners is not None:
+            workspace = extract_workspace_corners(self._last_corners, self._last_ids)
+            self.homography = compute_table_homography(
+                workspace, self.table_width, self.table_height, self.workspace_inflate_percent
+            )
+            return True
+
         # Jesli juz skalibrowany — pomijamy detekcje przez N klatek
         if (self.calibrated
-                and self._frames_since_detect < self.recalibrate_interval):
+                and self._frames_since_detect < self.recalibrate_interval
+                and not inflate_changed):
             return True
 
         self._frames_since_detect = 0
@@ -217,7 +244,7 @@ class TableCalibration:
         self._last_ids = ids
         workspace = extract_workspace_corners(corners, ids)
         self.homography = compute_table_homography(
-            workspace, self.table_width, self.table_height
+            workspace, self.table_width, self.table_height, self.workspace_inflate_percent
         )
         self.calibrated = True
         return True

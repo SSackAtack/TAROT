@@ -8,18 +8,18 @@ class ProfileStoreTest(unittest.TestCase):
     def test_save_and_load_profile(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             store = ProfileStore(tmpdir)
-            store.save("studio_day", {"LOCK_DEAD_ZONE_POS": 3.5})
+            store.save("studio_day", {"SNAPSHOT_SETTLE_SECONDS": 1.5})
 
             profile = store.load("studio_day")
 
-        self.assertEqual(profile["LOCK_DEAD_ZONE_POS"], 3.5)
+        self.assertEqual(profile["SNAPSHOT_SETTLE_SECONDS"], 1.5)
 
     def test_rejects_path_traversal_name(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             store = ProfileStore(tmpdir)
 
             with self.assertRaises(ValueError):
-                store.save("../bad", {"LOCK_DEAD_ZONE_POS": 3.5})
+                store.save("../bad", {"SNAPSHOT_SETTLE_SECONDS": 1.5})
 
     def test_rejects_unknown_parameter(self):
         with tempfile.TemporaryDirectory() as tmpdir:
