@@ -17,6 +17,7 @@ class ControlMessage:
     recording_state: str | None = None
     elapsed_ms: int | None = None
     dropped_frames: int | None = None
+    scene: str | None = None
 
 
 ALLOWED_TYPES = {
@@ -32,6 +33,7 @@ ALLOWED_TYPES = {
     "studio_start_recording",
     "studio_stop_recording",
     "studio_update_recording_status",
+    "studio_set_director_scene",
 }
 
 
@@ -80,5 +82,10 @@ def parse_control_message(raw_message):
             elapsed_ms=int(payload["elapsed_ms"]),
             dropped_frames=int(payload["dropped_frames"])
         )
+
+    if message_type == "studio_set_director_scene":
+        if "scene" not in payload:
+            raise ControlMessageError(f"{message_type} requires scene")
+        return ControlMessage(type=message_type, scene=str(payload["scene"]))
 
     return ControlMessage(type=message_type)

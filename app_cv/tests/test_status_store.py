@@ -108,6 +108,15 @@ class TestStatusStore(unittest.TestCase):
         self.assertEqual(studio["recording_id"], "rec_123")
         self.assertEqual(studio["elapsed_ms"], 5000)
 
+    def test_clear_recording_id_to_none(self):
+        # Ustawiamy najpierw recording_id
+        self.store.update_studio_state(recording_id="rec_123")
+        self.assertEqual(self.store.get_status()["studio"]["recording_id"], "rec_123")
+        
+        # Czyścimy na None i upewniamy się, że zmiana została zastosowana
+        self.store.update_studio_state(recording_id=None)
+        self.assertIsNone(self.store.get_status()["studio"]["recording_id"])
+
     def test_setters(self):
         self.store.set_calibration_state("calibrating", 0.95)
         self.store.set_parameter_metadata({"param1": "meta"})

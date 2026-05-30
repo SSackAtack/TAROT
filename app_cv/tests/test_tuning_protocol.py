@@ -78,6 +78,17 @@ class TuningProtocolTest(unittest.TestCase):
                 '{"type": "studio_update_recording_status", "recording_id": "rec_2026", "recording_state": "recording", "elapsed_ms": 12000}'
             )
 
+    def test_parses_studio_set_director_scene(self):
+        message = parse_control_message(
+            '{"type": "studio_set_director_scene", "scene": "wow"}'
+        )
+        self.assertEqual(message.type, "studio_set_director_scene")
+        self.assertEqual(message.scene, "wow")
+
+    def test_rejects_studio_set_director_scene_without_scene(self):
+        with self.assertRaises(ControlMessageError):
+            parse_control_message('{"type": "studio_set_director_scene"}')
+
 
 if __name__ == "__main__":
     unittest.main()

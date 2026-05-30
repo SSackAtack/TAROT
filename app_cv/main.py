@@ -233,6 +233,11 @@ def handle_control_message(message, camera_session):
         )
         return
 
+    if message.type == "studio_set_director_scene":
+        status_store.update_studio_state(director_scene=message.scene)
+        add_operator_warning(f"Studio: Zmieniono scene rezysera na: {message.scene}")
+        return
+
 
 def drain_control_messages(camera_session):
     with status_lock:

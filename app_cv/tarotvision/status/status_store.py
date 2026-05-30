@@ -6,6 +6,9 @@ import copy
 import threading
 from tarotvision.messages import build_status_payload
 
+_UNSET = object()
+
+
 class StatusStore:
     def __init__(self):
         self._lock = threading.Lock()
@@ -56,22 +59,22 @@ class StatusStore:
             if warnings is not None:
                 self._status["warnings"] = copy.deepcopy(warnings)
 
-    def update_studio_state(self, recording_state=None, recording_id=None, elapsed_ms=None, dropped_frames=None, audio_peak_db=None, director_scene=None, recording_dir_status=None):
+    def update_studio_state(self, recording_state=_UNSET, recording_id=_UNSET, elapsed_ms=_UNSET, dropped_frames=_UNSET, audio_peak_db=_UNSET, director_scene=_UNSET, recording_dir_status=_UNSET):
         """Aktualizuje stan nagrywania w studio nagrań."""
         with self._lock:
-            if recording_state is not None:
+            if recording_state is not _UNSET:
                 self._status["studio"]["recording_state"] = recording_state
-            if recording_id is not None:
+            if recording_id is not _UNSET:
                 self._status["studio"]["recording_id"] = recording_id
-            if elapsed_ms is not None:
+            if elapsed_ms is not _UNSET:
                 self._status["studio"]["elapsed_ms"] = elapsed_ms
-            if dropped_frames is not None:
+            if dropped_frames is not _UNSET:
                 self._status["studio"]["dropped_frames"] = dropped_frames
-            if audio_peak_db is not None:
+            if audio_peak_db is not _UNSET:
                 self._status["studio"]["audio_peak_db"] = audio_peak_db
-            if director_scene is not None:
+            if director_scene is not _UNSET:
                 self._status["studio"]["director_scene"] = director_scene
-            if recording_dir_status is not None:
+            if recording_dir_status is not _UNSET:
                 self._status["studio"]["recording_dir_status"] = copy.deepcopy(recording_dir_status)
 
     def set_calibration_state(self, state, last_score):
