@@ -32,14 +32,15 @@ Pozostalo:
 
 ## Session Status (2026-05-30, Michal + Gemini + Codex - doprecyzowanie konsoli Studio)
 
-Ustalenia potwierdzone przez Michala i Gemini:
-
-- Sciezka nagran jest konfigurowalna z poziomu Konsoli Operatora. Backend waliduje katalog i zapisuje fizyczne pliki poza narzucona sciezka repo, np. `D:\TarotRecordings`.
+- Sciezka nagran ma domyslna wartosc startowa `./recordings` (podfolder w repozytorium dopisany do `.gitignore` jako fallback), a operator moze ja w kazdej chwili zmienic w Konsoli na dowolna inna sciezke systemowa (np. `D:\TarotRecordings`).
+- Wybor i zmiana katalogu zapisu w Konsoli uzywa eleganckiego pola tekstowego oraz zaawansowanej walidacji po stronie backendu w Pythonie (co gwarantuje 100% stabilnosci bez restrykcji bezpieczenstwa przegladarki).
+- Konsola Studio jest dostepna pod adresem URL z prostym parametrem zapytania `?studio=1` w celu zachowania super lekkiej struktury frontendu bez instalowania zbednych systemow routingu.
+- FFmpeg zostaje zatwierdzone jako opcjonalny etap post-processingu w dalekiej przyszlosci, po pelnej stabilizacji lokalnego nagrywania offline.
 - TarotVision Studio dostaje dedykowany launcher, np. `start_tarotvision_studio.bat`, oddzielony od codziennego trybu developerskiego.
-- Intro, outro i napisy sa renderowane na zywo w przegladarce i nagrywane w jednym pliku. FFmpeg zostaje opcja przyszlosciowa, nie wymaganiem MVP.
-- Frontend pozostaje lekki: na razie `npm run build` + testy/manual smoke. Vitest odkladamy do czasu, az liczba czystych funkcji JS uzasadni nowa zaleznosc.
+- Intro, outro i napisy sa renderowane na zywo w przegladarce i nagrywane w jednym pliku wideo.
+- Frontend pozostaje lekki: na razie `npm run build` + testy/manual smoke. Vitest odkladamy do czasu, az zajdzie realna potrzeba.
 - YouTube uploader jest etapem 2. Najpierw perfekcyjne lokalne nagrywanie offline, audio mixer, frame stream i director mode.
-- Konsola Studio staje sie osobnym kamieniem milowym: nie tylko panel diagnostyczny, ale profesjonalne centrum przygotowania i nagrywania sesji.
+- Konsola Studio staje sie osobnym kamieniem milowym: nie tylko panel diagnostyczny, ale profesjonalne centrum przygotowania i nagrywania sesji..
 
 Artefakt wizualny:
 
