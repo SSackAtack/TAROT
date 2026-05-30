@@ -198,6 +198,12 @@ def process_scanned_sheet(sheet_path, output_dir, args, start_index=0, custom_pr
                 card_contours.append(cnt)
 
     print(f" -> Wykryto {len(card_contours)} potencjalnych kart na arkuszu.")
+    if len(card_contours) == 0:
+        print("\n    [INFO] Wykryto 0 kart na arkuszu! Najczestsze przyczyny:")
+        print("    1. Brak kontrastu: Jasne karty na jasnym/bialym tle skanera (zamknieta biała pokrywa).")
+        print("       -> Rozwiazanie: Skanuj z otwarta pokrywa (ciemne tlo) lub podloz czarna podkladke.")
+        print("    2. Zly parametr DPI: Upewnij sie, ze skanujesz w zalecanym standardzie 300 DPI.")
+        print("       (Przy 100 DPI karty sa za male i algorytm je ignoruje).")
 
     # Sortowanie konturów od góry do dołu, a potem od lewej do prawej
     def get_contour_precedence(contour, cols=3):
