@@ -62,10 +62,15 @@ Wykonano:
   - `app_cv/tests/test_camera_session.py` (weryfikacja otwierania, odczytu, zamykania, przełączania i konfiguracji kamery z mockowaniem `cv2.VideoCapture`).
   - `app_cv/tests/test_opencv_preview.py` (weryfikacja rysowania HUD, wyświetlania klatek, zamykania okien i obsługi klawiatury z mockowaniem funkcji OpenCV).
 - Zaimplementowano defensywne głębokie kopiowanie (`copy.deepcopy`) w `StatusStore` po poprawkach jakościowych z review (YELLOW LIGHT) w celu ochrony stanu przed zewnętrzną mutacją.
+- **Poprawki po review (RED LIGHT):**
+  - Wyeliminowano błędy NameError poprzez zmianę usuniętego symbolu `camera_index` na `camera_session.camera_index` w gałęziach snapshot-first i legacy state-first.
+  - Przywrócono metrykę diagnostyczną `frame_loop_ms` w pętli legacy state-first przed rysowaniem HUD.
+  - Zaimplementowano bezpieczne przerywanie zbierania klatek snapshotów w przypadku wykrycia zmiany kamery lub sygnału wyjścia z klawiatury.
+  - Dodano test statyczny `app_cv/tests/test_main_static_audit.py`, który analizuje Abstract Syntax Tree (AST) pliku `main.py` i automatycznie zgłasza błędy w przypadku wykrycia martwych referencji do starych zmiennych `camera_index` oraz `cap`.
 
 Weryfikacja:
-- Wszystkie **130 testów jednostkowych** (w tym 12 zupełnie nowych testów dla kamery, podglądu, store i diagnostyki) przechodzi w 100% pomyślnie w czasie 0.3s.
-- `py_compile app_cv/main.py app_cv/tarotvision/camera/camera_session.py app_cv/tarotvision/preview/opencv_preview.py` kompiluje się bez żadnych błędów.
+- Wszystkie **131 testów jednostkowych** (w tym test statycznego audytu AST) przechodzą w 100% pomyślnie w czasie 0.3s.
+- `py_compile app_cv/main.py app_cv/tarotvision/camera/camera_session.py app_cv/tarotvision/preview/opencv_preview.py app_cv/tests/test_main_static_audit.py` kompiluje się bez żadnych błędów.
 - `npm --prefix app_ar run build` kończy się pełnym sukcesem.
 
 ## Stan aktualny

@@ -615,6 +615,7 @@ while True:
             samples = [frame.copy()]
             # Drenujemy bufor kamery i pobieramy kolejne próbki bez blokowania wątku głównego.
             # Zapewnia to odświeżanie okna podglądu OpenCV, dzięki czemu Windows nie oznacza okna jako "Brak odpowiedzi".
+            key_action = None
             for i in range(SNAPSHOT_SAMPLE_COUNT - 1):
                 start_wait = time.perf_counter()
                 target_wait = SNAPSHOT_SAMPLE_INTERVAL_MS / 1000.0
@@ -626,9 +627,17 @@ while True:
                         display_temp = temp_frame.copy()
                         opencv_preview.draw_hud(display_temp, fps, f"ZBIERANIE SNAPSHOTA ({i+2}/{SNAPSHOT_SAMPLE_COUNT})...")
                         opencv_preview.show(display_temp)
-                    opencv_preview.handle_keyboard(camera_session)
+                    key_action = opencv_preview.handle_keyboard(camera_session)
+                    if key_action in ["quit", "switch"]:
+                        break
+                if key_action in ["quit", "switch"]:
+                    break
                 if last_read_frame is not None:
                     samples.append(last_read_frame)
+
+            if key_action in ["quit", "switch"]:
+                snapshot_gate.mark_rejected()
+                continue
 
             runtime_metrics.add("snapshot_samples_taken", len(samples))
             selected = choose_best_snapshot(samples)
@@ -682,7 +691,7 @@ while True:
         metrics_snapshot = runtime_metrics.snapshot()
         runtime_snapshot = {
             "profile": RUNTIME_PROFILE,
-            "camera_index": camera_index,
+            "camera_index": camera_session.camera_index,
             "capture_width": frame_width,
             "capture_height": frame_height,
             "camera_focus_locked": CAMERA_FOCUS_LOCKED,
@@ -1150,7 +1159,7 @@ while True:
     metrics_snapshot = runtime_metrics.snapshot()
     runtime_snapshot = {
         "profile": RUNTIME_PROFILE,
-        "camera_index": camera_index,
+        "camera_index": camera_session.camera_index,
         "capture_width": frame_width,
         "capture_height": frame_height,
         "camera_focus_locked": CAMERA_FOCUS_LOCKED,
@@ -1224,6 +1233,7 @@ while True:
     fps = 1.0 / time_diff if time_diff > 0 else 0.0
     prev_time = current_time
     runtime_metrics.add("fps", fps)
+    runtime_metrics.add("frame_loop_ms", (time.perf_counter() - frame_loop_start) * 1000.0)
     
     aruco_label = "TAK" if table_calibration.calibrated else "NIE"
     status_line = f"ORB: {len(cards_to_check)} | IoU: {orb_skipped_locked} | Pula: {len(inactive_names)} | ArUco: {aruco_label}"
