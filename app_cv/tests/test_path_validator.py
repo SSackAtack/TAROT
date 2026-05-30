@@ -43,7 +43,12 @@ class TestPathValidator(unittest.TestCase):
         self.assertIn("nie może zawierać sekwencji '..'", message)
         
     def test_system_directory(self):
-        valid, message = validate_recording_path("C:\\Windows")
+        if os.name == 'nt':
+            system_path = "C:\\Windows"
+        else:
+            system_path = "/etc"
+            
+        valid, message = validate_recording_path(system_path)
         self.assertFalse(valid)
         self.assertIn("Dostęp zabroniony: katalog systemowy", message)
         
