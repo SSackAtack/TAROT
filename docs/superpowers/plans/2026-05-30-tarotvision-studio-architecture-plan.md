@@ -50,6 +50,29 @@ Weryfikacja:
 
 - Dodano obraz koncepcyjny i doprecyzowano plan. Nie zmieniano kodu runtime.
 
+## Session Status (2026-05-30, Gemini - Wydzielenie rurociągów Pipeline boundary)
+
+Wykonano:
+- Zrealizowano w całości **Task 3** (Wydzielenie granic rurociągów przetwarzania snapshot-first i legacy state-first z monolitu).
+- Utworzono klasę bazową `VisionPipeline` w `app_cv/tarotvision/pipelines/base.py` definiującą standardowy kontrakt rurociągów CV.
+- Utworzono klasę `SnapshotFirstPipeline` w `app_cv/tarotvision/pipelines/snapshot_first.py` w całości hermetyzującą logikę nowego trybu "Złap i Zamróz" z bramkowaniem snapshotu, zbieraniem próbek w tle i oceną jakości klatki.
+- Utworzono klasę `StateFirstLegacyPipeline` w `app_cv/tarotvision/pipelines/state_first_legacy.py` hermetyzującą logikę starego rurociągu ciągłego śledzenia z debouncingiem, trackingiem konturów/IoU oraz dynamicznym harmonogramowaniem matchingu kart.
+- Przeniesiono specyficzne funkcje pomocnicze (`validate_quadrilateral`, `polygon_iou`, `deduplicate_detections`, `quad_to_box`) z `main.py` do modułu `state_first_legacy.py`, eliminując ponad 105 linii z pliku głównego.
+- Zrefaktoryzowano orkiestrator `app_cv/main.py`:
+  - Usunięto zbędne zmienne stanu sprzed pętli głównej i uproszczono jej początkową konfigurację.
+  - Zastąpiono rozgałęzienie pętli dwoma prostymi wywołaniami `.process_frame(...)` dla obu pipeline'ów z przekazaniem pre-komputowanego `motion_result`.
+  - Zapobieżono potencjalnemu błędowi `NameError` poprzez poprawną wcześniejszą deklarację `runtime_metrics`.
+- Zaimplementowano rygorystyczne testy kontraktów wejścia/wyjścia w `app_cv/tests/test_pipelines_contract.py` dla obu rurociągów (z mockowaniem ich zależności).
+
+Weryfikacja:
+- Wszystkie **134 testy jednostkowe** (w tym testy kontraktów i statyczny audyt AST) przechodzą pomyślnie w czasie 0.318s.
+- `py_compile app_cv/main.py app_cv/tarotvision/pipelines/state_first_legacy.py` kompiluje się bez błędów.
+- `npm --prefix app_ar run build` (budowanie produkcyjne frontendu) przechodzi pomyślnie w 311ms.
+- Zmiany zostały w pełni zacommitowane i wypchnięte na origin: commit hash `05b92e5`.
+
+Pozostało:
+- Przejść do kamienia milowego frontendu: **Task 4: Frontend refactor bez zmiany zachowania** w celu wydzielenia bootstrapu i modułów z `app_ar/main.js`.
+
 ## Session Status (2026-05-30, Gemini - Wydzielenie kamery i podglądu)
 
 Wykonano:
@@ -800,12 +823,12 @@ Testy:
 
 ### Task 3: Pipeline boundary
 
-- [ ] Utworz `pipelines/base.py`.
-- [ ] Utworz `pipelines/snapshot_first.py`.
-- [ ] Przenies branch `USE_SNAPSHOT_FIRST_CV` z glownej petli do `SnapshotFirstPipeline`.
-- [ ] Stary branch state-first zostaw jako `StateFirstLegacyPipeline`.
-- [ ] `main.py` wybiera pipeline na podstawie flagi i wywoluje `process_frame`.
-- [ ] Nie zmieniaj zachowania wizualnego ani metryk.
+- [x] Utworz `pipelines/base.py`.
+- [x] Utworz `pipelines/snapshot_first.py`.
+- [x] Przenies branch `USE_SNAPSHOT_FIRST_CV` z glownej petli do `SnapshotFirstPipeline`.
+- [x] Stary branch state-first zostaw jako `StateFirstLegacyPipeline`.
+- [x] `main.py` wybiera pipeline na podstawie flagi i wywoluje `process_frame`.
+- [x] Nie zmieniaj zachowania wizualnego ani metryk.
 
 Kryterium sukcesu:
 
@@ -999,11 +1022,10 @@ Nie implementuj:
 
 ## Kolejne kroki
 
-Natychmiastowy nastepny ruch dla Gemini:
+Natychmiastowy nastepny ruch:
 
-1. Przeczytac `AGENTS.md`, README, `future_integrated_recorder_spec.md` i ten plan.
-2. Rozpoczac Task 1: `StatusStore` i `DiagnosticsWriter`, bez zmiany zachowania runtime.
-3. Rownolegle potraktowac sekcje `Konsola TarotVision Studio` jako docelowy blueprint UI, ale nie zaczynac jej implementacji przed ustabilizowaniem granic `main.py` i `main.js`.
+1. Codex/Opus: Przeprowadzić review najnowszych zmian refaktoryzacji backendu (Task 3, commit `05b92e5`).
+2. Gemini/Codex: Rozpocząć **Task 4: Frontend refactor bez zmiany zachowania**, w celu wydzielenia kodu z monolitycznego pliku `app_ar/main.js` do wyspecjalizowanych podmodułów (`transport/`, `renderer/`, `operator/`, `demo/`) bez modyfikowania funkcjonalności overlay/WOW.
 
 ## Kryteria akceptacji calej architektury
 
