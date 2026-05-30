@@ -46,7 +46,7 @@ Ten plik przedstawia aktualny status techniczny oraz architekturę projektu Taro
 
 ## 4. Status Integracji i Jakości (Workflow / CI)
 
-* **Automatyzacja CI (WDROŻONA):** Skonfigurowano automatyczną weryfikację jakości w `.github/workflows/ci.yml`. Uruchamia ona testy Pythona, kompilację backendu oraz produkcyjny build frontendu. Oczekujemy na pierwszy zielony status z GitHub Actions po otwarciu PR.
+* **Automatyzacja CI (WDROŻONA & ZWERYFIKOWANA):** Skonfigurowano automatyczną weryfikację jakości w `.github/workflows/ci.yml`. Pierwszy oficjalny run GitHub Actions na gałęzi `master` (run **`26684570640`**) zakończył się **pełnym sukcesem na zielono (PASS)**. Zarówno testy Pythona (171 testów), jak i kompilacja frontendu przechodzą bezbłędnie w chmurze.
 * **Standardy Workflow (WDROŻONE):** Wdrożono katalog `.ai/` wraz z instrukcją `AI_WORKFLOW_FAILOVER.md`, rejestrem zadań `TASKS_INDEX.md` oraz szablonami szczegółów zadań pod `.ai/tasks/_TEMPLATE/`. Obowiązuje startup sequence zdefiniowany w `AGENTS.md`.
 * **Szablon PR (WDROŻONY):** Każdy Pull Request korzysta teraz ze zintegrowanego szablonu `.github/pull_request_template.md` dla lepszej weryfikacji kryteriów i raportów testowych.
 * **Zależności Python (WDROŻONE):** Utworzono plik `app_cv/requirements.txt` ze zwalidowanym zestawem paczek (OpenCV, NumPy, websockets, Pillow) stabilizujący proces instalacji w kontenerach CI.
@@ -55,6 +55,6 @@ Ten plik przedstawia aktualny status techniczny oraz architekturę projektu Taro
 
 ## 5. Następne Priorytety
 
-1. **Otwarcie Pull Requesta i Weryfikacja CI:** Uruchomienie pierwszego workflow runa na GitHubie dla gałęzi `workflow/ci-bootstrap` i scalenie zmian do `master` (wymaga zielonego statusu Actions oraz akceptacji Michała).
+1. **Powrót do prac funkcjonalnych (Bezpieczny):** Dzięki pełnemu zielonemu statusowi CI w chmurze i wdrożonym ramom workflow, możemy bezpiecznie wrócić do rozwoju aplikacji.
 2. **Task Studio Console 6: CV health minimal:** Wdrożenie ograniczonego, bardzo czystego widoku parametrów diagnostycznych oraz optymalizacja HUD.
 3. Dalsza integracja audio/reżysera w Konsoli Studio.
