@@ -31,6 +31,7 @@ from tarotvision.snapshot_quality import choose_best_snapshot
 from tarotvision.snapshot_analyzer import SnapshotAnalyzer
 from tarotvision.camera import CameraSession
 from tarotvision.preview import OpenCvPreview
+from tarotvision.pipelines import SnapshotFirstPipeline
 
 # Konfiguracja
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -474,10 +475,23 @@ snapshot_gate = SnapshotGate(SnapshotGateConfig(
     sample_count=SNAPSHOT_SAMPLE_COUNT,
     sample_interval_ms=SNAPSHOT_SAMPLE_INTERVAL_MS,
 ))
-snapshot_analyzer = SnapshotAnalyzer(recognize_crop=recognize_snapshot_crop)
-last_snapshot_cards = []
-snapshot_layout_id = 0
-last_motion_started_ms = None
+snapshot_pipeline = SnapshotFirstPipeline(
+    camera_session=camera_session,
+    opencv_preview=opencv_preview,
+    status_store=status_store,
+    diagnostics_writer=diagnostics_writer,
+    snapshot_gate=snapshot_gate,
+    snapshot_analyzer=snapshot_analyzer,
+    table_calibration=table_calibration,
+    runtime_metrics=runtime_metrics,
+    runtime_config=runtime_config,
+    build_operator_snapshot_fn=build_operator_snapshot,
+    operator_warnings=operator_warnings,
+    log_dir=LOG_DIR,
+    runtime_profile=RUNTIME_PROFILE
+)
+snapshot_pipeline.snapshot_sample_count = SNAPSHOT_SAMPLE_COUNT
+snapshot_pipeline.snapshot_sample_interval_ms = SNAPSHOT_SAMPLE_INTERVAL_MS
 
 # 3. Inicjalizacja Kamery — jawnie ustawiamy 720p (1280x720) dla wiecej cech ORB z wiekszej odleglosci
 log_event("[KAMERA] Uruchamianie kamery... (Wcisnij 'q' by zamknac, cyfry '0'-'9' by przelaczac kamery w locie!)")
@@ -594,143 +608,18 @@ while True:
         boost_frames_remaining = max(boost_frames_remaining, boost_after_layout_change_frames)
 
     if USE_SNAPSHOT_FIRST_CV:
-        now_ms = int(time.time() * 1000)
-        if motion_result.motion_detected:
-            last_motion_started_ms = now_ms
-
-        gate_decision = snapshot_gate.update(
-            now_ms=now_ms,
-            motion_detected=motion_result.motion_detected,
-            changed_ratio=motion_result.changed_ratio,
+        pipeline_result = snapshot_pipeline.process_frame(
+            frame=frame,
+            motion_result=motion_result,
+            frame_width=frame_width,
+            frame_height=frame_height,
+            frame_loop_start=frame_loop_start
         )
-        layout_snapshot = {
-            "layout_id": snapshot_layout_id,
-            "source": "snapshot",
-            "state": gate_decision.state,
-            "stable_for_ms": gate_decision.stable_for_ms,
-        }
-        runtime_metrics.add("stable_for_ms", gate_decision.stable_for_ms)
-
-        if gate_decision.should_sample and ret:
-            samples = [frame.copy()]
-            # Drenujemy bufor kamery i pobieramy kolejne próbki bez blokowania wątku głównego.
-            # Zapewnia to odświeżanie okna podglądu OpenCV, dzięki czemu Windows nie oznacza okna jako "Brak odpowiedzi".
-            key_action = None
-            for i in range(SNAPSHOT_SAMPLE_COUNT - 1):
-                start_wait = time.perf_counter()
-                target_wait = SNAPSHOT_SAMPLE_INTERVAL_MS / 1000.0
-                last_read_frame = None
-                while time.perf_counter() - start_wait < target_wait:
-                    ok, temp_frame = camera_session.read()
-                    if ok:
-                        last_read_frame = temp_frame.copy()
-                        display_temp = temp_frame.copy()
-                        opencv_preview.draw_hud(display_temp, fps, f"ZBIERANIE SNAPSHOTA ({i+2}/{SNAPSHOT_SAMPLE_COUNT})...")
-                        opencv_preview.show(display_temp)
-                    key_action = opencv_preview.handle_keyboard(camera_session)
-                    if key_action in ["quit", "switch"]:
-                        break
-                if key_action in ["quit", "switch"]:
-                    break
-                if last_read_frame is not None:
-                    samples.append(last_read_frame)
-
-            if key_action in ["quit", "switch"]:
-                snapshot_gate.mark_rejected()
-                continue
-
-            runtime_metrics.add("snapshot_samples_taken", len(samples))
-            selected = choose_best_snapshot(samples)
-            if selected is None:
-                snapshot_gate.mark_rejected()
-                layout_snapshot["state"] = snapshot_gate.state
-                layout_snapshot["snapshot_reject_reason"] = "all_samples_rejected"
-                runtime_metrics.add("snapshot_rejected_count", 1)
-            else:
-                snapshot_gate.mark_analyzing()
-                
-                # Szybki podgląd stanu analizy przed uruchomieniem ciężkich obliczeń ORB
-                display_analysis = selected.frame.copy()
-                opencv_preview.draw_hud(display_analysis, fps, "ANALIZOWANIE SNAPSHOTA...")
-                opencv_preview.show(display_analysis)
-                opencv_preview.handle_keyboard(camera_session)
-                
-                analysis_start = time.perf_counter()
-                result = snapshot_analyzer.analyze(selected.frame)
-                analysis_ms = (time.perf_counter() - analysis_start) * 1000.0
-                runtime_metrics.add("snapshot_analysis_ms", analysis_ms)
-                runtime_metrics.add("snapshot_quality_score", selected.quality.quality_score)
-
-                if result.card_count > 0:
-                    snapshot_layout_id += 1
-                    last_snapshot_cards = result.cards
-                    snapshot_gate.mark_published(
-                        layout_id=snapshot_layout_id,
-                        now_ms=int(time.time() * 1000),
-                    )
-                    runtime_metrics.add("layout_publish_count", 1)
-                    runtime_metrics.add("layout_changed", 1)
-                    if last_motion_started_ms is not None:
-                        runtime_metrics.add(
-                            "time_from_motion_to_publish_ms",
-                            int(time.time() * 1000) - last_motion_started_ms,
-                        )
-                else:
-                    snapshot_gate.mark_rejected()
-                    layout_snapshot["snapshot_reject_reason"] = "no_cards"
-                    runtime_metrics.add("snapshot_rejected_count", 1)
-
-                layout_snapshot.update({
-                    "layout_id": snapshot_layout_id,
-                    "state": snapshot_gate.state,
-                    "analysis_ms": analysis_ms,
-                    "quality_score": selected.quality.quality_score,
-                    "card_count": result.card_count,
-                })
-
-        metrics_snapshot = runtime_metrics.snapshot()
-        runtime_snapshot = {
-            "profile": RUNTIME_PROFILE,
-            "camera_index": camera_session.camera_index,
-            "capture_width": frame_width,
-            "capture_height": frame_height,
-            "camera_focus_locked": CAMERA_FOCUS_LOCKED,
-            "camera_exposure_locked": CAMERA_EXPOSURE_LOCKED,
-            "schedule_mode": "snapshot_first",
-            "table": table_calibration.status(),
-        }
-        status_update_start = time.perf_counter()
-        status_store.update_cv_state(
-            cards=last_snapshot_cards,
-            metrics=metrics_snapshot,
-            runtime=runtime_snapshot,
-            operator=build_operator_snapshot(),
-            layout=layout_snapshot,
-            warnings=list(operator_warnings[-8:])
-        )
-        runtime_metrics.add("status_update_ms", (time.perf_counter() - status_update_start) * 1000.0)
-
-        diagnostics_time = time.time()
-        if diagnostics_time - last_diagnostics_time >= 1.0:
-            append_diagnostics(metrics_snapshot, runtime_snapshot, last_snapshot_cards)
-            last_diagnostics_time = diagnostics_time
-
-        current_time = time.time()
-        time_diff = current_time - prev_time
-        fps = 1.0 / time_diff if time_diff > 0 else 0.0
-        prev_time = current_time
-        runtime_metrics.add("fps", fps)
-        runtime_metrics.add("frame_loop_ms", (time.perf_counter() - frame_loop_start) * 1000.0)
-
-        status_line = f"SNAPSHOT: {layout_snapshot['state']} | stable {gate_decision.stable_for_ms} ms | cards {len(last_snapshot_cards)}"
-        opencv_preview.draw_hud(display_frame, fps, status_line)
-        opencv_preview.show(display_frame)
-
-        key_action = opencv_preview.handle_keyboard(camera_session)
-        if key_action == "quit":
+        if pipeline_result["action"] == "quit":
             break
-        elif key_action == "switch":
-            frame_width, frame_height = camera_session.frame_width, camera_session.frame_height
+        elif pipeline_result["action"] == "switch":
+            frame_width = pipeline_result["frame_width"]
+            frame_height = pipeline_result["frame_height"]
             log_event(f"[KAMERA] Nowa rozdzielczosc: {frame_width}x{frame_height}")
         continue
     
