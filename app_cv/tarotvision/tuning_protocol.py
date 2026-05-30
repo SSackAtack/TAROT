@@ -98,7 +98,10 @@ def parse_control_message(raw_message):
     if message_type == "studio_set_director_scene":
         if "scene" not in payload:
             raise ControlMessageError(f"{message_type} requires scene")
-        return ControlMessage(type=message_type, scene=str(payload["scene"]))
+        scene = str(payload["scene"])
+        if scene not in {"table", "wow", "portrait_pip", "title_card"}:
+            raise ControlMessageError(f"Invalid director scene: {scene}")
+        return ControlMessage(type=message_type, scene=scene)
 
     if message_type == "studio_set_audio_volume":
         if "channel" not in payload or "volume" not in payload:
@@ -151,6 +154,47 @@ def parse_control_message(raw_message):
         markers = payload["markers"]
         if not isinstance(markers, list):
             raise ControlMessageError("markers must be a list")
+            
+        if len(markers) > 500:
+            raise ControlMessageError(f"Too many timeline markers: {len(markers)} (max 500)")
+            
+        allowed_marker_types = {
+            "recording_started",
+            "scene_changed",
+            "card_revealed",
+            "operator_marker",
+            "recording_stopped"
+        }
+        
+        for idx, marker in enumerate(markers):
+            if not isinstance(marker, dict):
+                raise ControlMessageError(f"Marker at index {idx} must be a dict")
+            if "timestamp_ms" not in marker:
+                raise ControlMessageError(f"Marker at index {idx} is missing timestamp_ms")
+            if "type" not in marker:
+                raise ControlMessageError(f"Marker at index {idx} is missing type")
+                
+            t_ms = marker["timestamp_ms"]
+            if not isinstance(t_ms, int) or isinstance(t_ms, bool):
+                raise ControlMessageError(f"Marker at index {idx} timestamp_ms must be an integer, got: {type(t_ms)}")
+            if t_ms < 0:
+                raise ControlMessageError(f"Marker at index {idx} timestamp_ms must be non-negative, got: {t_ms}")
+                
+            m_type = marker["type"]
+            if not isinstance(m_type, str):
+                raise ControlMessageError(f"Marker at index {idx} type must be a string")
+            if m_type not in allowed_marker_types:
+                raise ControlMessageError(f"Marker at index {idx} has invalid type: {m_type}")
+                
+            for k, v in marker.items():
+                if k in {"timestamp_ms", "type"}:
+                    continue
+                if v is not None and not isinstance(v, (str, int, float, bool)):
+                    raise ControlMessageError(
+                        f"Marker at index {idx} key '{k}' has invalid value type: {type(v)}. "
+                        "Only string, int, float, bool, or null are allowed."
+                    )
+                    
         return ControlMessage(type=message_type, recording_id=rec_id, markers=markers)
 
     return ControlMessage(type=message_type)

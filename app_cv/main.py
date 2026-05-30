@@ -279,7 +279,7 @@ def handle_control_message(message, camera_session):
         target_dir = os.path.abspath(base_dir)
         target_path = os.path.abspath(os.path.join(target_dir, filename))
         
-        if not target_path.startswith(target_dir):
+        if os.path.commonpath([target_dir, target_path]) != target_dir:
             add_operator_warning("Studio: Zablokowano probe zapisu timeline poza dozwolonym katalogiem")
             return
             

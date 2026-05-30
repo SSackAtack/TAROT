@@ -97,12 +97,13 @@ export async function startStudioRecording() {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
     const recordingId = `rec_${timestamp}`
 
-    // Inicjalizacja osi czasu
-    initTimeline()
-
     // Ustawienie lokalnego stanu nagrywania
     studioState.recordingState = 'recording'
     studioState.recordingId = recordingId
+    
+    // Inicjalizacja osi czasu
+    initTimeline()
+    
     studioState.elapsedMs = 0
     studioState.droppedFrames = 0
     recordingStartTime = Date.now()

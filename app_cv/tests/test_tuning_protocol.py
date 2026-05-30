@@ -150,20 +150,73 @@ class TuningProtocolTest(unittest.TestCase):
         with self.assertRaises(ControlMessageError):
             parse_control_message('{"type": "studio_set_director_mode"}')
 
+    def test_rejects_studio_set_director_scene_invalid(self):
+        with self.assertRaises(ControlMessageError):
+            parse_control_message('{"type": "studio_set_director_scene", "scene": "invalid_scene_name"}')
+
     def test_parses_studio_save_timeline(self):
+        # Poprawny marker z dodatkowym poprawnym polem
         message = parse_control_message(
-            '{"type": "studio_save_timeline", "recording_id": "rec_123", "markers": [{"timestamp_ms": 0, "type": "recording_started"}]}'
+            '{"type": "studio_save_timeline", "recording_id": "rec_123", "markers": [{"timestamp_ms": 0, "type": "recording_started", "scene": "table"}]}'
         )
         self.assertEqual(message.type, "studio_save_timeline")
         self.assertEqual(message.recording_id, "rec_123")
         self.assertEqual(len(message.markers), 1)
         self.assertEqual(message.markers[0]["type"], "recording_started")
+        self.assertEqual(message.markers[0]["scene"], "table")
 
     def test_rejects_studio_save_timeline_invalid_format(self):
         with self.assertRaises(ControlMessageError):
             parse_control_message('{"type": "studio_save_timeline", "recording_id": "rec_123", "markers": "not-a-list"}')
         with self.assertRaises(ControlMessageError):
             parse_control_message('{"type": "studio_save_timeline", "markers": []}')
+
+    def test_rejects_studio_save_timeline_too_many_markers(self):
+        # 501 markerów
+        markers = [{"timestamp_ms": idx, "type": "operator_marker"} for idx in range(501)]
+        import json
+        payload = json.dumps({"type": "studio_save_timeline", "recording_id": "rec_123", "markers": markers})
+        with self.assertRaises(ControlMessageError):
+            parse_control_message(payload)
+
+    def test_rejects_studio_save_timeline_invalid_marker_structure(self):
+        # Marker niebędący dictem
+        with self.assertRaises(ControlMessageError):
+            parse_control_message('{"type": "studio_save_timeline", "recording_id": "rec_123", "markers": [123]}')
+        
+        # Brak timestamp_ms
+        with self.assertRaises(ControlMessageError):
+            parse_control_message('{"type": "studio_save_timeline", "recording_id": "rec_123", "markers": [{"type": "operator_marker"}]}')
+            
+        # Brak type
+        with self.assertRaises(ControlMessageError):
+            parse_control_message('{"type": "studio_save_timeline", "recording_id": "rec_123", "markers": [{"timestamp_ms": 100}]}')
+
+    def test_rejects_studio_save_timeline_invalid_marker_types(self):
+        # timestamp_ms niebędący int (np. float)
+        with self.assertRaises(ControlMessageError):
+            parse_control_message('{"type": "studio_save_timeline", "recording_id": "rec_123", "markers": [{"timestamp_ms": 10.5, "type": "operator_marker"}]}')
+            
+        # timestamp_ms jako bool (bool jest podklasą int w Pythonie!)
+        with self.assertRaises(ControlMessageError):
+            parse_control_message('{"type": "studio_save_timeline", "recording_id": "rec_123", "markers": [{"timestamp_ms": true, "type": "operator_marker"}]}')
+            
+        # Ujemny timestamp_ms
+        with self.assertRaises(ControlMessageError):
+            parse_control_message('{"type": "studio_save_timeline", "recording_id": "rec_123", "markers": [{"timestamp_ms": -10, "type": "operator_marker"}]}')
+            
+        # Niewłaściwy typ type (nie string)
+        with self.assertRaises(ControlMessageError):
+            parse_control_message('{"type": "studio_save_timeline", "recording_id": "rec_123", "markers": [{"timestamp_ms": 10, "type": 123}]}')
+
+        # Typ spoza allowlisty
+        with self.assertRaises(ControlMessageError):
+            parse_control_message('{"type": "studio_save_timeline", "recording_id": "rec_123", "markers": [{"timestamp_ms": 10, "type": "invalid_type"}]}')
+
+    def test_rejects_studio_save_timeline_invalid_additional_fields(self):
+        # Dodatkowe pole ma zły typ (np. list)
+        with self.assertRaises(ControlMessageError):
+            parse_control_message('{"type": "studio_save_timeline", "recording_id": "rec_123", "markers": [{"timestamp_ms": 10, "type": "operator_marker", "custom": [1,2]}]}')
 
 
 if __name__ == "__main__":
