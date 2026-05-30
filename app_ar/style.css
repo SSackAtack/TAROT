@@ -36,7 +36,7 @@ html, body {
   z-index: 10000;
   width: min(360px, calc(100vw - 32px));
   max-height: calc(100vh - 32px);
-  overflow: auto;
+  overflow: visible; /* Wymagane, aby przycisk wystawał w lewo poza panel */
   box-sizing: border-box;
   padding: 14px;
   color: #f8fafc;
@@ -46,6 +46,49 @@ html, body {
   border: 1px solid rgba(148, 163, 184, 0.28);
   border-radius: 8px;
   backdrop-filter: blur(14px);
+  
+  /* Płynne wsuwanie i wysuwanie */
+  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+}
+
+/* Stan schowany panelu */
+.operator-panel--collapsed {
+  transform: translateX(calc(100% + 24px));
+}
+
+/* Przycisk do wsuwania/wysuwania panelu */
+.operator-panel__toggle-btn {
+  position: absolute;
+  top: 12px;
+  left: -36px; /* Wystaje w lewo poza panel */
+  width: 32px;
+  height: 32px;
+  background: rgba(8, 13, 20, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-right: none;
+  border-radius: 8px 0 0 8px;
+  color: #ffd700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10002;
+  box-shadow: -4px 4px 12px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(14px);
+  font-size: 14px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 0;
+  margin: 0;
+}
+
+.operator-panel__toggle-btn:hover {
+  background: rgba(30, 15, 50, 0.95);
+  color: #fff;
+  box-shadow: -4px 4px 16px rgba(212, 175, 55, 0.3);
+}
+
+.operator-panel__toggle-btn:active {
+  transform: scale(0.9);
 }
 
 .operator-panel__header {
@@ -73,12 +116,32 @@ html, body {
   border-top: 1px solid rgba(148, 163, 184, 0.18);
 }
 
+.operator-panel__section summary {
+  cursor: pointer;
+  outline: none;
+  user-select: none;
+  display: list-item;
+}
+
+.operator-panel__section summary::-webkit-details-marker {
+  color: #ffd700;
+}
+
+.operator-panel__section[open] summary {
+  margin-bottom: 10px;
+}
+
 .operator-panel__section-title {
-  margin-bottom: 8px;
+  display: inline-block;
   color: #cbd5e1;
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
+  transition: color 0.2s ease;
+}
+
+.operator-panel__section summary:hover .operator-panel__section-title {
+  color: #ffd700;
 }
 
 .operator-grid {
@@ -185,4 +248,188 @@ html, body {
 .operator-advanced summary {
   cursor: pointer;
   list-style-position: inside;
+}
+
+/* Stylizacja dla trybu WOW (Prezentacja) */
+body.wow-mode-active {
+  background: radial-gradient(circle at center, #1b0a2e 0%, #06020c 70%, #020004 100%) !important;
+  transition: background 1.5s ease;
+}
+
+body.wow-mode-active::after {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  background-image: radial-gradient(rgba(212, 175, 55, 0.08) 1px, transparent 0);
+  background-size: 24px 24px;
+  opacity: 0.4;
+  animation: bgPulse 8s infinite alternate ease-in-out;
+}
+
+@keyframes bgPulse {
+  0% { opacity: 0.3; transform: scale(1.0); }
+  100% { opacity: 0.5; transform: scale(1.05); }
+}
+
+/* Panel sterowania demo w trybie WOW */
+.wow-controls {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10001;
+  background: rgba(10, 5, 20, 0.72);
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  border-radius: 16px;
+  padding: 14px 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), inset 0 0 16px rgba(212, 175, 55, 0.15);
+  backdrop-filter: blur(20px);
+  color: #f3f4f6;
+  font-family: 'Outfit', 'Inter', sans-serif;
+  text-align: center;
+  width: max-content;
+  max-width: calc(100vw - 48px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  overflow: visible; /* Wymagane, aby przycisk wystawał w górę poza panel */
+  
+  /* Płynne wsuwanie i wysuwanie w dół */
+  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+}
+
+/* Stan schowany panelu dolnego */
+.wow-controls--collapsed {
+  transform: translate(-50%, calc(100% + 32px));
+}
+
+/* Przycisk do wsuwania/wysuwania panelu dolnego */
+.wow-controls__toggle-btn {
+  position: absolute;
+  top: -24px; /* Wystaje w górę poza panel */
+  left: 50%;
+  transform: translateX(-50%);
+  width: 44px;
+  height: 24px;
+  background: rgba(10, 5, 20, 0.9);
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  color: #ffd700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10002;
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(20px);
+  font-size: 10px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 0;
+  margin: 0;
+}
+
+.wow-controls__toggle-btn:hover {
+  background: rgba(30, 15, 50, 0.95);
+  color: #fff;
+  box-shadow: 0 -4px 16px rgba(212, 175, 55, 0.3);
+}
+
+.wow-controls__toggle-btn:active {
+  transform: translate(-50%, 2px);
+}
+
+.wow-controls__title {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #f3f4f6;
+  text-shadow: 0 0 10px rgba(212, 175, 55, 0.6);
+  background: linear-gradient(135deg, #fff 0%, #ffd700 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.wow-controls__buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.wow-btn {
+  background: rgba(30, 15, 50, 0.8);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  color: #e5e7eb;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.wow-btn:hover {
+  background: rgba(212, 175, 55, 0.15);
+  border-color: #ffd700;
+  color: #fff;
+  box-shadow: 0 0 12px rgba(212, 175, 55, 0.3);
+  transform: translateY(-2px);
+}
+
+.wow-btn:active {
+  transform: translateY(0);
+}
+
+.wow-btn--primary {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.8) 0%, rgba(109, 40, 217, 0.8) 100%);
+  border-color: rgba(168, 85, 247, 0.5);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.wow-btn--primary:hover {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.95) 0%, rgba(109, 40, 217, 0.95) 100%);
+  border-color: #ffd700;
+  box-shadow: 0 0 16px rgba(168, 85, 247, 0.5);
+}
+
+.wow-btn--active {
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.9) 0%, rgba(184, 134, 11, 0.9) 100%);
+  border-color: #ffd700;
+  color: #0d0614;
+  text-shadow: none;
+  font-weight: 700;
+  box-shadow: 0 0 16px rgba(212, 175, 55, 0.6);
+}
+
+.wow-btn--active:hover {
+  background: #ffd700;
+  color: #000;
+  box-shadow: 0 0 20px rgba(212, 175, 55, 0.8);
+}
+
+.wow-btn--danger {
+  background: rgba(153, 27, 27, 0.6);
+  border-color: rgba(220, 38, 38, 0.4);
+}
+
+.wow-btn--danger:hover {
+  background: rgba(220, 38, 38, 0.8);
+  border-color: #ef4444;
+  box-shadow: 0 0 12px rgba(220, 38, 38, 0.4);
+}
+
+.wow-controls__info {
+  font-size: 10px;
+  color: #9ca3af;
+}
+
+.wow-controls__info strong {
+  color: #ffd700;
 }
