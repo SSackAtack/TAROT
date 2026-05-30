@@ -1,6 +1,7 @@
 import { studioState } from './studioState'
 import { sendControlMessage } from '../transport/wsClient'
 import { renderer } from '../renderer/arRenderer'
+import { getStudioAudioTrack, playSyntheticSFX } from './audioMixer'
 
 let mediaRecorder = null
 let recordedChunks = []
@@ -51,18 +52,34 @@ export async function startStudioRecording() {
     recordedChunks = []
     
     // Przechwycenie strumienia z canvasu (30 FPS)
-    const stream = canvas.captureStream(30)
+    const canvasStream = canvas.captureStream(30)
+    const videoTrack = canvasStream.getVideoTracks()[0]
+    
+    // Przechwycenie ścieżki audio z miksera master
+    const audioTrack = getStudioAudioTrack()
+    const tracks = [videoTrack]
+    if (audioTrack) {
+        tracks.push(audioTrack)
+        console.log('Audio track successfully attached to MediaRecorder.')
+    } else {
+        console.warn('No active audio track found. Recording will proceed video-only.')
+    }
+    
+    const combinedStream = new MediaStream(tracks)
     
     // Przygotowanie opcji
     const options = { mimeType }
     
     try {
-        mediaRecorder = new MediaRecorder(stream, options)
+        mediaRecorder = new MediaRecorder(combinedStream, options)
     } catch (err) {
         console.error('Failed to create MediaRecorder:', err)
         studioState.recordingState = 'error'
         return
     }
+
+    // Odtwórz dźwięk startu nagrywania
+    playSyntheticSFX('start_rec')
 
     // Rejestracja zdarzeń MediaRecorder
     mediaRecorder.ondataavailable = (event) => {
@@ -122,6 +139,9 @@ export function stopStudioRecording() {
     }
 
     studioState.recordingState = 'stopping'
+    
+    // Odtwórz dźwięk zakończenia nagrywania
+    playSyntheticSFX('stop_rec')
     
     if (timerInterval) {
         clearInterval(timerInterval)

@@ -75,6 +75,15 @@ class StatusPayloadTest(unittest.TestCase):
         self.assertEqual(payload["studio"]["recording_state"], "recording")
         self.assertEqual(payload["studio"]["recording_id"], "session_123")
 
+    def test_build_status_payload_does_not_mutate_studio(self):
+        studio = {"recording_state": "idle"}
+        payload = build_status_payload(cards=[], studio=studio)
+        
+        # Upewniamy się, że w payloadzie jest audio
+        self.assertIn("audio", payload["studio"])
+        # Upewniamy się, że oryginalny przekazany słownik studio nie został zmutowany
+        self.assertNotIn("audio", studio)
+
 
 if __name__ == "__main__":
     unittest.main()

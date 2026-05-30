@@ -2,6 +2,7 @@ import { appState } from '../core/appState'
 import { studioState, updateStudioStateFromPayload, saveStudioVolumeSettings } from './studioState'
 import { sendControlMessage } from '../transport/wsClient'
 import { startStudioRecording, stopStudioRecording } from './mediaRecorderController'
+import { startStudioMicrophone, updateAudioMixerValues } from './audioMixer'
 
 // Globalne referencje do elementów DOM konsoli
 let sidebarEl = null
@@ -221,6 +222,9 @@ export function createStudioConsole() {
 function initStudioConsoleEvents() {
     if (!sidebarEl) return
 
+    // Automatyczna inicjalizacja mikrofonu i miksera audio w tle
+    startStudioMicrophone().catch(err => console.warn('Deferred microphone authorization:', err))
+
     // 1. Zmiana katalogu zapisu (Wysyła komendę konfiguracji zapisu)
     const pathBtn = sidebarEl.querySelector('#studio-path-btn')
     const pathInput = sidebarEl.querySelector('#studio-path-input')
@@ -364,6 +368,7 @@ export function updateStudioConsole(data) {
         }
     })
     saveStudioVolumeSettings()
+    updateAudioMixerValues()
 
     // 2. Górny Topbar statusu systemowego
     const wsInd = topbarEl.querySelector('#indicator-ws')

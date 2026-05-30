@@ -9,6 +9,9 @@ The payload format is backward-compatible: the frontend uses
 """
 
 
+import copy
+
+
 def build_status_payload(cards, metrics=None, warnings=None,
                          debug=None, runtime=None, operator=None,
                          table=None, layout=None, studio=None):
@@ -28,7 +31,7 @@ def build_status_payload(cards, metrics=None, warnings=None,
     Returns:
         dict ready for JSON serialization.
     """
-    studio_dict = studio or {}
+    studio_dict = copy.deepcopy(studio) if studio is not None else {}
     if "audio" not in studio_dict:
         studio_dict["audio"] = {
             "channels": {
