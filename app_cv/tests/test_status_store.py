@@ -160,5 +160,27 @@ class TestStatusStore(unittest.TestCase):
         if acquired:
             self.store.lock.release()
 
+    def test_get_status_returns_complete_v1_schema(self):
+        # Weryfikacja kompletności wszystkich sekcji top-level schematu Payload v1
+        status = self.store.get_status()
+        required_keys = [
+            "schema_version",
+            "detected",
+            "cards",
+            "metrics",
+            "warnings",
+            "debug",
+            "runtime",
+            "operator",
+            "table",
+            "layout",
+            "studio"
+        ]
+        for key in required_keys:
+            self.assertIn(key, status, f"Brak klucza '{key}' w status payload")
+        
+        self.assertEqual(status["schema_version"], 1)
+
 if __name__ == '__main__':
     unittest.main()
+

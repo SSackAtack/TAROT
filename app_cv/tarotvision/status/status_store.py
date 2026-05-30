@@ -4,17 +4,18 @@ Moduł zarządzania współdzielonym stanem (StatusStore) aplikacji TarotVision.
 """
 import copy
 import threading
+from tarotvision.messages import build_status_payload
 
 class StatusStore:
     def __init__(self):
         self._lock = threading.Lock()
-        self._status = {
-            "schema_version": 1,
-            "detected": False,
-            "cards": [],
-            "metrics": {},
-            "runtime": {},
-            "operator": {
+        self._status = build_status_payload(
+            cards=[],
+            metrics={},
+            warnings=[],
+            debug={},
+            runtime={},
+            operator={
                 "enabled": True,
                 "active_profile": "default",
                 "parameters": {},
@@ -24,7 +25,9 @@ class StatusStore:
                 "calibration": {"state": "idle", "last_score": None},
                 "warnings": [],
             },
-            "studio": {
+            table={},
+            layout={},
+            studio={
                 "recording_state": "idle",
                 "recording_id": None,
                 "elapsed_ms": 0,
@@ -32,7 +35,8 @@ class StatusStore:
                 "audio_peak_db": None,
                 "director_scene": "table"
             }
-        }
+        )
+
 
     def get_status(self):
         """Zwraca głęboką kopię obecnego statusu w bezpieczny dla wątków sposób."""
