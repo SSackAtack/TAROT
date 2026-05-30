@@ -56,7 +56,7 @@ python scripts/process_scans.py scans_input scans_output --background auto --for
 if %errorlevel% neq 0 (
     echo.
     echo [BLAD] Wystapil problem podczas przetwarzania skanow!
-    echo Upewnij sie, ze zainstalowales biblioteki (plik install_dependencies.bat).
+    echo Upewnij sie, ze zainstalowales biblioteki uruchamiajac install_dependencies.bat
     pause
     exit /b
 )
