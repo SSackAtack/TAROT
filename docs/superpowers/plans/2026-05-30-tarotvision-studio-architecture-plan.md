@@ -19,9 +19,14 @@ Wykonano:
   - `studio_update_recording_status` (okresowe raportowanie licznika czasu `elapsedMs` i klatek `droppedFrames` do `StatusStore` w celu pełnej synchronizacji diagnostycznej WebSocket).
 - Zintegrowano obsługę parsowania i walidacji tych trzech nowych komend w `tuning_protocol.py`.
 - Napisano 5 nowych testów jednostkowych w `test_tuning_protocol.py` w pełni weryfikujących parsowanie i walidację nowych poleceń nagrywania na backendzie.
-- Wszystkie 151 testów jednostkowych backendu przechodzi pomyślnie w czasie 0.333s.
+- **Poprawki po review (YELLOW LIGHT - poprawki kontraktu):**
+  - Rozbudowano `StatusStore` o wzorzec `_UNSET` w parametrach metody `update_studio_state()`. Zapobiega to ignorowaniu pustych wartości i pozwala na jawne zerowanie `recording_id=None` w pętli głównej po zatrzymaniu nagrania.
+  - Napisano test jednostkowy `test_clear_recording_id_to_none` w `test_status_store.py` sprawdzający poprawność czyszczenia pola.
+  - Zaimplementowano brakującą obsługę i parsowanie komendy WebSocket `studio_set_director_scene` w `tuning_protocol.py` oraz `main.py`, eliminując błędy odrzucania nieznanych typów przy przełączaniu scen na frontendzie.
+  - Napisano testy jednostkowe `test_parses_studio_set_director_scene` oraz `test_rejects_studio_set_director_scene_without_scene` w `test_tuning_protocol.py`.
+- Wszystkie testy jednostkowe backendu (teraz 154 testy) przechodzą pomyślnie w czasie 0.295s.
 - Produkcyjny build frontendu Vite z 21 przetransformowanymi modułami kończy się pełnym sukcesem w 273ms.
-- Zmiany zostały zacommitowane i wypchnięte: commit `176cd3d`.
+- Zmiany zostały zacommitowane i wypchnięte: commit `7945b29`.
 
 Pozostało:
 - Przejść do **Task Studio Console 4: Audio section** w celu dodania miksera audio i dynamicznych wskaźników dźwięku.
