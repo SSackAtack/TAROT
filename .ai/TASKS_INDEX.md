@@ -8,10 +8,10 @@ Ten plik stanowi centralny rejestr wszystkich zadań (Tasks) realizowanych w pro
 
 | Task ID | Status | Gałąź (Branch) | Realizator (Owner) | Zakres (Scope) | Ostatnia aktualizacja | Status Review |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **TASK-WF-001** | `DONE` | `workflow/ci-bootstrap` | Gemini | Scaffold struktury `.ai/` | 2026-05-30 | ChatGPT Approved |
-| **TASK-CI-001** | `IN_PROGRESS` | `workflow/ci-bootstrap` | Gemini | Konfiguracja GitHub Actions CI | 2026-05-30 | Oczekuje |
-| **TASK-PR-001** | `TODO` | `workflow/ci-bootstrap` | Gemini | Szablon Pull Request | 2026-05-30 | Oczekuje |
-| **TASK-DOC-001** | `TODO` | `workflow/ci-bootstrap` | Gemini | Aktualizacja README + AGENTS | 2026-05-30 | Oczekuje |
+| **TASK-WF-001** | `DONE` | `workflow/ci-bootstrap` | Gemini | Scaffold struktury `.ai/` i standardy workflow | 2026-05-30 | ChatGPT Approved |
+| **TASK-CI-001** | `DONE` | `workflow/ci-bootstrap` | Gemini | Konfiguracja GitHub Actions CI & requirements.txt | 2026-05-30 | Included in TASK-WF-001 |
+| **TASK-PR-001** | `DONE` | `workflow/ci-bootstrap` | Gemini | Szablon Pull Request (.github/pull_request_template.md) | 2026-05-30 | Included in TASK-WF-001 |
+| **TASK-DOC-001** | `DONE` | `workflow/ci-bootstrap` | Gemini | Aktualizacja README + AGENTS.md (startup sequence) | 2026-05-30 | Included in TASK-WF-001 |
 
 ---
 

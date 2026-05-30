@@ -42,15 +42,17 @@ Ten plik przedstawia aktualny status techniczny oraz architekturę projektu Taro
 
 ---
 
-## 4. Aktualne Ryzyka i Stan Zablokowania
+## 4. Status Integracji i Jakości (Workflow / CI)
 
-* **Brak CI/CD (W TRAKCIE ROZWIĄZYWANIA):** Do tej pory weryfikacja poprawności kodu (testy jednostkowe i kompilacja frontendu) opierała się wyłącznie na manualnych raportach agentów, co groziło regresją w przypadku braku uruchomienia testów lokalnie.
-* **Brak sztywnych ram workflow (W TRAKCIE ROZWIĄZYWANIA):** Brak sformalizowanych zasad failover dla agentów AI i szablonów PR.
-* **Requirements.txt (W TRAKCIE ROZWIĄZYWANIA):** Konieczność weryfikacji i stabilizacji pliku dependencies dla CI.
+* **Automatyzacja CI (WDROŻONA):** Skonfigurowano automatyczną weryfikację jakości w `.github/workflows/ci.yml`. Uruchamia ona testy Pythona, kompilację backendu oraz produkcyjny build frontendu. Oczekujemy na pierwszy zielony status z GitHub Actions po otwarciu PR.
+* **Standardy Workflow (WDROŻONE):** Wdrożono katalog `.ai/` wraz z instrukcją `AI_WORKFLOW_FAILOVER.md`, rejestrem zadań `TASKS_INDEX.md` oraz szablonami szczegółów zadań pod `.ai/tasks/_TEMPLATE/`. Obowiązuje startup sequence zdefiniowany w `AGENTS.md`.
+* **Szablon PR (WDROŻONY):** Każdy Pull Request korzysta teraz ze zintegrowanego szablonu `.github/pull_request_template.md` dla lepszej weryfikacji kryteriów i raportów testowych.
+* **Zależności Python (WDROŻONE):** Utworzono plik `app_cv/requirements.txt` ze zwalidowanym zestawem paczek (OpenCV, NumPy, websockets, Pillow) stabilizujący proces instalacji w kontenerach CI.
 
 ---
 
-## 5. Następne Priorytety (Po zakończeniu wdrożenia procesu)
+## 5. Następne Priorytety
 
-1. **TASK-WF-001 / TASK-CI-001 / TASK-PR-001 / TASK-DOC-001** (Zamknięcie bootstrapu workflow i automatyzacji testów w GitHub Actions).
-2. Dalszy rozwój Konsoli Studio (np. **Task Studio Console 6: CV health minimal** lub integracja z zaawansowanym systemem montażu w tle).
+1. **Otwarcie Pull Requesta i Weryfikacja CI:** Uruchomienie pierwszego workflow runa na GitHubie dla gałęzi `workflow/ci-bootstrap` i scalenie zmian do `master` (wymaga zielonego statusu Actions oraz akceptacji Michała).
+2. **Task Studio Console 6: CV health minimal:** Wdrożenie ograniczonego, bardzo czystego widoku parametrów diagnostycznych oraz optymalizacja HUD.
+3. Dalsza integracja audio/reżysera w Konsoli Studio.
