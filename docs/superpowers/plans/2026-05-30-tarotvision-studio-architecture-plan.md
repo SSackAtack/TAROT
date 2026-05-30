@@ -6,7 +6,7 @@ Ten dokument jest planem wykonawczym dla Gemini. Celem nie jest jednorazowe dopi
 
 Najwazniejsza decyzja architektoniczna: najpierw odchudzamy entrypointy i stabilizujemy granice modulow, potem dopiero dokladamy studio. Nie wolno dopisywac rekordera, miksera audio ani YouTube uploadu bezposrednio do obecnego monolitu `app_cv/main.py` lub `app_ar/main.js`.
 
-## Session Status (2026-05-30, Gemini - Modularyzacja frontendu, Status Payload v1, Task 5b, Task Studio Console 1 i przygotowanie pod Studio Console 2)
+## Session Status (2026-05-30, Gemini - Modularyzacja frontendu, Status Payload v1, Task 5b, Task Studio Console 1 i 1b - Wydzielenie styli do offline)
 
 Wykonano:
 - Zrealizowano w całości **Task 4** (Modularyzacja monolitu frontendu React/Vite/Three.js do czystych modułów ES6 w `app_ar/src/`).
@@ -23,13 +23,16 @@ Wykonano:
 - Dodano test jednostkowy `test_get_status_returns_complete_v1_schema` weryfikujący obecność wszystkich sekcji top-level w payloadzie.
 - Zrealizowano w całości **Task Studio Console 1: Fundament konsoli** (Implementacja trybu `?studio=1` w osobnym module frontendu `app_ar/src/studio/studioConsole.js`).
 - Utworzono layout: top status, preview overlay z safe guides, right sidebar z sekcjami: Nagrywanie, Reżyser/Sceny, Mikser Audio, CV Health, a na dole panel transportu.
-- Wstrzyknięto dynamiczne, zaawansowane style CSS dla trybu Studio oparte o Glassmorphism, zaawansowane ciemne tła z gradientami i mikroanimacje.
+- Zrealizowano w całości **Task Studio Console 1b** (Refaktoryzacja modularna i wydzielenie styli dla działania offline).
+- Przeniesiono dynamiczny CSS konsoli do dedykowanego, lokalnego pliku `app_ar/studio.css`, co zapobiega zależnościom sieciowym (Google Fonts) i gwarantuje stabilność w trybie offline, korzystając z premium krojów systemowych.
+- Zredukowano kod `studioConsole.js` o ponad 300 linii, poprawiając czytelność i eliminując ryzyko powstania monolitu.
+- Oznaczono wszystkie nieobsługiwane jeszcze przez backend przyciski i akcje (ARM/START RECORDING, TIMELINE MARKER, PLAY INTRO/OUTRO) jako `disabled` w HTML z informacją o oczekiwaniu na integrację w dymku.
 - Wdrożono integrację z WebSocket (wsClient.js) i dynamiczne ładowanie panelu w bootstrap.js na podstawie stanu appState.studioMode.
-- Zweryfikowano poprawność kompilacji: `npm run build` przebiega pomyślnie i kompiluje 19 modułów w 274ms.
+- Zweryfikowano poprawność kompilacji: `npm run build` przebiega pomyślnie i kompiluje 20 modułów w 309ms.
 - Zweryfikowano testy backendowe: Wszystkie **138 testów jednostkowych** Pythona przechodzi pomyślnie (0.316s).
 
 Pozostało:
-- Uzyskać review od Codexa (GREEN LIGHT) dla Task Studio Console 1.
+- Uzyskać review od Codexa (GREEN LIGHT) dla Task Studio Console 1b.
 - Przejść do **Task Studio Console 2: Ścieżka zapisu** w celu dodania backendowego walidatora katalogów nagrań na backendzie i kontrolki ścieżki w Konsoli Studio.
 
 ## Session Status (2026-05-30, Codex - projekt architektury dla Gemini)
