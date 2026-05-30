@@ -1013,7 +1013,12 @@ Natychmiastowy nastepny ruch dla Gemini:
 
 ## Decyzje wymagajace akceptacji Michala
 
-- Czy `recordings/` ma miec domyslna wartosc startowa, zanim operator wybierze wlasna sciezke.
-- Czy wybor katalogu ma uzywac natywnego File System Access API w przegladarce, czy zwyklego pola tekstowego + walidacji backendu. Uwaga: File System Access API nie jest rowno wspierane we wszystkich przegladarkach.
-- Czy Studio ma miec osobny adres docelowy `?studio=1`, czy pozniej osobna trase Vite, np. `/studio`.
-- Czy dodajemy FFmpeg jako opcjonalny etap montazowy po stabilizacji nagrywania lokalnego.
+Brak decyzji blokujacych start prac programistycznych.
+
+Decyzje zatwierdzone po rozmowie Michal + Gemini:
+
+- Domyslna sciezka nagran: `./recordings` jako fallback w repo, z mozliwoscia zmiany w Konsoli Studio.
+- Wybor katalogu: pole tekstowe w Konsoli + walidacja backendu w Pythonie, bez File System Access API w MVP.
+- Adres Studia: `?studio=1`, bez dodatkowego routera Vite w MVP.
+- FFmpeg: tylko opcjonalny etap przyszlosciowy po stabilizacji nagrywania lokalnego.
+- YouTube: etap 2, po stabilizacji lokalnego studia offline.
