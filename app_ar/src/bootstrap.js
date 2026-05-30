@@ -1,4 +1,5 @@
 import '../style.css'
+import '../studio.css'
 import { appState, arSettings } from './core/appState'
 import { scene, camera, renderer, initRenderer, updateCameraAnimation } from './renderer/arRenderer'
 import { initLights, initScenography, updateScenographyAnimation } from './renderer/scenography'
