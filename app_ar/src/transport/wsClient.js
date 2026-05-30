@@ -4,6 +4,7 @@ import { handleCardData } from '../renderer/cardFactory'
 import { cardNames } from '../renderer/textureCache'
 import { scene } from '../renderer/arRenderer'
 import { normalizeStatusPayload } from './messageNormalizer'
+import { updateStudioConsole } from '../studio/studioConsole'
 
 const GRID_SNAP_ENABLED = false
 const GRID_SIZE_X = 3.8
@@ -22,7 +23,11 @@ export function connectWebSocket(arSettings) {
 
     ws.onopen = () => {
         appState.controlSocket = ws
-        updateOperatorPanel(appState.latestStatus || normalizeStatusPayload(null))
+        if (appState.studioMode) {
+            updateStudioConsole(appState.latestStatus || normalizeStatusPayload(null))
+        } else {
+            updateOperatorPanel(appState.latestStatus || normalizeStatusPayload(null))
+        }
         wsReconnectDelay = 1000 
     }
 
@@ -34,7 +39,12 @@ export function connectWebSocket(arSettings) {
             
             const layout = data.layout || {}
             const detectedCards = data.cards || []
-            updateOperatorPanel(data)
+            
+            if (appState.studioMode) {
+                updateStudioConsole(data)
+            } else {
+                updateOperatorPanel(data)
+            }
             
             const layoutState = layout.state || ''
             const isWatcherOnlyState = ['settling', 'sampling_snapshots', 'analyzing_snapshot'].includes(layoutState)
@@ -52,10 +62,15 @@ export function connectWebSocket(arSettings) {
             appState.activeCards[name].targetOpacity = 0.0
         })
         if (appState.controlSocket === ws) appState.controlSocket = null
-        updateOperatorPanel(appState.latestStatus || normalizeStatusPayload(null))
+        if (appState.studioMode) {
+            updateStudioConsole(appState.latestStatus || normalizeStatusPayload(null))
+        } else {
+            updateOperatorPanel(appState.latestStatus || normalizeStatusPayload(null))
+        }
         setTimeout(() => connectWebSocket(arSettings), wsReconnectDelay)
         wsReconnectDelay = Math.min(wsReconnectDelay * 2, WS_MAX_DELAY)
     }
+
 
     ws.onerror = () => {
         ws.close()

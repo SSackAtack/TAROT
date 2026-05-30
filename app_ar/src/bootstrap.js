@@ -8,6 +8,8 @@ import { createOperatorPanel, initOperatorListeners } from './operator/operatorP
 import { connectWebSocket } from './transport/wsClient'
 import { createWowControls } from './demo/demoControls'
 
+import { createStudioConsole } from './studio/studioConsole'
+
 const GRID_SNAP_ENABLED = false
 const GRID_SIZE_X = 3.8
 const GRID_SIZE_Y = 6.0
@@ -19,10 +21,14 @@ initRenderer(container)
 initLights(scene)
 initScenography(scene)
 
-// 2. Inicjalizacja UI (Panel operatora i przyciski kontrolne WOW/Demo Spread)
-createOperatorPanel()
-initOperatorListeners()
-createWowControls()
+// 2. Inicjalizacja UI (Panel operatora / Konsola Studio i przyciski kontrolne WOW)
+if (appState.studioMode) {
+    createStudioConsole()
+} else {
+    createOperatorPanel()
+    initOperatorListeners()
+    createWowControls()
+}
 
 // 3. Połączenie WebSocket i asynchroniczne wczytywanie tekstur tarota
 connectWebSocket(arSettings)

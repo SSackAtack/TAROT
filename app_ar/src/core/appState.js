@@ -20,6 +20,7 @@ export function saveArSettings() {
 
 export const appState = {
     operatorMode: new URLSearchParams(window.location.search).get('operator') === '1',
+    studioMode: new URLSearchParams(window.location.search).get('studio') === '1',
     controlSocket: null,
     latestStatus: null,
     wowMode: false,
