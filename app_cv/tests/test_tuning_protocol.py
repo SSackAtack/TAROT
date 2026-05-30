@@ -36,6 +36,17 @@ class TuningProtocolTest(unittest.TestCase):
         with self.assertRaises(ControlMessageError):
             parse_control_message("{broken")
 
+    def test_parses_studio_set_recording_dir(self):
+        message = parse_control_message(
+            '{"type": "studio_set_recording_dir", "path": "D:\\\\TarotRecordings"}'
+        )
+        self.assertEqual(message.type, "studio_set_recording_dir")
+        self.assertEqual(message.path, "D:\\TarotRecordings")
+
+    def test_rejects_studio_set_recording_dir_without_path(self):
+        with self.assertRaises(ControlMessageError):
+            parse_control_message('{"type": "studio_set_recording_dir"}')
+
 
 if __name__ == "__main__":
     unittest.main()

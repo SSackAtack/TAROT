@@ -12,6 +12,7 @@ class ControlMessage:
     param: str | None = None
     value: float | str | None = None
     name: str | None = None
+    path: str | None = None
 
 
 ALLOWED_TYPES = {
@@ -23,6 +24,7 @@ ALLOWED_TYPES = {
     "camera_set",
     "calibration_start",
     "calibration_cancel",
+    "studio_set_recording_dir",
 }
 
 
@@ -49,5 +51,10 @@ def parse_control_message(raw_message):
         if "name" not in payload:
             raise ControlMessageError(f"{message_type} requires name")
         return ControlMessage(type=message_type, name=str(payload["name"]))
+
+    if message_type == "studio_set_recording_dir":
+        if "path" not in payload:
+            raise ControlMessageError(f"{message_type} requires path")
+        return ControlMessage(type=message_type, path=str(payload["path"]))
 
     return ControlMessage(type=message_type)

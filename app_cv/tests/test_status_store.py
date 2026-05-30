@@ -74,13 +74,15 @@ class TestStatusStore(unittest.TestCase):
         self.assertEqual(status["warnings"], ["warning"])
 
     def test_update_studio_state(self):
+        dir_status = {"valid": True, "message": "Ready", "path": "/tmp/rec"}
         self.store.update_studio_state(
             recording_state="recording",
             recording_id="rec_123",
             elapsed_ms=1000,
             dropped_frames=2,
             audio_peak_db=-3.5,
-            director_scene="wow"
+            director_scene="wow",
+            recording_dir_status=dir_status
         )
         
         status = self.store.get_status()
@@ -91,6 +93,7 @@ class TestStatusStore(unittest.TestCase):
         self.assertEqual(studio["dropped_frames"], 2)
         self.assertEqual(studio["audio_peak_db"], -3.5)
         self.assertEqual(studio["director_scene"], "wow")
+        self.assertEqual(studio["recording_dir_status"], dir_status)
 
     def test_partial_studio_update(self):
         # Najpierw ustawiamy pełny stan

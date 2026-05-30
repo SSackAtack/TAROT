@@ -56,7 +56,7 @@ class StatusStore:
             if warnings is not None:
                 self._status["warnings"] = copy.deepcopy(warnings)
 
-    def update_studio_state(self, recording_state=None, recording_id=None, elapsed_ms=None, dropped_frames=None, audio_peak_db=None, director_scene=None):
+    def update_studio_state(self, recording_state=None, recording_id=None, elapsed_ms=None, dropped_frames=None, audio_peak_db=None, director_scene=None, recording_dir_status=None):
         """Aktualizuje stan nagrywania w studio nagrań."""
         with self._lock:
             if recording_state is not None:
@@ -71,6 +71,8 @@ class StatusStore:
                 self._status["studio"]["audio_peak_db"] = audio_peak_db
             if director_scene is not None:
                 self._status["studio"]["director_scene"] = director_scene
+            if recording_dir_status is not None:
+                self._status["studio"]["recording_dir_status"] = copy.deepcopy(recording_dir_status)
 
     def set_calibration_state(self, state, last_score):
         """Aktualizuje stan kalibracji operatora."""

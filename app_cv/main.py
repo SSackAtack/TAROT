@@ -189,6 +189,20 @@ def handle_control_message(message, camera_session):
     if message.type == "calibration_cancel":
         calibration_state = {"state": "idle", "last_score": None}
         add_operator_warning("Anulowano kalibracje")
+        return
+
+    if message.type == "studio_set_recording_dir":
+        from tarotvision.status.path_validator import validate_recording_path
+        valid, msg = validate_recording_path(message.path)
+        status_store.update_studio_state(
+            recording_dir_status={
+                "valid": valid,
+                "message": msg,
+                "path": message.path
+            }
+        )
+        add_operator_warning(f"Studio: katalog zapisu zweryfikowany ({'OK' if valid else 'BLAD'}): {msg}")
+        return
 
 
 def drain_control_messages(camera_session):

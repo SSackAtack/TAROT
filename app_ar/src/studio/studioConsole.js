@@ -379,6 +379,12 @@ export function updateStudioConsole(data) {
         const status = data.studio.recording_dir_status
         pathStatus.textContent = `Stan: ${status.message}`
         pathStatus.style.color = status.valid ? "#34d399" : "#f87171"
+        
+        // Zaktualizujmy wartość inputu tylko gdy nie ma focusa
+        const pathInput = sidebarEl.querySelector('#studio-path-input')
+        if (pathInput && document.activeElement !== pathInput && status.path) {
+            pathInput.value = status.path
+        }
     }
 
     // 4. Diagnostyka CV Health
