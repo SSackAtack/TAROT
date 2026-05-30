@@ -204,6 +204,35 @@ def handle_control_message(message, camera_session):
         add_operator_warning(f"Studio: katalog zapisu zweryfikowany ({'OK' if valid else 'BLAD'}): {msg}")
         return
 
+    if message.type == "studio_start_recording":
+        status_store.update_studio_state(
+            recording_state="recording",
+            recording_id=message.recording_id,
+            elapsed_ms=0,
+            dropped_frames=0
+        )
+        add_operator_warning(f"Studio: Rozpoczeto nagrywanie, ID: {message.recording_id}")
+        return
+
+    if message.type == "studio_stop_recording":
+        status_store.update_studio_state(
+            recording_state="idle",
+            recording_id=None,
+            elapsed_ms=0,
+            dropped_frames=0
+        )
+        add_operator_warning("Studio: Zatrzymano i zapisano nagrywanie w przegladarce")
+        return
+
+    if message.type == "studio_update_recording_status":
+        status_store.update_studio_state(
+            recording_state=message.recording_state,
+            recording_id=message.recording_id,
+            elapsed_ms=message.elapsed_ms,
+            dropped_frames=message.dropped_frames
+        )
+        return
+
 
 def drain_control_messages(camera_session):
     with status_lock:

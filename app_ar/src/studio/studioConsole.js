@@ -1,6 +1,7 @@
 import { appState } from '../core/appState'
 import { studioState, updateStudioStateFromPayload, saveStudioVolumeSettings } from './studioState'
 import { sendControlMessage } from '../transport/wsClient'
+import { startStudioRecording, stopStudioRecording } from './mediaRecorderController'
 
 // Globalne referencje do elementów DOM konsoli
 let sidebarEl = null
@@ -302,6 +303,18 @@ function initStudioConsoleEvents() {
             })
         }
     })
+
+    // 4. Obsługa przycisku nagrywania (ARM RECORDING / STOP RECORDING)
+    const recBtn = bottombarEl ? bottombarEl.querySelector('#btn-studio-rec') : null
+    if (recBtn) {
+        recBtn.addEventListener('click', () => {
+            if (studioState.recordingState === 'recording') {
+                stopStudioRecording()
+            } else {
+                startStudioRecording()
+            }
+        })
+    }
 }
 
 // Pomocnicza funkcja formatowania czasu
@@ -354,6 +367,45 @@ export function updateStudioConsole(data) {
     if (recInd) {
         recInd.classList.toggle('studio-indicator--rec', isRecording)
         recInd.classList.toggle('studio-indicator--active', isRecording)
+    }
+
+    // Weryfikacja ścieżki i status przycisku nagrywania w Bottombarze
+    const recBtn = bottombarEl ? bottombarEl.querySelector('#btn-studio-rec') : null
+    const recordingDirValid = data.studio && data.studio.recording_dir_status && data.studio.recording_dir_status.valid
+    
+    if (recBtn) {
+        const recTextSpan = recBtn.querySelector('span:not(.indicator-rec)')
+        const recIndicator = recBtn.querySelector('.indicator-rec')
+        
+        if (!recordingDirValid) {
+            recBtn.setAttribute('disabled', 'true')
+            recBtn.setAttribute('title', 'Wymagany poprawnie zweryfikowany katalog zapisu na backendzie')
+            if (recTextSpan) recTextSpan.textContent = 'ARM RECORDING'
+            if (recIndicator) recIndicator.style.display = 'none'
+            recBtn.classList.remove('studio-btn-transport--rec')
+            recBtn.classList.remove('studio-btn-transport--stopping')
+        } else {
+            recBtn.removeAttribute('disabled')
+            recBtn.removeAttribute('title')
+            
+            if (studioState.recordingState === 'recording') {
+                recBtn.classList.add('studio-btn-transport--rec')
+                recBtn.classList.remove('studio-btn-transport--stopping')
+                if (recTextSpan) recTextSpan.textContent = 'STOP RECORDING'
+                if (recIndicator) recIndicator.style.display = 'inline-block'
+            } else if (studioState.recordingState === 'stopping') {
+                recBtn.setAttribute('disabled', 'true')
+                recBtn.classList.remove('studio-btn-transport--rec')
+                recBtn.classList.add('studio-btn-transport--stopping')
+                if (recTextSpan) recTextSpan.textContent = 'SAVING...'
+                if (recIndicator) recIndicator.style.display = 'none'
+            } else {
+                recBtn.classList.remove('studio-btn-transport--rec')
+                recBtn.classList.remove('studio-btn-transport--stopping')
+                if (recTextSpan) recTextSpan.textContent = 'START RECORDING'
+                if (recIndicator) recIndicator.style.display = 'none'
+            }
+        }
     }
 
     // 3. Sekcja Nagrywanie w Sidebarze

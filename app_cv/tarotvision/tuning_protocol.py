@@ -13,6 +13,10 @@ class ControlMessage:
     value: float | str | None = None
     name: str | None = None
     path: str | None = None
+    recording_id: str | None = None
+    recording_state: str | None = None
+    elapsed_ms: int | None = None
+    dropped_frames: int | None = None
 
 
 ALLOWED_TYPES = {
@@ -25,6 +29,9 @@ ALLOWED_TYPES = {
     "calibration_start",
     "calibration_cancel",
     "studio_set_recording_dir",
+    "studio_start_recording",
+    "studio_stop_recording",
+    "studio_update_recording_status",
 }
 
 
@@ -56,5 +63,22 @@ def parse_control_message(raw_message):
         if "path" not in payload:
             raise ControlMessageError(f"{message_type} requires path")
         return ControlMessage(type=message_type, path=str(payload["path"]))
+
+    if message_type == "studio_start_recording":
+        if "recording_id" not in payload:
+            raise ControlMessageError(f"{message_type} requires recording_id")
+        return ControlMessage(type=message_type, recording_id=str(payload["recording_id"]))
+
+    if message_type == "studio_update_recording_status":
+        for field in ["recording_id", "recording_state", "elapsed_ms", "dropped_frames"]:
+            if field not in payload:
+                raise ControlMessageError(f"{message_type} requires {field}")
+        return ControlMessage(
+            type=message_type,
+            recording_id=str(payload["recording_id"]),
+            recording_state=str(payload["recording_state"]),
+            elapsed_ms=int(payload["elapsed_ms"]),
+            dropped_frames=int(payload["dropped_frames"])
+        )
 
     return ControlMessage(type=message_type)

@@ -47,6 +47,37 @@ class TuningProtocolTest(unittest.TestCase):
         with self.assertRaises(ControlMessageError):
             parse_control_message('{"type": "studio_set_recording_dir"}')
 
+    def test_parses_studio_start_recording(self):
+        message = parse_control_message(
+            '{"type": "studio_start_recording", "recording_id": "rec_2026-05-30"}'
+        )
+        self.assertEqual(message.type, "studio_start_recording")
+        self.assertEqual(message.recording_id, "rec_2026-05-30")
+
+    def test_rejects_studio_start_recording_without_id(self):
+        with self.assertRaises(ControlMessageError):
+            parse_control_message('{"type": "studio_start_recording"}')
+
+    def test_parses_studio_stop_recording(self):
+        message = parse_control_message('{"type": "studio_stop_recording"}')
+        self.assertEqual(message.type, "studio_stop_recording")
+
+    def test_parses_studio_update_recording_status(self):
+        message = parse_control_message(
+            '{"type": "studio_update_recording_status", "recording_id": "rec_2026-05-30", "recording_state": "recording", "elapsed_ms": 12500, "dropped_frames": 2}'
+        )
+        self.assertEqual(message.type, "studio_update_recording_status")
+        self.assertEqual(message.recording_id, "rec_2026-05-30")
+        self.assertEqual(message.recording_state, "recording")
+        self.assertEqual(message.elapsed_ms, 12500)
+        self.assertEqual(message.dropped_frames, 2)
+
+    def test_rejects_studio_update_recording_status_missing_field(self):
+        with self.assertRaises(ControlMessageError):
+            parse_control_message(
+                '{"type": "studio_update_recording_status", "recording_id": "rec_2026", "recording_state": "recording", "elapsed_ms": 12000}'
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
