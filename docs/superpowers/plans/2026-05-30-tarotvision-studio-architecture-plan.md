@@ -62,13 +62,18 @@ Wykonano:
   - Usunięto zbędne zmienne stanu sprzed pętli głównej i uproszczono jej początkową konfigurację.
   - Zastąpiono rozgałęzienie pętli dwoma prostymi wywołaniami `.process_frame(...)` dla obu pipeline'ów z przekazaniem pre-komputowanego `motion_result`.
   - Zapobieżono potencjalnemu błędowi `NameError` poprzez poprawną wcześniejszą deklarację `runtime_metrics`.
+- **Poprawki po review (RED LIGHT - Task 3d):**
+  - Zainicjalizowano `snapshot_analyzer` w `main.py` przed przekazaniem go do `SnapshotFirstPipeline`, usuwając krytyczny błąd `NameError`.
+  - Całkowicie wyczyszczono `main.py` z resztek aktualizacji `boost_frames_remaining` przy detekcji wygaszenia ruchu (logika ta jest już hermetyzowana w rurociągu).
+  - Wdrożono czystą obsługę braku klatki (`not ret`) bezpośrednio w orkiestratorze. Jeśli kamera nie zwraca klatki, orkiestrator sam wyświetla zastępcze okno ostrzegawcze, wysyła status awarii kamery na WebSocket dla panelu operatora i obsługuje klawiaturę dla wyjścia/przełączenia kamer, po czym wykonuje `continue` – całkowicie omijając rurociągi CV, co wyklucza błędy mutacji pustych klatek i `NameError` dla brakujących cech.
+  - Rozbudowano test statyczny AST `app_cv/tests/test_main_static_audit.py` o automatyczne blokowanie usuniętych zmiennych stanu legacy (`boost_frames_remaining`, `boost_after_layout_change_frames`, `debounce_state`, `inactive_index`, `tracked_boxes_by_name`), zabezpieczając `main.py` przed regresją.
 - Zaimplementowano rygorystyczne testy kontraktów wejścia/wyjścia w `app_cv/tests/test_pipelines_contract.py` dla obu rurociągów (z mockowaniem ich zależności).
 
 Weryfikacja:
-- Wszystkie **134 testy jednostkowe** (w tym testy kontraktów i statyczny audyt AST) przechodzą pomyślnie w czasie 0.318s.
-- `py_compile app_cv/main.py app_cv/tarotvision/pipelines/state_first_legacy.py` kompiluje się bez błędów.
-- `npm --prefix app_ar run build` (budowanie produkcyjne frontendu) przechodzi pomyślnie w 311ms.
-- Zmiany zostały w pełni zacommitowane i wypchnięte na origin: commit hash `05b92e5`.
+- Wszystkie **134 testy jednostkowe** (w tym testy kontraktów i zaktualizowany statyczny audyt AST) przechodzą pomyślnie w czasie 0.367s.
+- `py_compile app_cv/main.py app_cv/tests/test_main_static_audit.py` kompiluje się bez błędów.
+- `npm --prefix app_ar run build` (budowanie produkcyjne frontendu) przechodzi pomyślnie w 272ms.
+- Zmiany zostały zacommitowane i wypchnięte na origin: commit hash `HEAD`.
 
 Pozostało:
 - Przejść do kamienia milowego frontendu: **Task 4: Frontend refactor bez zmiany zachowania** w celu wydzielenia bootstrapu i modułów z `app_ar/main.js`.

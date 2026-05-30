@@ -365,6 +365,8 @@ def recognize_snapshot_crop(gray_crop):
     }
 
 
+snapshot_analyzer = SnapshotAnalyzer(recognize_crop=recognize_snapshot_crop)
+
 runtime_metrics = RuntimeMetrics(maxlen=60)
 
 snapshot_gate = SnapshotGate(SnapshotGateConfig(
@@ -445,16 +447,44 @@ while True:
         display_frame = np.zeros((480, 640, 3), dtype=np.uint8)
         cv2.putText(display_frame, f"Brak wideo pod portem: {camera_session.camera_index}", (50, 200), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
         cv2.putText(display_frame, f"Wcisnij inna cyfre (0-5) by szukac.", (50, 250), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
-        gray_frame = None
-    else:
-        # Aktualizujemy rozdzielczosc dynamicznie (na wypadek zmiany kamery)
-        frame_height, frame_width = frame.shape[:2]
         
-        display_frame = frame.copy()
-        gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        opencv_preview.show(display_frame)
         
-        # Zastosowanie CLAHE — obiekt tworzony RAZ na poczatku, nie w kazdej klatce
-        gray_frame = clahe.apply(gray_frame)
+        # Aktualizujemy status o braku kamery
+        metrics_snapshot = runtime_metrics.snapshot()
+        runtime_snapshot = {
+            "profile": RUNTIME_PROFILE,
+            "camera_index": camera_session.camera_index,
+            "capture_width": frame_width,
+            "capture_height": frame_height,
+            "camera_focus_locked": CAMERA_FOCUS_LOCKED,
+            "camera_exposure_locked": CAMERA_EXPOSURE_LOCKED,
+            "schedule_mode": "no_camera"
+        }
+        status_store.update_cv_state(
+            cards=[],
+            metrics=metrics_snapshot,
+            runtime=runtime_snapshot,
+            operator=build_operator_snapshot(),
+            warnings=list(operator_warnings[-8:]) + ["Brak sygnalu wideo z kamery!"]
+        )
+        
+        key_action = opencv_preview.handle_keyboard(camera_session)
+        if key_action == "quit":
+            break
+        elif key_action == "switch":
+            frame_width, frame_height = camera_session.frame_width, camera_session.frame_height
+            log_event(f"[KAMERA] Nowa rozdzielczosc: {frame_width}x{frame_height}")
+        continue
+
+    # Aktualizujemy rozdzielczosc dynamicznie (na wypadek zmiany kamery)
+    frame_height, frame_width = frame.shape[:2]
+    
+    display_frame = frame.copy()
+    gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    
+    # Zastosowanie CLAHE — obiekt tworzony RAZ na poczatku, nie w kazdej klatce
+    gray_frame = clahe.apply(gray_frame)
     runtime_metrics.add("preprocess_ms", (time.perf_counter() - preprocess_start) * 1000.0)
 
     # Kalibracja stolu ArUco — szukamy 4 markerow co klatke
@@ -491,8 +521,7 @@ while True:
     else:
         motion_result = motion_detector.update(np.zeros((8, 8), dtype=np.uint8))
     runtime_metrics.add("motion_changed_ratio", motion_result.changed_ratio)
-    if motion_result.scene_settled:
-        boost_frames_remaining = max(boost_frames_remaining, boost_after_layout_change_frames)
+
 
     if USE_SNAPSHOT_FIRST_CV:
         pipeline_result = snapshot_pipeline.process_frame(
