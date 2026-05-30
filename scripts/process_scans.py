@@ -90,17 +90,16 @@ def scan_image_via_wia():
         print("2. Brak biblioteki pywin32. Uruchom 'install_dependencies.bat', aby ją zainstalować.")
         return None
 
-    print("\n[WIA] Inicjalizacja sprzętowa skanera...")
     try:
         # Tworzymy systemowy obiekt dialogu skanowania WIA
         dialog = win32com.client.Dispatch("WIA.CommonDialog")
         
-        print(" -> Oczekiwanie na interakcję w systemowym oknie skanowania...")
+        print(" -> Otwieranie systemowego kreatora skanowania Windows...")
         
         # Otwieramy systemowe okno dialogowe wyboru i skanowania obrazu
         image = dialog.ShowAcquireImage(
             1, # DeviceType (ScannerDeviceType)
-            0, # Intent (UnspecifiedIntent, pozwala wybrać profil w UI)
+            0, # Intent (UnspecifiedIntent)
             16384, # Bias (MaximizeQuality)
             "{B96B3CAF-0728-11D3-9D7B-0000F81EF32E}", # FormatID (JPEG)
             False, # AlwaysSelectDevice
@@ -109,7 +108,7 @@ def scan_image_via_wia():
         )
         
         if image:
-            temp_filename = f"scan_wia_{int(time.time())}.jpg"
+            temp_filename = f"scan_wia_temp.{int(time.time())}.jpg"
             scans_input_dir = os.path.abspath("scans_input")
             os.makedirs(scans_input_dir, exist_ok=True)
             temp_path = os.path.join(scans_input_dir, temp_filename)
@@ -118,21 +117,19 @@ def scan_image_via_wia():
                 os.remove(temp_path)
                 
             image.SaveFile(temp_path)
-            print("[SUKCES] Fizyczne skanowanie ukończone!")
-            print(f" -> Zapisano plik tymczasowy: {temp_filename}")
+            print(" -> [SUKCES] Pobrano skan z urządzenia!")
             return temp_path
             
     except Exception as e:
         err_str = str(e)
-        # Sprawdzamy czy użytkownik po prostu kliknął 'Anuluj'
         if "0x800704c7" in err_str.lower() or "anulowano" in err_str.lower() or "canceled" in err_str.lower():
             print("\n[WIA] Skanowanie zostało anulowane przez użytkownika.")
         else:
             print(f"\n[BŁĄD] Wystąpił błąd komunikacji WIA ze skanerem: {e}")
-            print("Upewnij się, że skaner jest podłączony do prądu, włączony i podpięty kablem USB do komputera.")
+            print("Upewnij się, że skaner jest podłączony do prądu, włączony i podpięty do komputera USB.")
     return None
 
-def process_scanned_sheet(sheet_path, output_dir, args, start_index=0):
+def process_scanned_sheet(sheet_path, output_dir, args, start_index=0, custom_prefix=None):
     """
     Wczytuje skan całego arkusza, wykrywa prostokąty kart w niskiej rozdzielczości roboczej,
     a następnie precyzyjnie wycina je w oryginalnej wysokiej rozdzielczości.
@@ -216,8 +213,10 @@ def process_scanned_sheet(sheet_path, output_dir, args, start_index=0):
     for idx, cnt in enumerate(card_contours):
         card_number = start_index + saved_count
         
-        # Generowanie nazwy pliku
-        if args.naming == "arcana" and card_number < len(MAJOR_ARCANAS):
+        # Generowanie nazwy pliku w zależności od prefiksu lub figur
+        if custom_prefix:
+            filename = f"{custom_prefix}_{card_number:02d}.{args.format}"
+        elif args.naming == "arcana" and card_number < len(MAJOR_ARCANAS):
             filename = f"{MAJOR_ARCANAS[card_number]}.{args.format}"
         else:
             filename = f"card_{card_number:02d}.{args.format}"
@@ -297,6 +296,121 @@ def process_scanned_sheet(sheet_path, output_dir, args, start_index=0):
 
     return start_index + saved_count, saved_count
 
+def run_interactive_assistant(args):
+    """
+    Prowadzi użytkownika krok po kroku przez proces skanowania masowego i testowego.
+    """
+    print("\n=============================================================")
+    print("        TAROTVISION - INTERAKTYWNY ASYSTENT SKANOWANIA")
+    print("=============================================================")
+    
+    # Krok 1: Wybór trybu (Testowy / Pełny)
+    mode = input("\nCzy chcesz zrobic szybki SKAN PROBNY (T) czy SKANOWAC CALA TALIE (C)? [T/C]: ").strip().upper()
+    
+    if mode == "T":
+        # Scenariusz A: Skan próbny
+        print("\n -> Wybrano tryb SKANU PROBNEGO (prefiks plikow: Test_XX).")
+        print(" -> Skaner wykona 1 probny skan, a gotowe karty zapisze jako Test_XX.")
+        print(" -> Przygotuj skaner, poloz karty i nacisnij Enter, aby rozpoczac...")
+        input()
+        
+        wia_temp_file = scan_image_via_wia()
+        if wia_temp_file is None:
+            print("[INFO] Skanowanie probne przerwane.")
+            return
+            
+        # Przetwarzamy pojedynczy arkusz testowy
+        process_scanned_sheet(wia_temp_file, args.output_dir, args, start_index=0, custom_prefix="Test")
+        
+        # Usuwamy plik tymczasowy
+        try:
+            os.remove(wia_temp_file)
+        except:
+            pass
+            
+        print("\n[SUKCES] Probna obrobka zakonczona pomyslnie!")
+        print("Otwieranie folderu scans_output...")
+        try:
+            os.system("explorer scans_output")
+        except:
+            pass
+            
+    elif mode == "C":
+        # Scenariusz B: Masowe skanowanie całej talii
+        deck_name = input("\n[1/2] Podaj unikalna nazwe kolekcji/talii (np. tarot_marsylski): ").strip()
+        if not deck_name:
+            deck_name = "talia"
+        deck_name = deck_name.replace(" ", "_") # Bezpieczeństwo nazw plików
+        
+        total_cards_str = input("[2/2] Podaj calkowita ilosc kart w tej talii (np. 22 lub 78): ").strip()
+        try:
+            total_cards = int(total_cards_str)
+        except ValueError:
+            total_cards = 22
+            print(f" -> [INFO] Niepoprawna liczba. Ustawiono domyslnie: {total_cards} kart.")
+            
+        print(f"\n -> Rozpoczynamy skanowanie calej talii '{deck_name}' ({total_cards} kart).")
+        print(f" -> Pliki beda zapisywane pod nazwami: scans_output/{deck_name}_XX.{args.format}")
+        
+        scanned_count = 0
+        sheet_index = 1
+        
+        while scanned_count < total_cards:
+            print(f"\n=============================================================")
+            print(f" ARKUSZ #{sheet_index} | Zeskanowano: {scanned_count} z {total_cards} kart")
+            print(f"=============================================================")
+            print("Instrukcja:")
+            print(f"1. Poloz kolejne karty na szybie skanera (np. 4 sztuki).")
+            print(f"2. Nacisnij Enter, aby wywolac systemowe skanowanie...")
+            input()
+            
+            wia_temp_file = scan_image_via_wia()
+            if wia_temp_file is None:
+                print("\n[INFO] Skanowanie tego arkusza nie powiodlo sie.")
+                retry = input("Czy chcesz sprobowac ponownie skanowac ten arkusz? [T/N]: ").strip().upper()
+                if retry == "T":
+                    continue
+                else:
+                    print(f"\n[INFO] Skanowanie przerwane. Zapisano lacznie {scanned_count} kart.")
+                    break
+            
+            # Przetwarzamy skan z poprawnym dynamicznym indeksem startowym
+            next_idx, extracted_count = process_scanned_sheet(
+                wia_temp_file, args.output_dir, args, start_index=scanned_count, custom_prefix=deck_name
+            )
+            
+            scanned_count += extracted_count
+            sheet_index += 1
+            
+            # Usuwamy plik tymczasowy
+            try:
+                os.remove(wia_temp_file)
+            except:
+                pass
+                
+            if scanned_count >= total_cards:
+                print(f"\n=============================================================")
+                print(f" [SUKCES] BRAWO! ZESKANOWANO CALA TALIE! ({scanned_count}/{total_cards} kart)")
+                print(f" Wszystkie pliki znajdziesz w scans_output z przedrostkiem {deck_name}_")
+                print("=============================================================")
+                break
+                
+            print(f"\n -> [POSTEP] Zeskanowano {scanned_count} z {total_cards} kart. Pozostalo: {total_cards - scanned_count} kart.")
+            cont = input("Czy chcesz skanowac kolejny arkusz? [T/N]: ").strip().upper()
+            if cont != "T":
+                print(f"\n[INFO] Skanowanie przerwane na prosbe uzytkownika. Zapisano {scanned_count} kart.")
+                break
+                
+        # Otwieramy katalog wyjściowy
+        if scanned_count > 0:
+            print("\nOtwieranie folderu scans_output...")
+            try:
+                os.system("explorer scans_output")
+            except:
+                pass
+    else:
+        print("[INFO] Niepoprawny wybor trybu. Asystent zostal zamkniety.")
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Ultra-precyzyjny skrypt do masowej obróbki i autokadrowania skanów kart tarota (OpenCV).")
     parser.add_argument("scans_dir", nargs="?", default="scans_input", help="Katalog wejściowy ze skanami (domyślnie: scans_input)")
@@ -311,6 +425,9 @@ if __name__ == "__main__":
     parser.add_argument("--quality", type=int, default=95, help="Jakość kompresji JPG/WebP (0-100, domyślnie: 95)")
     parser.add_argument("--debug-overlay", action="store_true", help="Generuje obraz z narysowanymi konturami i indeksami kart")
     parser.add_argument("--dry-run", action="store_true", help="Analizuje skany bez zapisu kart na dysk")
+    parser.add_argument("--interactive", action="store_true", help="Uruchamia asystenta krok po kroku (pętla masowego skanowania)")
+    parser.add_argument("--prefix", type=str, default=None, help="Niestandardowy prefiks dla nazw wycinanych kart")
+    parser.add_argument("--total-cards", type=int, default=None, help="Maksymalna oczekiwana liczba kart w talii")
 
     args = parser.parse_args()
 
@@ -319,21 +436,23 @@ if __name__ == "__main__":
 
     start_time = time.time()
 
+    # Sprawdzamy czy użytkownik chce uruchomić asystenta masowego skanowania
+    if args.interactive:
+        run_interactive_assistant(args)
+        sys.exit(0)
+
     print("=== ULTRA-PRECYZYJNA OBRÓBKA I PROSTOWANIE SKANÓW (OPENCV) ===")
     
     files = []
     
-    # Krok A: Sprawdzamy czy włączono skanowanie bezpośrednie ze sprzętu
     if args.scan:
         wia_temp_file = scan_image_via_wia()
         if wia_temp_file is None:
             print("[INFO] Skanowanie bezpośrednie nie powiodło się lub zostało anulowane. Zamykam program.")
             sys.exit(0)
-        # Przekazujemy nowo utworzony plik do dalszej analizy
         args.scans_dir = os.path.dirname(wia_temp_file)
         files = [os.path.basename(wia_temp_file)]
     else:
-        # Krok B: Klasyczne wyszukiwanie plików graficznych w katalogu scans_dir
         extensions = (".jpg", ".jpeg", ".png", ".tiff", ".tif")
         files = [f for f in os.listdir(args.scans_dir) if f.lower().endswith(extensions)]
 
@@ -343,13 +462,15 @@ if __name__ == "__main__":
     print(f"Katalog wyjściowy : {args.output_dir}")
     print(f"Docelowy format   : {args.format.upper()} (jakość: {args.quality}%)")
     print(f"Styl nazywania    : {args.naming.upper()}")
+    if args.prefix:
+        print(f"Prefiks plikow    : {args.prefix}")
     print(f"Rozmiar karty     : {args.target_width}x{args.target_height} px")
     print(f"Indeks startowy   : {args.start_index}")
     print("="*70)
 
     if not files:
         print(f"\n[INFO] Brak skanów w katalogu '{args.scans_dir}'.")
-        print("Umieść tam pliki skanera lub uruchom skrypt z flagą --scan.")
+        print("Umieść tam pliki skanera lub uruchom skrypt z flagą --scan lub --interactive.")
         sys.exit(0)
 
     scan_stats = {}
@@ -359,10 +480,17 @@ if __name__ == "__main__":
     for file in sorted(files):
         sheet_path = os.path.join(args.scans_dir, file)
         current_idx, extracted_count = process_scanned_sheet(
-            sheet_path, args.output_dir, args, start_index=current_idx
+            sheet_path, args.output_dir, args, start_index=current_idx, custom_prefix=args.prefix
         )
         scan_stats[file] = extracted_count
         total_extracted += extracted_count
+
+        # Jeśli skrypt był uruchomiony z plikiem tymczasowym WIA, czyścimy go po obróbce
+        if args.scan:
+            try:
+                os.remove(sheet_path)
+            except:
+                pass
 
     elapsed_time = time.time() - start_time
 

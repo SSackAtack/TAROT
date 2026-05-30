@@ -10,42 +10,35 @@ echo =======================================================================
 echo.
 echo Wybierz, co chcesz zrobic:
 echo.
-echo   [1] SKANUJ I OBROB - Bezposrednie skanowanie z Twojego skanera
-echo       (Karty leza na szybie skanera, skrypt sam wywola skanowanie)
+echo   [1] ASYSTENT SKANOWANIA - Kreator masowego skanowania talii (WIA)
+echo       (Prowadzi krok po kroku, umozliwia skan próbny lub calej talii)
 echo.
-echo   [2] OBROB GOTOWE PLIKI - Obrabia obrazy z folderu scans_input
+echo   [2] OBROB GOTOWE PLIKI - Kadruje i prostuje obrazy z folderu scans_input
 echo.
-echo   [3] GENERUJ TESTY - Tworzy syntetyczne karty testowe
+echo   [3] GENERUJ TESTY - Tworzy syntetyczne karty testowe do weryfikacji
 echo.
 echo   [4] ZAKONCZ
 echo.
 echo =======================================================================
 set /p "choice=Wpisz numer (1-4) i nacisnij Enter: "
 
-if "%choice%"=="1" goto HARDWARE_SCAN
+if "%choice%"=="1" goto INTERACTIVE_ASSISTANT
 if "%choice%"=="2" goto PROCESS_FILES
 if "%choice%"=="3" goto GENERATE_TESTS
 if "%choice%"=="4" exit /b
 goto MENU
 
-:HARDWARE_SCAN
+:INTERACTIVE_ASSISTANT
 cls
 echo =======================================================================
-echo      [1] SKANUJ I OBROB - Bezposrednia komunikacja ze skanerem
+echo      [1] ASYSTENT SKANOWANIA - Kreator masowego skanowania (WIA)
 echo =======================================================================
 echo.
-echo Instrukcja:
-echo 1. Poloz karty na szybie skanera (zalecana czarna podkladka / tlo).
-echo 2. Po nacisnieciu klawisza pojawi sie systemowe okienko Windows.
-echo 3. Wybierz swoj skaner, ustaw parametry i kliknij "Skanuj".
-echo.
-pause
-
-echo Inicjowanie skanowania WIA...
-python scripts/process_scans.py --scan --background auto --format png --naming generic --debug-overlay
+echo Uruchamianie interaktywnego asystenta w Pythonie...
+python scripts/process_scans.py --interactive --format png --naming generic --debug-overlay
 
 if errorlevel 1 goto ERROR_OCCURRED
-goto PROCESS_SUCCESS
+goto MENU
 
 :PROCESS_FILES
 cls
@@ -75,6 +68,7 @@ pause
 goto MENU
 
 :DO_PROCESS
+echo.
 echo Uruchamianie ultra-precyzyjnej obrobki...
 python scripts/process_scans.py scans_input scans_output --background auto --format png --naming generic --debug-overlay
 if errorlevel 1 goto ERROR_OCCURRED
@@ -108,7 +102,7 @@ goto MENU
 
 :ERROR_OCCURRED
 echo.
-echo [BLAD] Wystapil problem podczas przetwarzania skanow!
+echo [BLAD] Wystapil problem podczas pracy asystenta!
 echo Upewnij sie, ze zainstalowales biblioteki uruchamiajac install_dependencies.bat.
 echo.
 pause
