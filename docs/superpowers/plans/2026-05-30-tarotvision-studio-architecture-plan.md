@@ -50,6 +50,23 @@ Weryfikacja:
 
 - Dodano obraz koncepcyjny i doprecyzowano plan. Nie zmieniano kodu runtime.
 
+## Session Status (2026-05-30, Gemini - Refaktoryzacja stanu i logowania)
+
+Wykonano:
+- Zrealizowano w całości **Task 1** (bezinwazyjny refaktor backendu).
+- Utworzono puste struktury pakietu `tarotvision.runtime` (`__init__.py`, `app.py`).
+- Utworzono pakiet `tarotvision.status` z modułami `status_store.py` (klasa `StatusStore`) oraz `diagnostics_writer.py` (klasa `DiagnosticsWriter`).
+- Przeniesiono globalny stan `current_status` i `status_lock` do klasy `StatusStore` z zachowaniem pełnej thread-safety.
+- Wydzielono logowanie diagnostyczne `cv_metrics.jsonl` do dedykowanej klasy `DiagnosticsWriter`.
+- Wprowadzono bezinwazyjne zmiany w `app_cv/main.py` – entrypoint działa dokładnie tak samo, bez regresji w algorytmach CV i AR.
+- Zaimplementowano kompleksowe testy jednostkowe w `app_cv/tests/test_status_store.py` oraz `app_cv/tests/test_diagnostics_writer.py`.
+- **Poprawki po review (YELLOW LIGHT):** Wdrożono defensywne głębokie kopiowanie (`copy.deepcopy`) dla wszystkich parametrów w metodzie `StatusStore.update_cv_state()` w celu ochrony przed mutacją stanu z zewnątrz. Dodano dedykowany test jednostkowy `test_update_cv_state_defensive_copy` weryfikujący to zachowanie.
+
+Weryfikacja:
+- Wszystkie 118 testów jednostkowych przechodzi pomyślnie w czasie 0.26s (w tym nowy test defensywnego kopiowania).
+- `py_compile app_cv/main.py` kompiluje się bez żadnych błędów.
+- `npm --prefix app_ar run build` kończy się pełnym sukcesem.
+
 ## Stan aktualny
 
 ### Fakty z repo
@@ -744,16 +761,16 @@ Kryterium sukcesu:
 
 ### Task 1: Backend refactor bez zmiany zachowania
 
-- [ ] Utworz minimalne moduly runtime: `runtime/app.py`, `status/status_store.py`, `status/diagnostics_writer.py`.
-- [ ] Przenies globalny `current_status` i `status_lock` do `StatusStore`.
-- [ ] Przenies zapis `cv_metrics.jsonl` do `DiagnosticsWriter`.
-- [ ] `app_cv/main.py` nadal uruchamia aplikacje tak samo jak teraz.
-- [ ] Nie zmieniaj algorytmow CV.
+- [x] Utworz minimalne moduly runtime: `runtime/app.py`, `status/status_store.py`, `status/diagnostics_writer.py`.
+- [x] Przenies globalny `current_status` i `status_lock` do `StatusStore`.
+- [x] Przenies zapis `cv_metrics.jsonl` do `DiagnosticsWriter`.
+- [x] `app_cv/main.py` nadal uruchamia aplikacje tak samo jak teraz.
+- [x] Nie zmieniaj algorytmow CV.
 
 Testy:
 
-- [ ] Dodaj `app_cv/tests/test_status_store.py`.
-- [ ] Dodaj `app_cv/tests/test_diagnostics_writer.py` z tymczasowym katalogiem.
+- [x] Dodaj `app_cv/tests/test_status_store.py`.
+- [x] Dodaj `app_cv/tests/test_diagnostics_writer.py` z tymczasowym katalogiem.
 
 Weryfikacja:
 

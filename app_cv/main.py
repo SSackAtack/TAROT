@@ -65,24 +65,11 @@ LOCK_AFTER_FRAMES = 8      # Klatki stabilnej detekcji zanim pozycja zostanie za
 LOCK_DEAD_ZONE_POS = 3.0   # Minimalny ruch pozycji (w jednostkach sceny) zeby odblokowac karte (zwiekszony pod katem szumow centroidu)
 LOCK_DEAD_ZONE_ANGLE = 0.5 # Minimalny ruch kata (w radianach, ~28 stopni) zeby odblokowac karte
 
-# Stan wspoldzielony miedzy watkiem wizyjnym (CV) a watkiem serwera WebSocket
-status_lock = threading.Lock()
-current_status = {
-    "detected": False,
-    "cards": [],
-    "metrics": {},
-    "runtime": {},
-    "operator": {
-        "enabled": True,
-        "active_profile": "default",
-        "parameters": {},
-        "parameter_metadata": {},
-        "pending_changes": {},
-        "supported_camera_controls": {},
-        "calibration": {"state": "idle", "last_score": None},
-        "warnings": [],
-    },
-}
+from tarotvision.status import StatusStore, DiagnosticsWriter
+
+# Stan wspoldzielony i zapis diagnostyczny zarządzany przez wydzielone moduly
+status_store = StatusStore()
+status_lock = status_store.lock
 
 # Zestaw polaczonych klientow
 connected_clients = set()
@@ -96,10 +83,10 @@ calibration_state = {"state": "idle", "last_score": None}
 profile_store = ProfileStore(os.path.join(LOG_DIR, "calibration_profiles"))
 active_tuning_profile = "default"
 
-os.makedirs(LOG_DIR, exist_ok=True)
-diagnostics_path = os.path.join(LOG_DIR, "cv_metrics.jsonl")
-if os.environ.get("TAROTVISION_RESET_LOGS") == "1" and os.path.exists(diagnostics_path):
-    os.remove(diagnostics_path)
+# Inicjalizacja DiagnosticsWriter
+reset_logs = os.environ.get("TAROTVISION_RESET_LOGS") == "1"
+diagnostics_writer = DiagnosticsWriter(LOG_DIR, filename="cv_metrics.jsonl", reset_on_start=reset_logs)
+
 
 logging.basicConfig(
     filename=os.path.join(LOG_DIR, "cv_runtime.log"),
@@ -320,24 +307,14 @@ def drain_control_messages(capture):
 
 
 def append_diagnostics(metrics_snapshot, runtime_snapshot, active_cards):
-    payload = {
-        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
-        "detected": len(active_cards) > 0,
-        "card_count": len(active_cards),
-        "cards": active_cards,
-        "metrics": metrics_snapshot,
-        "runtime": runtime_snapshot
-    }
-    with open(diagnostics_path, "a", encoding="utf-8") as log_file:
-        log_file.write(json.dumps(payload, ensure_ascii=False) + "\n")
+    diagnostics_writer.append(metrics_snapshot, runtime_snapshot, active_cards)
 
 async def handler(websocket):
     log_event(f"[WEBSOCKET] Polaczono klienta: {websocket.remote_address}")
     connected_clients.add(websocket)
     try:
         # Wyslij natychmiast obecny stan (bezpieczna gleboka kopia)
-        with status_lock:
-            state = copy.deepcopy(current_status)
+        state = status_store.get_status()
         await websocket.send(json.dumps(state))
         
         async for message in websocket:
@@ -359,8 +336,7 @@ async def broadcast_status():
     while True:
         if connected_clients:
             # Bezpieczna gleboka kopia pod lockiem — eliminuje race condition z shallow copy
-            with status_lock:
-                state_to_send = copy.deepcopy(current_status)
+            state_to_send = status_store.get_status()
             
             # Serializujemy do JSON raz i porownujemy stringi (unika problemow z float comparison)
             current_json = json.dumps(state_to_send)
@@ -839,14 +815,14 @@ while True:
             "table": table_calibration.status(),
         }
         status_update_start = time.perf_counter()
-        with status_lock:
-            current_status["detected"] = len(last_snapshot_cards) > 0
-            current_status["cards"] = last_snapshot_cards
-            current_status["metrics"] = metrics_snapshot
-            current_status["runtime"] = runtime_snapshot
-            current_status["operator"] = build_operator_snapshot()
-            current_status["warnings"] = list(operator_warnings[-8:])
-            current_status["layout"] = layout_snapshot
+        status_store.update_cv_state(
+            cards=last_snapshot_cards,
+            metrics=metrics_snapshot,
+            runtime=runtime_snapshot,
+            operator=build_operator_snapshot(),
+            layout=layout_snapshot,
+            warnings=list(operator_warnings[-8:])
+        )
         runtime_metrics.add("status_update_ms", (time.perf_counter() - status_update_start) * 1000.0)
 
         diagnostics_time = time.time()
@@ -1319,12 +1295,13 @@ while True:
     runtime_snapshot["tracking_iou_threshold"] = tracking_iou_threshold
     runtime_snapshot["table"] = table_calibration.status()
     status_update_start = time.perf_counter()
-    with status_lock:
-        current_status["detected"] = len(active_detected_cards) > 0
-        current_status["cards"] = active_detected_cards
-        current_status["metrics"] = metrics_snapshot
-        current_status["runtime"] = runtime_snapshot
-        current_status["operator"] = build_operator_snapshot()
+    status_store.update_cv_state(
+        cards=active_detected_cards,
+        metrics=metrics_snapshot,
+        runtime=runtime_snapshot,
+        operator=build_operator_snapshot(),
+        warnings=list(operator_warnings[-8:])
+    )
     runtime_metrics.add("status_update_ms", (time.perf_counter() - status_update_start) * 1000.0)
 
     diagnostics_time = time.time()
