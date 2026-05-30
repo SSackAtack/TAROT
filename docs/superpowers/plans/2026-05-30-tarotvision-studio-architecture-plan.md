@@ -6,6 +6,20 @@ Ten dokument jest planem wykonawczym dla Gemini. Celem nie jest jednorazowe dopi
 
 Najwazniejsza decyzja architektoniczna: najpierw odchudzamy entrypointy i stabilizujemy granice modulow, potem dopiero dokladamy studio. Nie wolno dopisywac rekordera, miksera audio ani YouTube uploadu bezposrednio do obecnego monolitu `app_cv/main.py` lub `app_ar/main.js`.
 
+## Session Status (2026-05-30, Gemini - Kolory, Kontrast i Dostępność Wizualna, Task Studio Console 6 - Zakończony)
+
+Wykonano:
+- Zrealizowano w całości **Task Studio Console 6 (Dostosowanie szaty graficznej i kontrastów konsoli)**.
+- **Elegancja i Profesjonalizm (Zamiana Żółci):** Usunięto jaskrawą żółć (`#ffd700`) we wszystkich elementach interfejsu (wskaźniki, napis logo, suwaki miksera, playhead, aktywne obramowania i przyciski). Zastąpiono ją szlachetnym, zgaszonym i wyrazistym kolorem ciepłej miedzi / bursztynu (`#d67d3e` / `rgba(214, 125, 62, ...)`). Interfejs wygląda teraz spójnie i premium.
+- **Maksymalna Czytelność Diagnostyki CV:** Znacznie podbito jasność w sekcji **Diagnostyka CV Health**. Szare etykiety (`FPS:`, `Cards:`, `Stable Ms:`, `Snapshot:`) zostały rozjaśnione do jasnoszarego `#cbd5e1`, a same wartości diagnostyczne otrzymały czystą biel `#ffffff` oraz pogrubienie (`font-weight: 700`).
+- **Czytelne Zablokowane Przyciski (Disabled):** 
+  - Zwiększono `opacity` zablokowanych przycisków w bottombarze (`ARM RECORDING`, `+ ADD MARKER`, `PLAY INTRO`, `PLAY OUTRO`) z `0.5` do `0.85`, rozjaśniono ich tło na ciemnostalowy (`rgba(30, 41, 59, 0.25)`) i zastosowano zgaszony, ale w pełni czytelny niebiesko-szary kolor tekstu/ikon (`#8ba1b8`).
+- **Pomyślny Audyt Review (GREEN LIGHT):** Zmiana została zweryfikowana lokalnie za pomocą testów backendowych oraz buildu frontendu i otrzymała pełną aprobatę od kuratora AI (ChatGPT Supervisor).
+- Zmiany zostały zacommitowane i wypchnięte: commit `19c999f`.
+
+Pozostało:
+- Przejść do dalszych etapów rozwoju Konsoli Studio w kolejnych sesjach (Task Studio Console 6: CV health minimal w celu dalszego czyszczenia layoutu, lub Realna integracja Web Audio / mierników audio w tle).
+
 ## Session Status (2026-05-30, Gemini - Automatyczny Reżyser, Oś Czasu, timeline JSON i Walidacja, Task Studio Console 5 & 5b-fix - Zakończony)
 
 Wykonano:
