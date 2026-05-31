@@ -34,6 +34,28 @@ def log_to_file(message, level="INFO"):
     except Exception:
         pass
 
+def save_image_unicode(file_path, img, params=None):
+    """
+    Bezpiecznie zapisuje obraz OpenCV, radząc sobie ze ścieżkami Unicode na systemach Windows.
+    """
+    ext = os.path.splitext(file_path)[1]
+    if params is None:
+        is_success, im_buf_arr = cv2.imencode(ext, img)
+    else:
+        is_success, im_buf_arr = cv2.imencode(ext, img, params)
+    
+    if is_success:
+        try:
+            with open(file_path, "wb") as f:
+                f.write(im_buf_arr.tobytes())
+            return True
+        except Exception as e:
+            log_to_file(f"Blad zapisu pliku {file_path}: {e}", "ERROR")
+            return False
+    else:
+        log_to_file(f"Blad kodowania obrazu dla pliku {file_path}", "ERROR")
+    return False
+
 def order_points(pts):
     """
     Porządkuje 4 punkty wierzchołkowe w stałej kolejności:
@@ -462,15 +484,15 @@ def process_scanned_sheet(sheet_path, output_dir, args, start_index=0, custom_pr
                 bgra = cv2.cvtColor(warped, cv2.COLOR_BGR2BGRA)
                 bgra[:, :, 3] = alpha_mask
                 if args.format == "webp":
-                    cv2.imwrite(out_path, bgra, [int(cv2.IMWRITE_WEBP_QUALITY), args.quality])
+                    save_image_unicode(out_path, bgra, [int(cv2.IMWRITE_WEBP_QUALITY), args.quality])
                 else:
-                    cv2.imwrite(out_path, bgra)
+                    save_image_unicode(out_path, bgra)
             else:
                 bg_color = (0, 0, 0) if is_dark else (255, 255, 255)
                 mask_3d = np.repeat(alpha_mask[:, :, np.newaxis], 3, axis=2)
                 bg_fill = np.ones_like(warped) * bg_color
                 warped_jpg = np.where(mask_3d == 255, warped, bg_fill).astype(np.uint8)
-                cv2.imwrite(out_path, warped_jpg, [int(cv2.IMWRITE_JPEG_QUALITY), args.quality])
+                save_image_unicode(out_path, warped_jpg, [int(cv2.IMWRITE_JPEG_QUALITY), args.quality])
 
             print(f"   -> Wycięto i zapisano: {filename} ({args.target_width}x{args.target_height} px)")
             log_to_file(f"Zapisano wyciętą kartę: {filename} w {output_dir}", "INFO")
@@ -485,7 +507,7 @@ def process_scanned_sheet(sheet_path, output_dir, args, start_index=0, custom_pr
     if args.debug_overlay and len(card_contours) > 0:
         debug_filename = f"debug_{os.path.splitext(os.path.basename(sheet_path))[0]}.jpg"
         debug_path = os.path.join(output_dir, debug_filename)
-        cv2.imwrite(debug_path, img_debug)
+        save_image_unicode(debug_path, img_debug)
         print(f" -> [DEBUG] Zapisano obraz podglądu detekcji: {debug_filename}")
         log_to_file(f"Zapisano obraz podglądu detekcji: {debug_path}", "INFO")
 
