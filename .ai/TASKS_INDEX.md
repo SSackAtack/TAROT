@@ -24,7 +24,7 @@ Ten plik stanowi centralny rejestr wszystkich zadań (Tasks) realizowanych w pro
 | **TASK-DECK-005** | `APPROVED` | `master` | Gemini | Wdrożenie talii Światło i Cień z integracją oraz uodpornieniem zapisu Unicode na Windowsie | 2026-05-31 | Confirmed 171/171 Green |
 | **TASK-DECK-006** | `APPROVED` | `master` | Gemini | Manifest talii i konfiguracja aktywnych talii sesji 1–3 talie | 2026-05-31 | APPROVED BY CHATGPT SUPERVISOR |
 | **TASK-DECK-007** | `APPROVED` | `master` | Gemini | Frontend lazy loading tylko aktywnych talii | 2026-05-31 | APPROVED BY CHATGPT SUPERVISOR |
-| **TASK-DECK-008** | `DONE` | `task/deck-008-backend-cv-registry` | Gemini | Backend CV registry tylko dla aktywnych talii | 2026-05-31 | Awaiting Gemini |
+| **TASK-DECK-008** | `APPROVED` | `master` | Gemini | Backend CV registry tylko dla aktywnych talii | 2026-05-31 | APPROVED BY CHATGPT SUPERVISOR |
 
 ---
 

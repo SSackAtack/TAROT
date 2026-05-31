@@ -10,7 +10,7 @@ TASK-DECK-008: Backend CV registry tylko dla aktywnych talii
 `ac75f7b825fd76a22d851c79631cbb481bfac9e3`
 
 ## Head Commit
-`feat: implement dynamic pattern loading for active decks in CV backend` (Commit w trakcie tworzenia na branchu roboczym)
+`c168e4e5b1f59461a962998d22e494bbef699bba` (`feat: implement dynamic pattern loading for active decks in CV backend`)
 
 ## Files Changed
 - `app_cv/main.py` [MODIFY]

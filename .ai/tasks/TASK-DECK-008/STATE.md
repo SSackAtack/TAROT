@@ -1,7 +1,7 @@
 # STATE — TASK-DECK-008
 
 ## Status
-DONE
+APPROVED
 
 ## Owner
 Gemini
@@ -13,7 +13,7 @@ ChatGPT Supervisor
 2026-05-31
 
 ## Current State
-Zadanie zostało pomyślnie zakończone. Zaimplementowano dynamiczny rejestr Computer Vision w backendzie Python/OpenCV (`app_cv/main.py`). Backend odczytuje teraz `/active_decks.json` oraz `/decks_manifest.json` przy uruchomieniu i wczytuje cyfrowe wzorce wyłącznie dla wskazanych aktywnych talii (od 1 do 3), wczytywanych w pętli. Wdrożono rygorystyczny mechanizm **fail-safe** (fallback) - w razie braku plików JSON system wczytuje domyślną talię wskazaną przez zmienną środowiskową (np. `rider-waite-smith`), zapobiegając regresji. Testy jednostkowe (171 testów) przechodzą pomyślnie na zielono, a dry-run potwierdził prawidłowe ładowanie wzorców w locie.
+Zadanie zostało pomyślnie zakończone i formalnie zatwierdzone przez ChatGPT Supervisor (GREEN LIGHT). Zaimplementowano dynamiczny rejestr Computer Vision w backendzie Python/OpenCV (`app_cv/main.py`). Backend odczytuje teraz `/active_decks.json` oraz `/decks_manifest.json` przy uruchomieniu i wczytuje cyfrowe wzorce wyłącznie dla wskazanych aktywnych talii (od 1 do 3), wczytywanych w pętli. Wdrożono rygorystyczny mechanizm **fail-safe** (fallback) - w razie braku plików JSON system wczytuje domyślną talię wskazaną przez zmienną środowiskową (np. `rider-waite-smith`), zapobiegając regresji. Testy jednostkowe (171 testów) przechodzą pomyślnie na zielono, a dry-run potwierdził prawidłowe ładowanie wzorców w locie.
 
 ## What Was Done By Gemini
 1. Utworzono branch roboczy `task/deck-008-backend-cv-registry`.
