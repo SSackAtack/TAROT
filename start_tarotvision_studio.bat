@@ -75,12 +75,12 @@ if %ERRORLEVEL% NEQ 0 (
     echo.
     echo Wybierz akcję:
     echo ------------------------------------------------------------
-    echo [1] (Zalecane) Automatycznie zatrzymaj wiszące procesy na porcie 5173 i kontynuuj
-    echo [2] Kontynuuj uruchamianie mimo to (na własną odpowiedzialność)
+    echo [1] [Zalecane] Automatycznie zatrzymaj wiszące procesy na porcie 5173 i kontynuuj
+    echo [2] Kontynuuj uruchamianie mimo to [na własną odpowiedzialność]
     echo [3] Przerwij i wyjdź z launchera
     echo ------------------------------------------------------------
     echo.
-    set /p PORT_CHOICE="Twój wybór [1-3] (domyślnie 3): "
+    set /p PORT_CHOICE="Twój wybór [1-3] [domyślnie 3]: "
     if "!PORT_CHOICE!"=="" set "PORT_CHOICE=3"
     
     if "!PORT_CHOICE!"=="1" (
