@@ -1,0 +1,44 @@
+# GEMINI REPORT — TASK-CV-AUTOTUNE-001
+
+## Task
+TASK-CV-AUTOTUNE-001 — Offline single-frame rectangle autotune prototype
+
+## Branch
+`task/cv-autotune-001-offline-single-frame`
+
+## Base Commit
+`d8f22617f694e9f73c4d5fbc40d210515e0a6d96` (feat: parameterize card rectangle detection - PR #11 merge tip)
+
+## Head Commit
+`8202760` (fix: strengthen autotuner nested contour validation)
+
+## Files Changed
+* `app_cv/tarotvision/auto_tuner.py`
+* `app_cv/tests/test_auto_tuner.py`
+* `.ai/TASKS_INDEX.md`
+* `.ai/tasks/TASK-CV-AUTOTUNE-001/TASK.md`
+* `.ai/tasks/TASK-CV-AUTOTUNE-001/STATE.md`
+* `.ai/tasks/TASK-CV-AUTOTUNE-001/CHANGELOG.md`
+* `.ai/tasks/TASK-CV-AUTOTUNE-001/TEST_REPORT.md`
+* `.ai/tasks/TASK-CV-AUTOTUNE-001/GEMINI_REPORT.md`
+
+## Summary
+* Zaimplementowano kompletny moduł `auto_tuner.py` realizujący prototyp autotuningu detekcji prostokąta karty.
+* Wdrożono funkcję `score_candidate_quad` dokonującą wieloaspektowej oceny konturów (proporcje boków, powierzchnia kandydata, stopień centralności) w skali od `0.0` do `1.0`.
+* Dodano optymalizator `tune_card_detection_params` przeszukujący przestrzeń coarse search (240 stanów) z kontrolą budżetu iteracji oraz klasyfikacją wiarygodności autotuningu (`LOW/MEDIUM/HIGH`).
+* Napisano pełne pokrycie testami jednostkowymi w `test_auto_tuner.py` potwierdzając poprawność matematyczną scoringu, odporność na puste klatki wideo, poprawność rozwiązywania pułapki A4 oraz przestrzeganie budżetu.
+* Pomyślnie zweryfikowano wszystkie 187 testów backendowych oraz proces budowania produkcyjnego frontendu w Vite.
+* Zadanie zostało w 100% odizolowane technicznie (brak zmian w runtime main, UI, WebSocket itp. - zerowe ryzyko regresji na masterze).
+
+## Tests Run
+* `python -m unittest discover tests` w `app_cv` => `PASS` (187/187 testów zielonych)
+* `npm run build` w `app_ar` => `PASS`
+
+## Known Risks
+* **Scoring wyłącznie geometryczny (bez weryfikacji ORB):** Autotuner ocenia jakość konturów wyłącznie na podstawie parametrów geometrycznych (proporcje, powierzchnia, położenie). Istnieje ryzyko, że wykryty idealny prostokąt nie będzie zawierał czytelnych dla algorytmu ORB cech kluczowych karty.
+* **Brak testów fizycznych z kamerą:** Dotychczasowe testy opierają się na danych syntetycznych. Rzeczywiste warunki oświetleniowe, odbicia światła i cienie na fizycznym stole mogą wpłynąć na stabilność progów Canny.
+* **Ryzyko fałszywych kandydatów w trybach RETR_LIST/TREE:** Użycie trybów głębokiego wyszukiwania konturów generuje znacznie większą liczbę prostokątów zagnieżdżonych. Bez sprawnej selekcji i limitu `max_candidates` może to nieznacznie wydłużyć czas przetwarzania klatki w pętli CV.
+* **To jest wyłącznie offline prototyp:** Autotuner działa obecnie w trybie pasywnym / offline i nie integruje się jeszcze z aktywnym rurociągiem wideo w czasie rzeczywistym ani z interfejsem operatora.
+
+## Request for Supervisor
+APPROVAL
