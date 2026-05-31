@@ -53,6 +53,37 @@ def order_points(pts):
     
     return rect
 
+def get_orientation_score(img_bgr, target_width, target_height):
+    """
+    Oblicza jasność regionów krawędziowych karty w celu wyznaczenia jej prawidłowej orientacji.
+    Regiony górny/dolny powinny zawierać białe etykiety tekstowe (np. numer/nazwa karty),
+    podczas gdy brzegi lewy/prawy powinny mieć minimalną jasność (kara za etykietę leżącą bokiem).
+    """
+    gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
+    W, H = target_width, target_height
+    
+    # Proporcje grubości pasków (12% wysokości i szerokości)
+    pad_h = int(H * 0.12)
+    pad_w = int(W * 0.12)
+    margin_w = int(W * 0.10)
+    margin_h = int(H * 0.10)
+    
+    # Wycinamy regiony, omijając zaokrąglone rogi
+    top_region = gray[0:pad_h, margin_w:W-margin_w]
+    bottom_region = gray[H-pad_h:H, margin_w:W-margin_w]
+    left_region = gray[margin_h:H-margin_h, 0:pad_w]
+    right_region = gray[margin_h:H-margin_h, W-pad_w:W]
+    
+    # Obliczamy średnią jasność
+    avg_top = float(np.mean(top_region)) if top_region.size > 0 else 0.0
+    avg_bottom = float(np.mean(bottom_region)) if bottom_region.size > 0 else 0.0
+    avg_left = float(np.mean(left_region)) if left_region.size > 0 else 0.0
+    avg_right = float(np.mean(right_region)) if right_region.size > 0 else 0.0
+    
+    # Wyznaczamy ostateczny score: preferujemy paski poziome, karzemy pionowe
+    score = (avg_top + avg_bottom) - (avg_left + avg_right)
+    return score, (avg_top, avg_bottom, avg_left, avg_right)
+
 def create_rounded_mask(width, height, radius):
     """
     Tworzy 1-kanałową maskę z zaokrąglonymi rogami z wygładzaniem krawędzi (antyaliasing).
@@ -189,7 +220,7 @@ def process_scanned_sheet(sheet_path, output_dir, args, start_index=0, custom_pr
     gray = cv2.cvtColor(img_work, cv2.COLOR_BGR2GRAY)
     blurred = cv2.GaussianBlur(gray, (7, 7), 0)
 
-    # Detekcja jasności tła
+    # Detekcja jasności tła do celów operatorskich (JPG/logowanie)
     is_dark = True
     if args.background == "auto":
         is_dark = detect_background_dark(gray)
@@ -200,15 +231,50 @@ def process_scanned_sheet(sheet_path, output_dir, args, start_index=0, custom_pr
         print(f" -> Tło ustawione jako: {'CIEMNE' if is_dark else 'JASNE'}")
         log_to_file(f"Ustawiono tło manualnie dla {os.path.basename(sheet_path)}: {'CIEMNE' if is_dark else 'JASNE'}", "INFO")
 
-    # Progowanie w zależności od tła
-    if is_dark:
-        _, thresh = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    else:
-        _, thresh = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+    # Budowa modelu koloru tła w przestrzeni CIE L*a*b* na podstawie krawędzi obrazu roboczego
+    # Delikatne rozmycie koloru redukuje mikroszum matrycy skanera
+    img_work_blurred = cv2.GaussianBlur(img_work, (5, 5), 0)
+    img_lab = cv2.cvtColor(img_work_blurred, cv2.COLOR_BGR2LAB)
+    
+    h_lab, w_lab = img_lab.shape[:2]
+    border_pixels = []
+    # Pobieramy próbki pikseli tła z krawędzi (szerokość 15 px)
+    border_pixels.extend(img_lab[0:15, :, :].reshape(-1, 3))
+    border_pixels.extend(img_lab[h_lab-15:h_lab, :, :].reshape(-1, 3))
+    border_pixels.extend(img_lab[:, 0:15, :].reshape(-1, 3))
+    border_pixels.extend(img_lab[:, w_lab-15:w_lab, :].reshape(-1, 3))
+    border_pixels = np.array(border_pixels)
+    
+    # Mediana koloru tła (wektor 3-kanałowy LAB)
+    bg_color_lab = np.median(border_pixels, axis=0)
+    log_to_file(f"Model koloru tła LAB: L={bg_color_lab[0]:.1f}, A={bg_color_lab[1]:.1f}, B={bg_color_lab[2]:.1f}", "INFO")
 
-    # Czyszczenie morfologiczne (zamknięcie)
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
-    thresh = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)
+    # Obliczenie euklidesowego dystansu barwnego każdego piksela do modelu tła
+    diff = img_lab.astype(np.float32) - bg_color_lab
+    dist = np.sqrt(np.sum(diff**2, axis=2))
+    
+    # Skalowanie dystansu do standardowej głębi 8-bit
+    dist_normalized = cv2.normalize(dist, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+
+    # Progowanie mapy dystansu: automatyczne Otsu z progiem bezpieczeństwa (bezpiecznik przed szumem)
+    otsu_thresh, thresh_color = cv2.threshold(dist_normalized, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    
+    if otsu_thresh < 20:
+        # Bardzo jednolite tło bez kart - podnosimy próg, by uniknąć wykrywania szumu
+        _, thresh_color = cv2.threshold(dist_normalized, 20, 255, cv2.THRESH_BINARY)
+        log_to_file(f"Zastosowano próg bezpieczeństwa (20), bo Otsu dało zbyt niską wartość: {otsu_thresh:.1f}", "INFO")
+    else:
+        log_to_file(f"Progowanie Otsu dla odległości LAB: {otsu_thresh:.1f}", "INFO")
+
+    # Detekcja krawędzi Canny'ego na rozmytym obrazie szarym (wygładzanie Canny'ego na krawędziach kart)
+    canny_edges = cv2.Canny(blurred, 30, 100)
+
+    # Łączenie logicznym OR maski barwnej i krawędzi (scala ciemne karty na ciemnym tle)
+    combined_mask = cv2.bitwise_or(thresh_color, canny_edges)
+
+    # Czyszczenie i domknięcie morfologiczne większym kernelem (11x11)
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (11, 11))
+    thresh = cv2.morphologyEx(combined_mask, cv2.MORPH_CLOSE, kernel)
 
     # Detekcja konturów
     contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -303,34 +369,72 @@ def process_scanned_sheet(sheet_path, output_dir, args, start_index=0, custom_pr
         box_orig = box / scale
         ordered_box = order_points(box_orig)
 
-        # Obliczamy rzeczywistą szerokość i wysokość boku na podstawie odległości euklidesowych.
-        # Zapobiega to błędowi OpenCV minAreaRect, które potrafi losowo zamieniać szerokość i wysokość miejscami.
-        width_real = (np.linalg.norm(ordered_box[0] - ordered_box[1]) + np.linalg.norm(ordered_box[3] - ordered_box[2])) / 2.0
-        height_real = (np.linalg.norm(ordered_box[0] - ordered_box[3]) + np.linalg.norm(ordered_box[1] - ordered_box[2])) / 2.0
+        # Wyliczamy parametry do logowania
+        area = cv2.contourArea(cnt)
+        hull = cv2.convexHull(cnt)
+        hull_area = cv2.contourArea(hull)
+        solidity = area / hull_area if hull_area > 0 else 0
+        
+        rect = cv2.minAreaRect(cnt)
+        (x_mid, y_mid), (w_rect, h_rect), angle_rect = rect
+        aspect_ratio = max(w_rect, h_rect) / min(w_rect, h_rect) if min(w_rect, h_rect) > 0 else 1.0
 
-        if width_real > height_real:
-            # Karta leży poziomo (szerokość > wysokość).
-            # Mapujemy wierzchołki zgodnie z ruchem wskazówek zegara, aby uniknąć odbicia lustrzanego (mirroring)
-            src_pts = ordered_box
-            dst_pts = np.array([
-                [0, args.target_height - 1],                       # ordered_box[0] (TL) -> BL
-                [0, 0],                                             # ordered_box[1] (TR) -> TL
-                [args.target_width - 1, 0],                         # ordered_box[2] (BR) -> TR
-                [args.target_width - 1, args.target_height - 1]     # ordered_box[3] (BL) -> BR
-            ], dtype="float32")
-        else:
-            # Karta leży pionowo (szerokość <= wysokość).
-            # Klasyczne mapowanie 1-do-1 z zachowaniem proporcji
-            src_pts = ordered_box
-            dst_pts = np.array([
-                [0, 0],                                             # ordered_box[0] (TL) -> TL
-                [args.target_width - 1, 0],                         # ordered_box[1] (TR) -> TR
-                [args.target_width - 1, args.target_height - 1],     # ordered_box[2] (BR) -> BR
-                [0, args.target_height - 1]                         # ordered_box[3] (BL) -> BL
-            ], dtype="float32")
+        # Wycinek standardowy (pionowy: 600x1032)
+        dst_pts_pion = np.array([
+            [0, 0],
+            [args.target_width - 1, 0],
+            [args.target_width - 1, args.target_height - 1],
+            [0, args.target_height - 1]
+        ], dtype="float32")
+        M_pion = cv2.getPerspectiveTransform(ordered_box, dst_pts_pion)
+        warped_pion = cv2.warpPerspective(img, M_pion, (args.target_width, args.target_height), flags=cv2.INTER_CUBIC)
 
-        M = cv2.getPerspectiveTransform(src_pts, dst_pts)
-        warped = cv2.warpPerspective(img, M, (args.target_width, args.target_height), flags=cv2.INTER_CUBIC)
+        # Wycinek poziomy (1032x600 - na wypadek gdyby karta na skanie leżała bokiem)
+        dst_pts_poziom = np.array([
+            [0, 0],
+            [args.target_height - 1, 0],
+            [args.target_height - 1, args.target_width - 1],
+            [0, args.target_width - 1]
+        ], dtype="float32")
+        M_poziom = cv2.getPerspectiveTransform(ordered_box, dst_pts_poziom)
+        warped_poziom = cv2.warpPerspective(img, M_poziom, (args.target_height, args.target_width), flags=cv2.INTER_CUBIC)
+
+        # Generujemy 4 warianty o docelowych wymiarach pionowych (600x1032)
+        candidates = {
+            "rot_0": warped_pion,
+            "rot_180": cv2.rotate(warped_pion, cv2.ROTATE_180),
+            "rot_90_cw": cv2.rotate(warped_poziom, cv2.ROTATE_90_CLOCKWISE),
+            "rot_90_ccw": cv2.rotate(warped_poziom, cv2.ROTATE_90_COUNTERCLOCKWISE)
+        }
+
+        # Obliczamy scoring jasności dla każdego z wariantów
+        best_cand_name = "rot_0"
+        best_score = -999999.0
+        best_details = (0.0, 0.0, 0.0, 0.0)
+        cand_scores = {}
+
+        for cand_name, cand_img in candidates.items():
+            score, details = get_orientation_score(cand_img, args.target_width, args.target_height)
+            cand_scores[cand_name] = score
+            if score > best_score:
+                best_score = score
+                best_cand_name = cand_name
+                best_details = details
+
+        # Zapisujemy najlepszy wariant
+        warped = candidates[best_cand_name]
+        avg_top, avg_bottom, avg_left, avg_right = best_details
+
+        # Dokładny log diagnostyczny zgodnie z wymaganiami TASK-SCAN-004
+        log_to_file(
+            f"Karta #{card_number:02d} ({filename}) -> "
+            f"area={area:.1f}, aspect_ratio={aspect_ratio:.2f}, solidity={solidity:.2f}, "
+            f"background_mode={'dark' if is_dark else 'light'}, "
+            f"selected_orientation={best_cand_name} (score={best_score:.2f}), "
+            f"orientation_scores={ {k: round(v, 2) for k, v in cand_scores.items()} }. "
+            f"Srednia jasnosc regionow (top/bottom/left/right): {avg_top:.1f}/{avg_bottom:.1f}/{avg_left:.1f}/{avg_right:.1f}",
+            "INFO"
+        )
 
         out_path = os.path.join(output_dir, filename)
 
