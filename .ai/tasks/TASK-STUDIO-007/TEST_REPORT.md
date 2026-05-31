@@ -3,6 +3,9 @@
 ## 1. Testy Automatyczne
 *Zgodnie ze specyfikacją zadania, nie modyfikowano kodu źródłowego frontendu deweloperskiego (JS/CSS) ani backendu CV (Python). W związku z tym testy automatyczne nie były wymagane dla tego zadania. Pomimo tego potwierdzono, że istniejące testy jednostkowe CV przechodzą bezbłędnie.*
 
+> [!NOTE]
+> Wszystkie poniższe testy manualne zostały powtórzone i pomyślnie zwalidowane na systemie Windows **po wdrożeniu poprawki `setlocal EnableDelayedExpansion` oraz zastosowaniu składni `!PORT_CHOICE!`**. Naprawiło to problem wczesnej ewaluacji zmiennej wewnątrz bloku instrukcji warunkowej deweloperskich skryptów dewelopera.
+
 ---
 
 ## 2. Raport z Wykonania Testów Manualnych

@@ -1,6 +1,6 @@
 @echo off
 chcp 65001 >nul
-setlocal
+setlocal EnableDelayedExpansion
 title TarotVision Studio - Launcher
 color 0E
 cd /d "%~dp0"
@@ -81,16 +81,16 @@ if %ERRORLEVEL% NEQ 0 (
     echo ------------------------------------------------------------
     echo.
     set /p PORT_CHOICE="Twój wybór [1-3] (domyślnie 3): "
-    if "%PORT_CHOICE%"=="" set "PORT_CHOICE=3"
+    if "!PORT_CHOICE!"=="" set "PORT_CHOICE=3"
     
-    if "%PORT_CHOICE%"=="1" (
+    if "!PORT_CHOICE!"=="1" (
         echo.
         echo [INFO] Zamykam wiszące procesy na porcie 5173...
         powershell -Command "$proc = Get-NetTCPConnection -LocalPort 5173 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique; foreach ($p in $proc) { Stop-Process -Id $p -Force -ErrorAction SilentlyContinue; Write-Host 'Zatrzymano proces o ID' $p }"
         echo [INFO] Odczekanie 2 sekund na zwolnienie portu...
         timeout /t 2 /nobreak >nul
     )
-    if "%PORT_CHOICE%"=="3" (
+    if "!PORT_CHOICE!"=="3" (
         echo.
         echo [INFO] Uruchamianie przerwane przez operatora.
         color 0E
