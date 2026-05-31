@@ -29,7 +29,8 @@ Ten plik stanowi centralny rejestr wszystkich zadań (Tasks) realizowanych w pro
 | **TASK-DECK-010** | `APPROVED` | `master` | Gemini | UI wyboru 1–3 talii w Studio / launcherze | 2026-05-31 | APPROVED BY CHATGPT SUPERVISOR (PR #4) |
 | **TASK-STUDIO-006** | `APPROVED` | `master` | Gemini | Diagnostyka CV Health Minimal i Dedykowany Launcher Studio | 2026-05-31 | APPROVED BY CHATGPT SUPERVISOR (PR #5) |
 | **TASK-STUDIO-007** | `APPROVED` | `master` | Gemini | Uodpornienie launchera Studio pod zajęty port 5173 | 2026-05-31 | APPROVED BY CHATGPT SUPERVISOR (PR #6 + PR #9 fix) |
-| **TASK-CV-RECT-001** | `DONE` | `task/cv-rect-001-parameterize-card-detection` | Gemini | Parametryzacja detekcji prostokątów kart pod autotuning | 2026-05-31 | Oczekuje na review |
+| **TASK-CV-RECT-001** | `APPROVED` | `master` | Gemini | Parametryzacja detekcji prostokątów kart pod autotuning | 2026-05-31 | APPROVED BY CHATGPT SUPERVISOR (PR #11) |
+
 
 
 ---
