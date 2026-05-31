@@ -23,3 +23,4 @@ Wszystkie zmiany wprowadzone w ramach zadania **TASK-DECK-010: UI wyboru 1–3 t
 
 ### Poprawiono (Fixed)
 - Naprawiono potencjalne Race Conditions w wątkach poprzez wywoływanie dynamicznego przeładowania wzorców ORB bezpośrednio w głównym wątku pętli CV (poprzez kolejkę orkiestrowaną przez `drain_control_messages`), eliminując zderzenia z wątkiem WebSocket.
+- **[BUGFIX]** Rozwiązano problem gubienia pola `operator.active_decks` podczas klatkowych aktualizacji stanu CV (`update_cv_state` w `StatusStore`). Zapewniono odporne, wątkobezpieczne zachowywanie i przywracanie listy aktywnych talii pod lockiem oraz dodano testy jednostkowe zapobiegające regresji.

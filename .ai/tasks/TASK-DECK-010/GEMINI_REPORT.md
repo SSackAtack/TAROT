@@ -10,7 +10,7 @@ TASK-DECK-010: UI wyboru 1–3 talii w Studio / launcherze
 `5c04091`
 
 ## Head Commit
-`b534f31`
+`28fbcee`
 
 ## Files Changed
 - `app_cv/tarotvision/status/status_store.py`
