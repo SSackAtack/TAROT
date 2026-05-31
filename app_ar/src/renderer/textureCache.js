@@ -1,46 +1,92 @@
 import * as THREE from 'three'
 import { appState } from '../core/appState'
 
-export const cardNames = [
-    ...Array.from({ length: 78 }, (_, i) => `RWS_${String(i).padStart(2, '0')}`),
-    ...Array.from({ length: 78 }, (_, i) => `Zodiak_${String(i).padStart(2, '0')}`),
-    ...Array.from({ length: 78 }, (_, i) => `Magic_${String(i).padStart(2, '0')}`),
-    ...Array.from({ length: 78 }, (_, i) => `Gilded_${String(i).padStart(2, '0')}`),
-    ...Array.from({ length: 78 }, (_, i) => `Marchetti_${String(i).padStart(2, '0')}`),
-    ...Array.from({ length: 78 }, (_, i) => `Boski_${String(i).padStart(2, '0')}`),
-    ...Array.from({ length: 78 }, (_, i) => `Światło_i_Cień_${String(i).padStart(2, '0')}`)
-]
+export const cardNames = []
 
 const textureLoader = new THREE.TextureLoader()
 
 export function loadTextures(onComplete, handleCardDataFn) {
-    console.log(`[PRELOAD] Rozpoczynam wczytywanie ${cardNames.length} tekstur tarota...`)
+    console.log(`[PRELOAD] Pobieram konfigurację aktywnych talii...`)
     
-    const preloadPromises = cardNames.map((name) => {
-        return new Promise((resolve) => {
-            const path = `/karty/${name}.webp`
-            textureLoader.load(path, (texture) => {
-                appState.texturesCache[name] = texture
-                texture.minFilter = THREE.LinearMipmapLinearFilter
-                texture.magFilter = THREE.LinearFilter
-                texture.colorSpace = THREE.SRGBColorSpace  
-                resolve()
-            }, undefined, (err) => {
-                console.error(`[PRELOAD BŁĄD] Nie udało się załadować: ${name}`, err)
-                resolve() 
+    Promise.all([
+        fetch('/active_decks.json').then(r => r.json()),
+        fetch('/decks_manifest.json').then(r => r.json())
+    ]).then(([activeData, manifestData]) => {
+        const activeDecks = activeData.active_decks || []
+        const decks = manifestData.decks || []
+        
+        const activeDecksMetadata = decks.filter(d => activeDecks.includes(d.id))
+        
+        // Wyczyszczenie i uzupełnienie tablicy w miejscu
+        cardNames.length = 0
+        activeDecksMetadata.forEach(deck => {
+            for (let i = 0; i < deck.card_count; i++) {
+                cardNames.push(`${deck.prefix}_${String(i).padStart(2, '0')}`)
+            }
+        })
+        
+        console.log(`[PRELOAD] Wykryto ${activeDecks.length} aktywne talie: ${activeDecks.join(', ')}`)
+        console.log(`[PRELOAD] Rozpoczynam wczytywanie ${cardNames.length} tekstur tarota...`)
+        
+        const preloadPromises = cardNames.map((name) => {
+            return new Promise((resolve) => {
+                const path = `/karty/${name}.webp`
+                textureLoader.load(path, (texture) => {
+                    appState.texturesCache[name] = texture
+                    texture.minFilter = THREE.LinearMipmapLinearFilter
+                    texture.magFilter = THREE.LinearFilter
+                    texture.colorSpace = THREE.SRGBColorSpace  
+                    resolve()
+                }, undefined, (err) => {
+                    console.error(`[PRELOAD BŁĄD] Nie udało się załadować: ${name}`, err)
+                    resolve() 
+                })
             })
         })
-    })
 
-    Promise.all(preloadPromises).then(() => {
-        appState.texturesReady = true
-        console.log(`[PRELOAD] Wszystkie ${Object.keys(appState.texturesCache).length} tekstur gotowe!`)
-        
-        if (onComplete) onComplete()
-        
-        if (appState.latestFrameData && handleCardDataFn) {
-            handleCardDataFn(appState.latestFrameData)
+        Promise.all(preloadPromises).then(() => {
+            appState.texturesReady = true
+            console.log(`[PRELOAD] Wszystkie ${Object.keys(appState.texturesCache).length} tekstur gotowe!`)
+            
+            if (onComplete) onComplete()
+            
+            if (appState.latestFrameData && handleCardDataFn) {
+                handleCardDataFn(appState.latestFrameData)
+            }
+        })
+    }).catch(err => {
+        console.warn("[PRELOAD OSTRZEŻENIE] Nie udało się wczytać manifestów talii, ładowanie awaryjne (RWS):", err)
+        // Fallback do Rider-Waite-Smith w przypadku błędu sieci/pliku (np. środowisko testowe bez serwera)
+        cardNames.length = 0
+        for (let i = 0; i < 78; i++) {
+            cardNames.push(`RWS_${String(i).padStart(2, '0')}`)
         }
+        
+        console.log(`[PRELOAD AWARYJNY] Rozpoczynam wczytywanie ${cardNames.length} domyślnych tekstur tarota (RWS)...`)
+        const preloadPromises = cardNames.map((name) => {
+            return new Promise((resolve) => {
+                const path = `/karty/${name}.webp`
+                textureLoader.load(path, (texture) => {
+                    appState.texturesCache[name] = texture
+                    texture.minFilter = THREE.LinearMipmapLinearFilter
+                    texture.magFilter = THREE.LinearFilter
+                    texture.colorSpace = THREE.SRGBColorSpace  
+                    resolve()
+                }, undefined, (err) => {
+                    console.error(`[PRELOAD BŁĄD] Nie udało się załadować w trybie awaryjnym: ${name}`, err)
+                    resolve() 
+                })
+            })
+        })
+
+        Promise.all(preloadPromises).then(() => {
+            appState.texturesReady = true
+            console.log(`[PRELOAD] Preload awaryjny gotowy!`)
+            if (onComplete) onComplete()
+            if (appState.latestFrameData && handleCardDataFn) {
+                handleCardDataFn(appState.latestFrameData)
+            }
+        })
     })
 }
 
