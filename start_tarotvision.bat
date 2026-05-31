@@ -13,10 +13,28 @@ set "TAROTVISION_SNAPSHOT_FIRST=1"
 set "LAUNCH_LOG=%LOG_DIR%\launcher.log"
 
 echo ========================================
+echo    TAROT VISION - WYBOR TALII
+echo ========================================
+echo.
+echo Wybierz talie tarot, ktora chcesz zaladowac:
+echo 1) Rider-Waite-Smith (domyslna)
+echo 2) Zodiak
+echo.
+set /p DECK_CHOICE="Twoj wybor [1-2] (domyslnie 1): "
+
+set "TAROTVISION_DECK=rider-waite-smith"
+if "%DECK_CHOICE%"=="2" (
+    set "TAROTVISION_DECK=zodiak"
+)
+
+echo.
+echo Wybrano talie: %TAROTVISION_DECK%
+echo [%date% %time%] Wybrana talia: %TAROTVISION_DECK% >> "%LAUNCH_LOG%"
+echo.
+echo ========================================
 echo    TAROT VISION - Uruchamianie
 echo ========================================
 echo.
-echo [%date% %time%] Start TarotVision >> "%LAUNCH_LOG%"
 echo [LOG] Logi beda zapisane w: %LOG_DIR%
 echo [CV] Tryb snapshot-first: WLACZONY
 echo.
@@ -31,7 +49,7 @@ echo [3/4] Otwieram przegladarke...
 start "" "http://localhost:5173/?operator=1"
 
 echo [4/4] Uruchamiam serwer CV (Python)...
-start "TarotVision CV" /D "%~dp0app_cv" cmd /k "set TAROTVISION_LOG_DIR=%LOG_DIR%&& set TAROTVISION_RESET_LOGS=1&& set TAROTVISION_SNAPSHOT_FIRST=1&& python main.py"
+start "TarotVision CV" /D "%~dp0app_cv" cmd /k "set TAROTVISION_LOG_DIR=%LOG_DIR%&& set TAROTVISION_RESET_LOGS=1&& set TAROTVISION_SNAPSHOT_FIRST=1&& set TAROTVISION_DECK=%TAROTVISION_DECK%&& python main.py"
 
 echo.
 echo ========================================

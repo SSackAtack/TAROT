@@ -36,7 +36,8 @@ from tarotvision.pipelines import SnapshotFirstPipeline, StateFirstLegacyPipelin
 # Konfiguracja
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 LOG_DIR = os.environ.get("TAROTVISION_LOG_DIR", os.path.join(PROJECT_ROOT, "logs"))
-CV_ASSETS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "biblioteka_talii", "rider-waite-smith", "produkcja", "wzorce_cv"))
+DECK_NAME = os.environ.get("TAROTVISION_DECK", "rider-waite-smith")
+CV_ASSETS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "biblioteka_talii", DECK_NAME, "produkcja", "wzorce_cv"))
 MIN_MATCH_COUNT = 18   # Obnizony do 18 — filtry geometryczne (homografia + validate_quad + aspect ratio + inlier ratio) skutecznie eliminuja szum
 RATIO_THRESH = 0.75    # Zaostrzone z 0.79 do 0.75 dla wyeliminowania dopasowan krzyzowych i poprawy homografii podobnych kart (np. Star i Moon)
 MIN_INLIER_RATIO = 0.3 # Minimalna proporcja inlierow w homografii RANSAC (odrzuca niestabilne dopasowania)

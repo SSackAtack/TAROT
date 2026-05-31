@@ -1,0 +1,322 @@
+{
+  "deck_name": "Zodiak",
+  "deck_id": "zodiak_physical_scans",
+  "language": "pl",
+  "copyright": "private",
+  "card_count": 78,
+  "source": "Fizyczne skany uzytkownika z urzadzenia WIA",
+  "cards": [
+    {
+      "id": 0,
+      "file_base": "Zodiak_00"
+    },
+    {
+      "id": 1,
+      "file_base": "Zodiak_01"
+    },
+    {
+      "id": 2,
+      "file_base": "Zodiak_02"
+    },
+    {
+      "id": 3,
+      "file_base": "Zodiak_03"
+    },
+    {
+      "id": 4,
+      "file_base": "Zodiak_04"
+    },
+    {
+      "id": 5,
+      "file_base": "Zodiak_05"
+    },
+    {
+      "id": 6,
+      "file_base": "Zodiak_06"
+    },
+    {
+      "id": 7,
+      "file_base": "Zodiak_07"
+    },
+    {
+      "id": 8,
+      "file_base": "Zodiak_08"
+    },
+    {
+      "id": 9,
+      "file_base": "Zodiak_09"
+    },
+    {
+      "id": 10,
+      "file_base": "Zodiak_10"
+    },
+    {
+      "id": 11,
+      "file_base": "Zodiak_11"
+    },
+    {
+      "id": 12,
+      "file_base": "Zodiak_12"
+    },
+    {
+      "id": 13,
+      "file_base": "Zodiak_13"
+    },
+    {
+      "id": 14,
+      "file_base": "Zodiak_14"
+    },
+    {
+      "id": 15,
+      "file_base": "Zodiak_15"
+    },
+    {
+      "id": 16,
+      "file_base": "Zodiak_16"
+    },
+    {
+      "id": 17,
+      "file_base": "Zodiak_17"
+    },
+    {
+      "id": 18,
+      "file_base": "Zodiak_18"
+    },
+    {
+      "id": 19,
+      "file_base": "Zodiak_19"
+    },
+    {
+      "id": 20,
+      "file_base": "Zodiak_20"
+    },
+    {
+      "id": 21,
+      "file_base": "Zodiak_21"
+    },
+    {
+      "id": 22,
+      "file_base": "Zodiak_22"
+    },
+    {
+      "id": 23,
+      "file_base": "Zodiak_23"
+    },
+    {
+      "id": 24,
+      "file_base": "Zodiak_24"
+    },
+    {
+      "id": 25,
+      "file_base": "Zodiak_25"
+    },
+    {
+      "id": 26,
+      "file_base": "Zodiak_26"
+    },
+    {
+      "id": 27,
+      "file_base": "Zodiak_27"
+    },
+    {
+      "id": 28,
+      "file_base": "Zodiak_28"
+    },
+    {
+      "id": 29,
+      "file_base": "Zodiak_29"
+    },
+    {
+      "id": 30,
+      "file_base": "Zodiak_30"
+    },
+    {
+      "id": 31,
+      "file_base": "Zodiak_31"
+    },
+    {
+      "id": 32,
+      "file_base": "Zodiak_32"
+    },
+    {
+      "id": 33,
+      "file_base": "Zodiak_33"
+    },
+    {
+      "id": 34,
+      "file_base": "Zodiak_34"
+    },
+    {
+      "id": 35,
+      "file_base": "Zodiak_35"
+    },
+    {
+      "id": 36,
+      "file_base": "Zodiak_36"
+    },
+    {
+      "id": 37,
+      "file_base": "Zodiak_37"
+    },
+    {
+      "id": 38,
+      "file_base": "Zodiak_38"
+    },
+    {
+      "id": 39,
+      "file_base": "Zodiak_39"
+    },
+    {
+      "id": 40,
+      "file_base": "Zodiak_40"
+    },
+    {
+      "id": 41,
+      "file_base": "Zodiak_41"
+    },
+    {
+      "id": 42,
+      "file_base": "Zodiak_42"
+    },
+    {
+      "id": 43,
+      "file_base": "Zodiak_43"
+    },
+    {
+      "id": 44,
+      "file_base": "Zodiak_44"
+    },
+    {
+      "id": 45,
+      "file_base": "Zodiak_45"
+    },
+    {
+      "id": 46,
+      "file_base": "Zodiak_46"
+    },
+    {
+      "id": 47,
+      "file_base": "Zodiak_47"
+    },
+    {
+      "id": 48,
+      "file_base": "Zodiak_48"
+    },
+    {
+      "id": 49,
+      "file_base": "Zodiak_49"
+    },
+    {
+      "id": 50,
+      "file_base": "Zodiak_50"
+    },
+    {
+      "id": 51,
+      "file_base": "Zodiak_51"
+    },
+    {
+      "id": 52,
+      "file_base": "Zodiak_52"
+    },
+    {
+      "id": 53,
+      "file_base": "Zodiak_53"
+    },
+    {
+      "id": 54,
+      "file_base": "Zodiak_54"
+    },
+    {
+      "id": 55,
+      "file_base": "Zodiak_55"
+    },
+    {
+      "id": 56,
+      "file_base": "Zodiak_56"
+    },
+    {
+      "id": 57,
+      "file_base": "Zodiak_57"
+    },
+    {
+      "id": 58,
+      "file_base": "Zodiak_58"
+    },
+    {
+      "id": 59,
+      "file_base": "Zodiak_59"
+    },
+    {
+      "id": 60,
+      "file_base": "Zodiak_60"
+    },
+    {
+      "id": 61,
+      "file_base": "Zodiak_61"
+    },
+    {
+      "id": 62,
+      "file_base": "Zodiak_62"
+    },
+    {
+      "id": 63,
+      "file_base": "Zodiak_63"
+    },
+    {
+      "id": 64,
+      "file_base": "Zodiak_64"
+    },
+    {
+      "id": 65,
+      "file_base": "Zodiak_65"
+    },
+    {
+      "id": 66,
+      "file_base": "Zodiak_66"
+    },
+    {
+      "id": 67,
+      "file_base": "Zodiak_67"
+    },
+    {
+      "id": 68,
+      "file_base": "Zodiak_68"
+    },
+    {
+      "id": 69,
+      "file_base": "Zodiak_69"
+    },
+    {
+      "id": 70,
+      "file_base": "Zodiak_70"
+    },
+    {
+      "id": 71,
+      "file_base": "Zodiak_71"
+    },
+    {
+      "id": 72,
+      "file_base": "Zodiak_72"
+    },
+    {
+      "id": 73,
+      "file_base": "Zodiak_73"
+    },
+    {
+      "id": 74,
+      "file_base": "Zodiak_74"
+    },
+    {
+      "id": 75,
+      "file_base": "Zodiak_75"
+    },
+    {
+      "id": 76,
+      "file_base": "Zodiak_76"
+    },
+    {
+      "id": 77,
+      "file_base": "Zodiak_77"
+    }
+  ]
+}

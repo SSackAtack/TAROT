@@ -3,6 +3,8 @@
 biblioteka_talii/*/mastery/
 *.tiff
 *.tif
+scans_input/
+scans_output/
 
 # Duże pliki graficzne
 *.psd
