@@ -25,6 +25,7 @@ Ten plik stanowi centralny rejestr wszystkich zadań (Tasks) realizowanych w pro
 | **TASK-DECK-006** | `APPROVED` | `master` | Gemini | Manifest talii i konfiguracja aktywnych talii sesji 1–3 talie | 2026-05-31 | APPROVED BY CHATGPT SUPERVISOR |
 | **TASK-DECK-007** | `APPROVED` | `master` | Gemini | Frontend lazy loading tylko aktywnych talii | 2026-05-31 | APPROVED BY CHATGPT SUPERVISOR |
 | **TASK-DECK-008** | `APPROVED` | `master` | Gemini | Backend CV registry tylko dla aktywnych talii | 2026-05-31 | APPROVED BY CHATGPT SUPERVISOR |
+| **TASK-DECK-009** | `DONE` | `task/deck-009-websocket-payload` | Gemini | WebSocket payload z deck_id + card_id | 2026-05-31 | Awaiting Supervisor |
 
 ---
 
