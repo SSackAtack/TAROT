@@ -2,6 +2,12 @@
 
 Ten dokument określa rygorystyczne reguły współpracy zespołu sztucznej inteligencji (AI) pracującego nad projektem **TarotVision (TAROT)**. Zapewnia on bezproblemowe i bezpieczne przejmowanie zadań (failover) przez różne modele AI w dowolnym momencie.
 
+Szczegółowy standard przekazywania informacji między modelami przez GitHub opisuje dodatkowo:
+
+```text
+.ai/AI_AGENT_COMMUNICATION_PROTOCOL.md
+```
+
 ---
 
 ## 1. Role i Struktura Zespołu
@@ -23,6 +29,8 @@ Ten dokument określa rygorystyczne reguły współpracy zespołu sztucznej inte
    Każde zadanie i każdy Pull Request **musi** zawierać kompletny raport z testów jednostkowych backendu oraz kompilacji frontendu. Brak testów = brak możliwości merge'a.
 4. **Ciągłość Pracy (Failover Readiness):**
    Każdy agent AI kończący swoją sesję ma obowiązek pozostawić stan kodu oraz dokumentację w taki sposób, aby kolejny agent mógł wejść w zadanie bez czytania historii poprzednich czatów.
+5. **Komunikacja przez GitHub:**
+   Przy przekazywaniu pracy między modelami używamy protokołu `.ai/AI_AGENT_COMMUNICATION_PROTOCOL.md`. Michał nie musi wybierać, czy informacja ma trafić do issue, PR review, komentarza czy pliku `.md`; model zapisujący informację wybiera kanał samodzielnie.
 
 ---
 
@@ -43,6 +51,7 @@ Każde zadanie realizowane przez dowolnego agenta musi mieć dedykowany podkatal
 
 Zanim napiszesz jakikolwiek kod:
 1. Odczytaj plik `.ai/PROJECT_STATE.md` — aby zrozumieć ogólny stan projektu.
-2. Odczytaj plik `.ai/TASKS_INDEX.md` — aby zlokalizować aktualnie przypisane zadanie.
-3. Przeczytaj szczegółowe wytyczne w `.ai/tasks/TASK-XXX/TASK.md`.
-4. **Bezwzględnie przestrzegaj dopuszczalnego zakresu (Scope) plików.** Zmiana plików poza zakresem bez zgody jest niedozwolona.
+2. Odczytaj plik `.ai/AI_AGENT_COMMUNICATION_PROTOCOL.md` — aby znać aktualny standard przekazywania informacji między modelami.
+3. Odczytaj plik `.ai/TASKS_INDEX.md` — aby zlokalizować aktualnie przypisane zadanie.
+4. Przeczytaj szczegółowe wytyczne w `.ai/tasks/TASK-XXX/TASK.md`.
+5. **Bezwzględnie przestrzegaj dopuszczalnego zakresu (Scope) plików.** Zmiana plików poza zakresem bez zgody jest niedozwolona.
