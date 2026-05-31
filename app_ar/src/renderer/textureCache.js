@@ -7,7 +7,8 @@ export const cardNames = [
     ...Array.from({ length: 78 }, (_, i) => `Magic_${String(i).padStart(2, '0')}`),
     ...Array.from({ length: 78 }, (_, i) => `Gilded_${String(i).padStart(2, '0')}`),
     ...Array.from({ length: 78 }, (_, i) => `Marchetti_${String(i).padStart(2, '0')}`),
-    ...Array.from({ length: 78 }, (_, i) => `Boski_${String(i).padStart(2, '0')}`)
+    ...Array.from({ length: 78 }, (_, i) => `Boski_${String(i).padStart(2, '0')}`),
+    ...Array.from({ length: 78 }, (_, i) => `Światło_i_Cień_${String(i).padStart(2, '0')}`)
 ]
 
 const textureLoader = new THREE.TextureLoader()

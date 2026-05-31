@@ -23,8 +23,9 @@ echo 3) Magic (Tarot of Mystical Moments)
 echo 4) Gilded (The Gilded Tarot)
 echo 5) Marchetti (Tarot Marchetti)
 echo 6) Boski (Boski Tarot)
+echo 7) Swiatlo i Cien (Swiatlo_i_Cien)
 echo.
-set /p DECK_CHOICE="Twoj wybor [1-6] (domyslnie 1): "
+set /p DECK_CHOICE="Twoj wybor [1-7] (domyslnie 1): "
 
 set "TAROTVISION_DECK=rider-waite-smith"
 if "%DECK_CHOICE%"=="2" (
@@ -41,6 +42,9 @@ if "%DECK_CHOICE%"=="5" (
 )
 if "%DECK_CHOICE%"=="6" (
     set "TAROTVISION_DECK=boski"
+)
+if "%DECK_CHOICE%"=="7" (
+    set "TAROTVISION_DECK=światło_i_cień"
 )
 
 echo.

@@ -1,0 +1,322 @@
+{
+  "deck_name": "Światło_i_Cień",
+  "deck_id": "światło_i_cień_scans",
+  "language": "pl",
+  "copyright": "private",
+  "card_count": 78,
+  "source": "Fizyczne skany uzytkownika z urzadzenia WIA",
+  "cards": [
+    {
+      "id": 0,
+      "file_base": "Światło_i_Cień_00"
+    },
+    {
+      "id": 1,
+      "file_base": "Światło_i_Cień_01"
+    },
+    {
+      "id": 2,
+      "file_base": "Światło_i_Cień_02"
+    },
+    {
+      "id": 3,
+      "file_base": "Światło_i_Cień_03"
+    },
+    {
+      "id": 4,
+      "file_base": "Światło_i_Cień_04"
+    },
+    {
+      "id": 5,
+      "file_base": "Światło_i_Cień_05"
+    },
+    {
+      "id": 6,
+      "file_base": "Światło_i_Cień_06"
+    },
+    {
+      "id": 7,
+      "file_base": "Światło_i_Cień_07"
+    },
+    {
+      "id": 8,
+      "file_base": "Światło_i_Cień_08"
+    },
+    {
+      "id": 9,
+      "file_base": "Światło_i_Cień_09"
+    },
+    {
+      "id": 10,
+      "file_base": "Światło_i_Cień_10"
+    },
+    {
+      "id": 11,
+      "file_base": "Światło_i_Cień_11"
+    },
+    {
+      "id": 12,
+      "file_base": "Światło_i_Cień_12"
+    },
+    {
+      "id": 13,
+      "file_base": "Światło_i_Cień_13"
+    },
+    {
+      "id": 14,
+      "file_base": "Światło_i_Cień_14"
+    },
+    {
+      "id": 15,
+      "file_base": "Światło_i_Cień_15"
+    },
+    {
+      "id": 16,
+      "file_base": "Światło_i_Cień_16"
+    },
+    {
+      "id": 17,
+      "file_base": "Światło_i_Cień_17"
+    },
+    {
+      "id": 18,
+      "file_base": "Światło_i_Cień_18"
+    },
+    {
+      "id": 19,
+      "file_base": "Światło_i_Cień_19"
+    },
+    {
+      "id": 20,
+      "file_base": "Światło_i_Cień_20"
+    },
+    {
+      "id": 21,
+      "file_base": "Światło_i_Cień_21"
+    },
+    {
+      "id": 22,
+      "file_base": "Światło_i_Cień_22"
+    },
+    {
+      "id": 23,
+      "file_base": "Światło_i_Cień_23"
+    },
+    {
+      "id": 24,
+      "file_base": "Światło_i_Cień_24"
+    },
+    {
+      "id": 25,
+      "file_base": "Światło_i_Cień_25"
+    },
+    {
+      "id": 26,
+      "file_base": "Światło_i_Cień_26"
+    },
+    {
+      "id": 27,
+      "file_base": "Światło_i_Cień_27"
+    },
+    {
+      "id": 28,
+      "file_base": "Światło_i_Cień_28"
+    },
+    {
+      "id": 29,
+      "file_base": "Światło_i_Cień_29"
+    },
+    {
+      "id": 30,
+      "file_base": "Światło_i_Cień_30"
+    },
+    {
+      "id": 31,
+      "file_base": "Światło_i_Cień_31"
+    },
+    {
+      "id": 32,
+      "file_base": "Światło_i_Cień_32"
+    },
+    {
+      "id": 33,
+      "file_base": "Światło_i_Cień_33"
+    },
+    {
+      "id": 34,
+      "file_base": "Światło_i_Cień_34"
+    },
+    {
+      "id": 35,
+      "file_base": "Światło_i_Cień_35"
+    },
+    {
+      "id": 36,
+      "file_base": "Światło_i_Cień_36"
+    },
+    {
+      "id": 37,
+      "file_base": "Światło_i_Cień_37"
+    },
+    {
+      "id": 38,
+      "file_base": "Światło_i_Cień_38"
+    },
+    {
+      "id": 39,
+      "file_base": "Światło_i_Cień_39"
+    },
+    {
+      "id": 40,
+      "file_base": "Światło_i_Cień_40"
+    },
+    {
+      "id": 41,
+      "file_base": "Światło_i_Cień_41"
+    },
+    {
+      "id": 42,
+      "file_base": "Światło_i_Cień_42"
+    },
+    {
+      "id": 43,
+      "file_base": "Światło_i_Cień_43"
+    },
+    {
+      "id": 44,
+      "file_base": "Światło_i_Cień_44"
+    },
+    {
+      "id": 45,
+      "file_base": "Światło_i_Cień_45"
+    },
+    {
+      "id": 46,
+      "file_base": "Światło_i_Cień_46"
+    },
+    {
+      "id": 47,
+      "file_base": "Światło_i_Cień_47"
+    },
+    {
+      "id": 48,
+      "file_base": "Światło_i_Cień_48"
+    },
+    {
+      "id": 49,
+      "file_base": "Światło_i_Cień_49"
+    },
+    {
+      "id": 50,
+      "file_base": "Światło_i_Cień_50"
+    },
+    {
+      "id": 51,
+      "file_base": "Światło_i_Cień_51"
+    },
+    {
+      "id": 52,
+      "file_base": "Światło_i_Cień_52"
+    },
+    {
+      "id": 53,
+      "file_base": "Światło_i_Cień_53"
+    },
+    {
+      "id": 54,
+      "file_base": "Światło_i_Cień_54"
+    },
+    {
+      "id": 55,
+      "file_base": "Światło_i_Cień_55"
+    },
+    {
+      "id": 56,
+      "file_base": "Światło_i_Cień_56"
+    },
+    {
+      "id": 57,
+      "file_base": "Światło_i_Cień_57"
+    },
+    {
+      "id": 58,
+      "file_base": "Światło_i_Cień_58"
+    },
+    {
+      "id": 59,
+      "file_base": "Światło_i_Cień_59"
+    },
+    {
+      "id": 60,
+      "file_base": "Światło_i_Cień_60"
+    },
+    {
+      "id": 61,
+      "file_base": "Światło_i_Cień_61"
+    },
+    {
+      "id": 62,
+      "file_base": "Światło_i_Cień_62"
+    },
+    {
+      "id": 63,
+      "file_base": "Światło_i_Cień_63"
+    },
+    {
+      "id": 64,
+      "file_base": "Światło_i_Cień_64"
+    },
+    {
+      "id": 65,
+      "file_base": "Światło_i_Cień_65"
+    },
+    {
+      "id": 66,
+      "file_base": "Światło_i_Cień_66"
+    },
+    {
+      "id": 67,
+      "file_base": "Światło_i_Cień_67"
+    },
+    {
+      "id": 68,
+      "file_base": "Światło_i_Cień_68"
+    },
+    {
+      "id": 69,
+      "file_base": "Światło_i_Cień_69"
+    },
+    {
+      "id": 70,
+      "file_base": "Światło_i_Cień_70"
+    },
+    {
+      "id": 71,
+      "file_base": "Światło_i_Cień_71"
+    },
+    {
+      "id": 72,
+      "file_base": "Światło_i_Cień_72"
+    },
+    {
+      "id": 73,
+      "file_base": "Światło_i_Cień_73"
+    },
+    {
+      "id": 74,
+      "file_base": "Światło_i_Cień_74"
+    },
+    {
+      "id": 75,
+      "file_base": "Światło_i_Cień_75"
+    },
+    {
+      "id": 76,
+      "file_base": "Światło_i_Cień_76"
+    },
+    {
+      "id": 77,
+      "file_base": "Światło_i_Cień_77"
+    }
+  ]
+}
