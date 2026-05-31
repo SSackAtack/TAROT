@@ -218,6 +218,30 @@ class TuningProtocolTest(unittest.TestCase):
         with self.assertRaises(ControlMessageError):
             parse_control_message('{"type": "studio_save_timeline", "recording_id": "rec_123", "markers": [{"timestamp_ms": 10, "type": "operator_marker", "custom": [1,2]}]}')
 
+    def test_parses_studio_set_active_decks(self):
+        message = parse_control_message(
+            '{"type": "studio_set_active_decks", "active_decks": ["rider-waite-smith", "zodiak"]}'
+        )
+        self.assertEqual(message.type, "studio_set_active_decks")
+        self.assertEqual(message.active_decks, ["rider-waite-smith", "zodiak"])
+
+    def test_rejects_studio_set_active_decks_invalid(self):
+        # Brak active_decks
+        with self.assertRaises(ControlMessageError):
+            parse_control_message('{"type": "studio_set_active_decks"}')
+        # Zły typ (nie lista)
+        with self.assertRaises(ControlMessageError):
+            parse_control_message('{"type": "studio_set_active_decks", "active_decks": "rider-waite-smith"}')
+        # Pusta lista (mniej niż 1)
+        with self.assertRaises(ControlMessageError):
+            parse_control_message('{"type": "studio_set_active_decks", "active_decks": []}')
+        # Zbyt wiele talii (więcej niż 3)
+        with self.assertRaises(ControlMessageError):
+            parse_control_message('{"type": "studio_set_active_decks", "active_decks": ["1", "2", "3", "4"]}')
+        # Zły element (nie string)
+        with self.assertRaises(ControlMessageError):
+            parse_control_message('{"type": "studio_set_active_decks", "active_decks": ["rider-waite-smith", 123]}')
+
 
 if __name__ == "__main__":
     unittest.main()

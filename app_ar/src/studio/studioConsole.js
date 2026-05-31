@@ -12,6 +12,134 @@ let topbarEl = null
 let bottombarEl = null
 let previousCards = []
 
+let isDecksInitialized = false
+let loadedDecksList = []
+let activeDecksState = []
+
+function initStudioDecksPanel() {
+    if (isDecksInitialized || !sidebarEl) return
+    isDecksInitialized = true
+
+    const listEl = sidebarEl.querySelector('#studio-decks-list')
+    const applyBtn = sidebarEl.querySelector('#studio-decks-apply-btn')
+
+    if (!listEl) return
+
+    // 1. Pobierz manifest talii
+    fetch('/decks_manifest.json')
+        .then(res => res.json())
+        .then(manifest => {
+            loadedDecksList = manifest.decks || []
+            
+            // Pobierz aktualne aktywne talie z active_decks.json na starcie w celu synchronizacji początkowej
+            fetch('/active_decks.json')
+                .then(res => res.json())
+                .then(activeData => {
+                    activeDecksState = activeData.active_decks || []
+                    renderDecksCheckboxes(listEl, applyBtn)
+                })
+                .catch(() => {
+                    renderDecksCheckboxes(listEl, applyBtn)
+                })
+        })
+        .catch(err => {
+            listEl.innerHTML = `<div style="font-size: 11px; color: #f87171; text-align: center; padding: 8px;">Błąd pobierania manifestu: ${err}</div>`
+        })
+}
+
+function renderDecksCheckboxes(listEl, applyBtn) {
+    if (!listEl) return
+    listEl.innerHTML = ''
+
+    loadedDecksList.forEach(deck => {
+        const isChecked = activeDecksState.includes(deck.id)
+        
+        const row = document.createElement('div')
+        row.className = 'studio-deck-row'
+        row.style.display = 'flex'
+        row.style.alignItems = 'center'
+        row.style.justifyContent = 'space-between'
+        row.style.padding = '6px 10px'
+        row.style.background = 'rgba(30, 41, 59, 0.4)'
+        row.style.border = '1px solid rgba(255,255,255,0.05)'
+        row.style.borderRadius = '4px'
+        row.style.transition = 'all 0.2s ease'
+        row.style.marginBottom = '2px'
+
+        row.innerHTML = `
+            <span style="font-size: 12px; font-weight: 500; color: #cbd5e1;">${deck.display_name}</span>
+            <input type="checkbox" class="studio-deck-checkbox" data-deck-id="${deck.id}" ${isChecked ? 'checked' : ''} style="accent-color: #d67d3e; cursor: pointer; width: 15px; height: 15px;">
+        `
+        listEl.appendChild(row)
+    })
+
+    // Logika przycisków i checkboxów
+    const checkboxes = listEl.querySelectorAll('.studio-deck-checkbox')
+    checkboxes.forEach(cb => {
+        cb.addEventListener('change', () => {
+            const checkedBoxes = Array.from(checkboxes).filter(c => c.checked)
+            const count = checkedBoxes.length
+
+            // Limit 1-3 aktywnych talii
+            if (count >= 3) {
+                checkboxes.forEach(c => {
+                    if (!c.checked) c.disabled = true
+                })
+            } else {
+                checkboxes.forEach(c => c.disabled = false)
+            }
+
+            // Jeśli jest tylko 1 zaznaczona talia, zabraniamy jej odznaczenia (żeby nie było 0)
+            if (count <= 1) {
+                checkedBoxes.forEach(c => c.disabled = true)
+            } else {
+                checkedBoxes.forEach(c => {
+                    if (count < 3) c.disabled = false
+                })
+            }
+
+            // Sprawdzamy czy zaszła zmiana w stosunku do stanu activeDecksState
+            const currentSelected = checkedBoxes.map(c => c.getAttribute('data-deck-id'))
+            const hasChanged = currentSelected.length !== activeDecksState.length || 
+                               !currentSelected.every(id => activeDecksState.includes(id))
+
+            if (applyBtn) {
+                if (hasChanged && currentSelected.length >= 1 && currentSelected.length <= 3) {
+                    applyBtn.removeAttribute('disabled')
+                } else {
+                    applyBtn.setAttribute('disabled', 'true')
+                }
+            }
+        })
+    })
+
+    // Pierwsze uruchomienie walidacji stanu checkboxów
+    const initialChecked = Array.from(checkboxes).filter(c => c.checked)
+    if (initialChecked.length >= 3) {
+        checkboxes.forEach(c => {
+            if (!c.checked) c.disabled = true
+        })
+    } else if (initialChecked.length <= 1) {
+        initialChecked.forEach(c => c.disabled = true)
+    }
+
+    if (applyBtn) {
+        applyBtn.addEventListener('click', () => {
+            const selected = Array.from(checkboxes)
+                .filter(c => c.checked)
+                .map(c => c.getAttribute('data-deck-id'))
+
+            if (selected.length >= 1 && selected.length <= 3) {
+                sendControlMessage({
+                    type: "studio_set_active_decks",
+                    active_decks: selected
+                })
+                applyBtn.setAttribute('disabled', 'true')
+            }
+        })
+    }
+}
+
 export function createStudioConsole() {
     if (!appState.studioMode) return
 
@@ -162,8 +290,22 @@ export function createStudioConsole() {
                 </div>
             </div>
         </div>
+ 
+        <!-- Sekcja 4: Aktywne Talie (Active Decks Selection) -->
+        <div class="studio-card">
+            <div class="studio-card__header">
+                <div class="studio-card__title">Aktywne Talie (Active Decks)</div>
+                <div class="studio-card__subtitle" id="studio-decks-count">Wybierz 1-3 talie</div>
+            </div>
+            <div class="studio-decks-list" id="studio-decks-list" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;">
+                <div style="font-size: 11px; color: rgba(255,255,255,0.4); text-align: center; padding: 8px;">Ładowanie listy talii...</div>
+            </div>
+            <button class="studio-btn-action" id="studio-decks-apply-btn" style="width: 100%; justify-content: center; height: 32px;" disabled>
+                Zastosuj Wybór (Apply)
+            </button>
+        </div>
 
-        <!-- Sekcja 4: Diagnostyka CV -->
+        <!-- Sekcja 5: Diagnostyka CV -->
         <div class="studio-card">
             <div class="studio-card__header">
                 <div class="studio-card__title">Diagnostyka CV Health</div>
@@ -236,6 +378,9 @@ export function createStudioConsole() {
 // Inicjalizacja nasłuchu na interakcje w Konsoli Studio
 function initStudioConsoleEvents() {
     if (!sidebarEl) return
+
+    // Inicjalizacja panelu aktywnych talii
+    initStudioDecksPanel()
 
     // Automatyczna inicjalizacja mikrofonu i miksera audio w tle
     startStudioMicrophone().catch(err => console.warn('Deferred microphone authorization:', err))
@@ -670,5 +815,48 @@ export function updateStudioConsole(data) {
     const cvSnap = sidebarEl.querySelector('#cv-snap-val')
     if (cvSnap && data.layout && data.layout.state !== undefined) {
         cvSnap.textContent = data.layout.state
+    }
+
+    // 5. Synchronizacja stanu aktywnych talii z WebSocketu (data.operator.active_decks)
+    if (data.operator && data.operator.active_decks) {
+        const remoteDecks = data.operator.active_decks
+        const equals = remoteDecks.length === activeDecksState.length &&
+                       remoteDecks.every(id => activeDecksState.includes(id))
+        
+        if (!equals) {
+            activeDecksState = [...remoteDecks]
+            
+            // Asynchroniczne doładowanie tekstur w locie do cache w silniku 3D Three.js
+            import('../renderer/textureCache').then(module => {
+                module.dynamicPreloadDecks(activeDecksState)
+            })
+            
+            // Reaktywna aktualizacja zaznaczenia bez burzenia DOM
+            if (sidebarEl) {
+                const listEl = sidebarEl.querySelector('#studio-decks-list')
+                const checkboxes = listEl ? listEl.querySelectorAll('.studio-deck-checkbox') : []
+                if (checkboxes.length > 0) {
+                    checkboxes.forEach(cb => {
+                        const deckId = cb.getAttribute('data-deck-id')
+                        const isChecked = activeDecksState.includes(deckId)
+                        cb.checked = isChecked
+                    })
+                    
+                    // Limitowanie w locie
+                    const checkedBoxes = Array.from(checkboxes).filter(c => c.checked)
+                    const count = checkedBoxes.length
+                    checkboxes.forEach(c => {
+                        c.disabled = false
+                        if (count >= 3 && !c.checked) c.disabled = true
+                        if (count <= 1 && c.checked) c.disabled = true
+                    })
+                    
+                    const applyBtn = sidebarEl.querySelector('#studio-decks-apply-btn')
+                    if (applyBtn) {
+                        applyBtn.setAttribute('disabled', 'true')
+                    }
+                }
+            }
+        }
     }
 }
