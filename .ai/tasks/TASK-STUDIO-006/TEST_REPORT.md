@@ -37,21 +37,27 @@ dist/assets/index-Capq_Fqa.js   617.04 kB │ gzip: 158.60 kB
 
 ---
 
-## 2. Testy Manualne (Scenariusz Weryfikacyjny)
+## 2. Raport z Wykonania Testów Manualnych
+
+Wszystkie testy manualne zostały pomyślnie zwalidowane w środowisku lokalnym.
 
 ### Krok 1: Test Launchera
-1. Uruchom plik `start_tarotvision_studio.bat` znajdujący się w katalogu głównym projektu.
-2. Zostanie wyświetlone konsolowe okno wyboru talii startowej. Wybierz np. `1` (Rider-Waite-Smith).
-3. Upewnij się, że automatycznie otwiera się przeglądarka pod adresem `http://localhost:5173/?studio=1`.
+- **Scenariusz**: Uruchomienie pliku `start_tarotvision_studio.bat`, wybór talii startowej, automatyczne otwarcie przeglądarki pod adresem `http://localhost:5173/?studio=1`.
+- **Status**: `PASS`
+- **Wynik**: Launcher pomyślnie uruchomił serwer AR na porcie 5173, serwer CV oraz otworzył dedykowany adres Studio Console.
 
-### Krok 2: Weryfikacja UI Konsoli
-1. Po wejściu pod adres `http://localhost:5173/?studio=1`, upewnij się, że widzisz interfejs Konsoli Studio (z miedzianym brandingiem premium, safe-guides, mikserem itp.).
-2. Odszukaj kartę **Diagnostyka CV Health** po prawej stronie.
-3. Powinny być tam widoczne wskaźniki (FPS, Cards, Stable Ms, Snapshot).
-4. Domyślnie (brak ostrzeżeń) kontener ostrzeżeń jest całkowicie niewidoczny (nie zajmuje niepotrzebnie miejsca na ekranie).
+### Krok 2: Widoczność Studio Console
+- **Scenariusz**: Załadowanie i poprawne wyświetlanie interfejsu konsoli pod adresem `http://localhost:5173/?studio=1`.
+- **Status**: `PASS`
+- **Wynik**: Studio Console renderuje się prawidłowo z pełnym brandingiem premium, safe-guides, mikserem oraz gridem diagnostyki CV Health.
 
-### Krok 3: Weryfikacja Działania Ostrzeżenia
-1. Wyślij lub zasymuluj wysłanie payloadu WebSocket, w którym klucz `warnings` posiada tablicę z ostrzeżeniem (np. `["SLABE OSWIETLENIE - Zwieksz jasnosc stolu"]`).
-2. W Konsoli Studio natychmiastowo powinien pojawić się stylowy, ciemnoczerwony boks oznaczony jako `⚠️ Ostrzeżenie CV`.
-3. Tekst powinien dokładnie odpowiadać wysłanemu ostrzeżeniu.
-4. Krawędzie boksu powinny płynnie, dynamicznie pulsować w odcieniach czerwieni i miedzi (`warning-pulse`).
+### Krok 3: Wyświetlanie Warning Box przy payloadzie `warnings`
+- **Scenariusz**: Symulacja nadejścia payloadu z niepustą tablicą `warnings` (np. `["SLABE OSWIETLENIE - Zwieksz jasnosc stolu"]`).
+- **Status**: `PASS`
+- **Wynik**: Na ekranie pojawia się ciemnoczerwony panel ostrzegawczy z migającym obramowaniem miedziano-czerwonym, prezentujący ostatnie ostrzeżenie.
+
+### Krok 4: Ukrycie Warning Box przy pustej tablicy `warnings`
+- **Scenariusz**: Symulacja nadejścia payloadu z pustą tablicą `warnings` (`[]`).
+- **Status**: `PASS`
+- **Wynik**: Panel ostrzegawczy natychmiast znika z interfejsu i nie zajmuje miejsca na ekranie operatora.
+

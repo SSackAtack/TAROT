@@ -18,4 +18,8 @@ Pliki zmienione:
 - `.ai/TASKS_INDEX.md`
 
 Znane ryzyka / decyzje do review:
-- Brak. Zakres jest w 100% bezpieczny i odizolowany od mechanizmów CV OpenCV/ORB oraz widoku operatorskiego.
+- **Residual Risk: LOW**
+  - *Kolizja portów*: Launcher w ciemno zakłada start Vite na porcie 5173. Jeśli port jest zajęty przez inną wiszącą sesję, Vite przełączy się na 5174, a launcher i tak otworzy 5173. Środek zaradczy: standardowe zwolnienie portów/zamknięcie procesów w tle.
+  - *Zachowanie komendy start*: Launcher używa systemowego `start` do otwarcia przeglądarki. W przypadku nietypowej domyślnej przeglądarki bez wsparcia dla nowoczesnych standardów HTML5/WebSockets, Studio Console może napotkać błędy. Środek zaradczy: używanie nowoczesnej przeglądarki (np. Chrome/Edge/Firefox).
+  - *Założenie o typie danych warnings*: Logika frontendu zakłada, że `data.warnings` to tablica surowych napisów (stringów). Gdyby w przyszłości backend zmienił strukturę warnings na obiekty, w HUD wyświetli się surowy `[object Object]`. Zmiana ta jest jednak poza zakresem i backend CV pozostaje niezmieniony.
+
