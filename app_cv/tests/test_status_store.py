@@ -42,7 +42,9 @@ class TestStatusStore(unittest.TestCase):
         self.assertEqual(status["cards"], cards)
         self.assertEqual(status["metrics"], metrics)
         self.assertEqual(status["runtime"], runtime)
-        self.assertEqual(status["operator"], operator)
+        for key in operator:
+            self.assertEqual(status["operator"][key], operator[key])
+        self.assertIn("active_decks", status["operator"])
         self.assertEqual(status["layout"], layout)
         self.assertEqual(status["warnings"], warnings)
 
@@ -215,6 +217,26 @@ class TestStatusStore(unittest.TestCase):
             self.assertIn(key, status, f"Brak klucza '{key}' w status payload")
         
         self.assertEqual(status["schema_version"], 1)
+
+    def test_update_cv_state_preserves_active_decks(self):
+        # 1. Ustawienie początkowych aktywnych talii
+        initial_decks = ["magic", "zodiak"]
+        self.store.update_active_decks(initial_decks)
+        
+        # Weryfikacja ustawienia
+        status_before = self.store.get_status()
+        self.assertEqual(status_before["operator"]["active_decks"], initial_decks)
+        
+        # 2. Wywołanie update_cv_state ze słownikiem operator, który NIE zawiera active_decks
+        cards = []
+        metrics = {"fps": 30.0}
+        runtime = {}
+        operator_without_decks = {"enabled": True, "active_profile": "default"}
+        self.store.update_cv_state(cards, metrics, runtime, operator_without_decks)
+        
+        # 3. Weryfikacja, czy active_decks zostało zachowane
+        status_after = self.store.get_status()
+        self.assertEqual(status_after["operator"]["active_decks"], initial_decks)
 
 if __name__ == '__main__':
     unittest.main()

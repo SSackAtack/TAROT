@@ -608,3 +608,43 @@ body.studio-mode-active {
     100% { opacity: 1.0; }
 }
 
+/* Stylizacja i mikro-animacje wyboru aktywnych talii (Active Decks Selection) */
+.studio-decks-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.studio-deck-row {
+    transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s ease, transform 0.15s ease !important;
+}
+
+.studio-deck-row:hover {
+    background-color: rgba(214, 125, 62, 0.08) !important;
+    border-color: rgba(214, 125, 62, 0.25) !important;
+    transform: translateX(2px);
+}
+
+.studio-deck-row:has(.studio-deck-checkbox:checked) {
+    background-color: rgba(214, 125, 62, 0.05) !important;
+    border-color: rgba(214, 125, 62, 0.2) !important;
+}
+
+.studio-deck-checkbox {
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+}
+
+.studio-deck-checkbox:hover {
+    transform: scale(1.15);
+}
+
+.studio-deck-checkbox:active {
+    transform: scale(0.9);
+}
+
+.studio-deck-checkbox:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+

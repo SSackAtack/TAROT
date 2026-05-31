@@ -24,6 +24,7 @@ class ControlMessage:
     peak_db: float | None = None
     mode: str | None = None
     markers: list | None = None
+    active_decks: list | None = None
 
 
 ALLOWED_TYPES = {
@@ -45,6 +46,7 @@ ALLOWED_TYPES = {
     "studio_update_audio_peak",
     "studio_set_director_mode",
     "studio_save_timeline",
+    "studio_set_active_decks",
 }
 
 
@@ -196,6 +198,19 @@ def parse_control_message(raw_message):
                     )
                     
         return ControlMessage(type=message_type, recording_id=rec_id, markers=markers)
+
+    if message_type == "studio_set_active_decks":
+        if "active_decks" not in payload:
+            raise ControlMessageError(f"{message_type} requires active_decks")
+        decks = payload["active_decks"]
+        if not isinstance(decks, list):
+            raise ControlMessageError("active_decks must be a list")
+        if not (1 <= len(decks) <= 3):
+            raise ControlMessageError(f"active_decks list length must be between 1 and 3, got {len(decks)}")
+        for d in decks:
+            if not isinstance(d, str):
+                raise ControlMessageError("active_decks elements must be strings")
+        return ControlMessage(type=message_type, active_decks=decks)
 
     return ControlMessage(type=message_type)
 

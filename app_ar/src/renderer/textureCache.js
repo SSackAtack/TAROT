@@ -233,3 +233,67 @@ export function createCardBackTexture() {
     texture.colorSpace = THREE.SRGBColorSpace
     return texture
 }
+
+export function dynamicPreloadDecks(activeDecksList, onComplete) {
+    if (!activeDecksList || activeDecksList.length === 0) return
+
+    console.log(`[DYNAMIC PRELOAD] Wykryto żądanie doładowania talii: ${activeDecksList.join(', ')}`)
+
+    fetch('/decks_manifest.json')
+        .then(r => r.json())
+        .then(manifestData => {
+            const decks = manifestData.decks || []
+            const activeDecksMetadata = decks.filter(d => activeDecksList.includes(d.id))
+
+            const newCardNamesToLoad = []
+
+            activeDecksMetadata.forEach(deck => {
+                const prefix = deck.prefix
+                const checkCardName = `${prefix}_00`
+                if (!appState.texturesCache[checkCardName]) {
+                    console.log(`[DYNAMIC PRELOAD] Talia '${deck.display_name}' nie jest załadowana. Przygotowuję doładowanie...`)
+                    for (let i = 0; i < deck.card_count; i++) {
+                        const name = `${prefix}_${String(i).padStart(2, '0')}`
+                        newCardNamesToLoad.push(name)
+                        if (!cardNames.includes(name)) {
+                            cardNames.push(name)
+                        }
+                    }
+                }
+            });
+
+            if (newCardNamesToLoad.length === 0) {
+                console.log(`[DYNAMIC PRELOAD] Wszystkie wymagane tekstury są już w cache.`)
+                if (onComplete) onComplete()
+                return
+            }
+
+            console.log(`[DYNAMIC PRELOAD] Rozpoczynam asynchroniczne wczytywanie ${newCardNamesToLoad.length} brakujących tekstur...`)
+            appState.texturesReady = false
+
+            const preloadPromises = newCardNamesToLoad.map((name) => {
+                return new Promise((resolve) => {
+                    const path = `/karty/${name}.webp`
+                    textureLoader.load(path, (texture) => {
+                        appState.texturesCache[name] = texture
+                        texture.minFilter = THREE.LinearMipmapLinearFilter
+                        texture.magFilter = THREE.LinearFilter
+                        texture.colorSpace = THREE.SRGBColorSpace  
+                        resolve()
+                    }, undefined, (err) => {
+                        console.error(`[DYNAMIC PRELOAD BŁĄD] Nie udało się załadować: ${name}`, err)
+                        resolve() 
+                    })
+                })
+            })
+
+            Promise.all(preloadPromises).then(() => {
+                appState.texturesReady = true
+                console.log(`[DYNAMIC PRELOAD] Pomyślnie doładowano ${newCardNamesToLoad.length} nowych tekstur w locie! Łącznie w cache: ${Object.keys(appState.texturesCache).length}`)
+                if (onComplete) onComplete()
+            })
+        })
+        .catch(err => {
+            console.error(`[DYNAMIC PRELOAD BŁĄD] Nie udało się pobrać manifestu talii:`, err)
+        })
+}

@@ -43,6 +43,7 @@ class StatusStore:
             }
         )
         
+        self._status["operator"]["active_decks"] = ["rider-waite-smith"]
         self._decks_cache = {}
         try:
             base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
@@ -55,6 +56,14 @@ class StatusStore:
                     deck_id = deck.get("id")
                     if prefix and deck_id:
                         self._decks_cache[prefix] = deck_id
+                        
+            active_decks_path = os.path.join(base_dir, "app_ar", "public", "active_decks.json")
+            if os.path.exists(active_decks_path):
+                with open(active_decks_path, "r", encoding="utf-8") as f:
+                    active_data = json.load(f)
+                active_ids = active_data.get("active_decks", [])
+                if isinstance(active_ids, list) and len(active_ids) > 0:
+                    self._status["operator"]["active_decks"] = active_ids
         except Exception:
             pass
 
@@ -63,6 +72,11 @@ class StatusStore:
         """Zwraca głęboką kopię obecnego statusu w bezpieczny dla wątków sposób."""
         with self._lock:
             return copy.deepcopy(self._status)
+
+    def update_active_decks(self, active_decks):
+        """Aktualizuje listę aktywnych talii w statusie w bezpieczny dla wątków sposób."""
+        with self._lock:
+            self._status["operator"]["active_decks"] = copy.deepcopy(active_decks)
 
     def _get_deck_id(self, card_name):
         """Dopasowuje prefiks karty do technicznego ID talii z manifestu z fallbackami ASCII."""
@@ -104,11 +118,19 @@ class StatusStore:
                 enriched_cards.append(card)
 
         with self._lock:
+            # Zachowaj active_decks z obecnego stanu przed nadpisaniem słownika operator
+            old_active_decks = self._status["operator"].get("active_decks")
+
             self._status["detected"] = len(enriched_cards) > 0
             self._status["cards"] = enriched_cards
             self._status["metrics"] = copy.deepcopy(metrics)
             self._status["runtime"] = copy.deepcopy(runtime)
-            self._status["operator"] = copy.deepcopy(operator)
+            
+            new_operator = copy.deepcopy(operator)
+            if ("active_decks" not in new_operator or not new_operator["active_decks"]) and old_active_decks is not None:
+                new_operator["active_decks"] = old_active_decks
+            self._status["operator"] = new_operator
+
             if layout is not None:
                 self._status["layout"] = copy.deepcopy(layout)
             if warnings is not None:
