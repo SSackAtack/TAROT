@@ -1,7 +1,7 @@
 # STATE — TASK-DECK-007
 
 ## Status
-DONE
+APPROVED
 
 ## Owner
 Gemini
@@ -13,7 +13,7 @@ ChatGPT Supervisor
 2026-05-31
 
 ## Current State
-Zadanie zostało pomyślnie zakończone. Zaimplementowano asynchroniczny i dynamiczny preloading tekstur w oparciu o manifesty talii. Frontend pobiera `/active_decks.json` oraz `/decks_manifest.json` przed załadowaniem zasobów 3D Three.js i buforuje wyłącznie te pliki, które są wskazane jako aktywne. Wdrożono solidny mechanizm fallback do domyślnej talii `RWS` w razie nieoczekiwanego braku dostępu do plików JSON, co zapewnia odporność na awarie (fail-safe). Testy jednostkowe (171 testów) oraz budowanie frontendu Vite przebiegają poprawnie.
+Zadanie zostało pomyślnie zakończone i formalnie zatwierdzone przez ChatGPT Supervisor (GREEN LIGHT). Zaimplementowano asynchroniczny i dynamiczny preloading tekstur w oparciu o manifesty talii. Frontend pobiera `/active_decks.json` oraz `/decks_manifest.json` przed załadowaniem zasobów 3D Three.js i buforuje wyłącznie te pliki, które są wskazane jako aktywne. Wdrożono solidny mechanizm fallback do domyślnej talii `RWS` w razie nieoczekiwanego braku dostępu do plików JSON, co zapewnia odporność na awarie (fail-safe). Testy jednostkowe (171 testów) oraz budowanie frontendu Vite przebiegają poprawnie.
 
 ## What Was Done By Gemini
 1. Utworzono branch roboczy `task/deck-007-frontend-lazy-loading`.

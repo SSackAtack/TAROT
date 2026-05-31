@@ -10,7 +10,7 @@ TASK-DECK-007: Frontend lazy loading tylko aktywnych talii
 `d4a97eb825fd76a22d851c79631cbb481bfac9e3`
 
 ## Head Commit
-`feat: implement frontend lazy loading for active decks only` (Commit w trakcie tworzenia na branchu roboczym)
+`28e0e0b18aa27500205eecc27ab4606290d70c19` (`feat: implement frontend lazy loading for active decks only`)
 
 ## Files Changed
 - `app_ar/src/renderer/textureCache.js` [MODIFY]
