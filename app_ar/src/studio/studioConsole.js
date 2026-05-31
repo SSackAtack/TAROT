@@ -15,6 +15,7 @@ let previousCards = []
 let isDecksInitialized = false
 let loadedDecksList = []
 let activeDecksState = []
+let isDecksApplying = false
 
 function initStudioDecksPanel() {
     if (isDecksInitialized || !sidebarEl) return
@@ -104,7 +105,9 @@ function renderDecksCheckboxes(listEl, applyBtn) {
                                !currentSelected.every(id => activeDecksState.includes(id))
 
             if (applyBtn) {
-                if (hasChanged && currentSelected.length >= 1 && currentSelected.length <= 3) {
+                if (isDecksApplying) {
+                    applyBtn.setAttribute('disabled', 'true')
+                } else if (hasChanged && currentSelected.length >= 1 && currentSelected.length <= 3) {
                     applyBtn.removeAttribute('disabled')
                 } else {
                     applyBtn.setAttribute('disabled', 'true')
@@ -129,12 +132,16 @@ function renderDecksCheckboxes(listEl, applyBtn) {
                 .filter(c => c.checked)
                 .map(c => c.getAttribute('data-deck-id'))
 
-            if (selected.length >= 1 && selected.length <= 3) {
+            if (selected.length >= 1 && selected.length <= 3 && !isDecksApplying) {
+                isDecksApplying = true
+                applyBtn.setAttribute('disabled', 'true')
+                applyBtn.textContent = 'Trwa wdrażanie...'
+                checkboxes.forEach(c => c.disabled = true)
+                
                 sendControlMessage({
                     type: "studio_set_active_decks",
                     active_decks: selected
                 })
-                applyBtn.setAttribute('disabled', 'true')
             }
         })
     }
@@ -841,21 +848,48 @@ export function updateStudioConsole(data) {
                         const isChecked = activeDecksState.includes(deckId)
                         cb.checked = isChecked
                     })
+                }
+            }
+        }
+
+        // Zabezpieczenie Apply: jeśli oczekujemy na wdrożenie, sprawdzamy czy stan się zgadza z żądaniem
+        if (isDecksApplying && sidebarEl) {
+            const listEl = sidebarEl.querySelector('#studio-decks-list')
+            const checkboxes = listEl ? listEl.querySelectorAll('.studio-deck-checkbox') : []
+            if (checkboxes.length > 0) {
+                const checkedIds = Array.from(checkboxes).filter(c => c.checked).map(c => c.getAttribute('data-deck-id'))
+                const matchesRequest = remoteDecks.length === checkedIds.length &&
+                                       remoteDecks.every(id => checkedIds.includes(id))
+                
+                if (matchesRequest) {
+                    isDecksApplying = false
+                    const applyBtn = sidebarEl.querySelector('#studio-decks-apply-btn')
+                    if (applyBtn) {
+                        applyBtn.textContent = 'Zastosuj Wybór (Apply)'
+                        applyBtn.setAttribute('disabled', 'true')
+                    }
                     
-                    // Limitowanie w locie
-                    const checkedBoxes = Array.from(checkboxes).filter(c => c.checked)
-                    const count = checkedBoxes.length
+                    // Przywracamy limity dla checkboxów i je odblokowujemy
+                    const count = checkedIds.length
                     checkboxes.forEach(c => {
                         c.disabled = false
                         if (count >= 3 && !c.checked) c.disabled = true
                         if (count <= 1 && c.checked) c.disabled = true
                     })
-                    
-                    const applyBtn = sidebarEl.querySelector('#studio-decks-apply-btn')
-                    if (applyBtn) {
-                        applyBtn.setAttribute('disabled', 'true')
-                    }
                 }
+            }
+        } else if (!isDecksApplying && sidebarEl) {
+            // Standardowa aktualizacja checkboxów gdy nie trwa proces Apply
+            const listEl = sidebarEl.querySelector('#studio-decks-list')
+            const checkboxes = listEl ? listEl.querySelectorAll('.studio-deck-checkbox') : []
+            if (checkboxes.length > 0) {
+                const checkedBoxes = Array.from(checkboxes).filter(c => c.checked)
+                const count = checkedBoxes.length
+                checkboxes.forEach(c => {
+                    c.disabled = false
+                    if (count >= 3 && !c.checked) c.disabled = true
+                    if (count <= 1 && c.checked) c.disabled = true
+                })
             }
         }
     }

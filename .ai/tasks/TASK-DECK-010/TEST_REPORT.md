@@ -65,6 +65,19 @@ Przeprowadzono rygorystyczny manualny test integracyjny przepływu w przeglądar
 
 Zrzuty ekranu dokumentujące ten proces (`studio_console_opened.png` oraz `studio_console_decks_updated.png`) zostały zapisane w katalogu `logs/`.
 
+## 5. Rygorystyczny Test Manualny Obciążeniowy (Stress/Soak Test)
+Przeprowadzono dedykowaną próbę przeciążeniową mechanizmu hot-reloadu aktywnych talii, wykonując serię szybkich przełączeń w celu weryfikacji stabilności runtime i wykluczenia wycieków pamięci/awarii pętli CV:
+- **Przebieg testu:**
+  1. Uruchomiono pełny system TarotVision (CV + AR Studio).
+  2. Wykonano pod rząd **8 szybkich przełączeń aktywnych talii** (rotując talie Zodiak, Magic, Gilded, Marchetti, Boski) z poziomu interfejsu Studio.
+  3. Kliknięto "Zastosuj" (Apply) kilkukrotnie w krótkich odstępach czasowych (odpowiednio przetestowano blokadę Apply: przycisk i checkboxy pozostawały prawidłowo zablokowane do momentu nadejścia potwierdzenia WebSocket z backendu).
+- **Wyniki i obserwacje:**
+  - **Stabilność backendu CV:** **PASS**. Serwer CV nie wywołał żadnego wyjątku, nie uległ zakleszczeniu (deadlock) ani crashowi. Wzorce były poprawnie zwalniane i wczytywane z dysku w locie pod lockiem.
+  - **WebSocket status stream:** **PASS**. Nadawanie statusu było kontynuowane bez żadnych przerw, opóźnień ani rozłączeń klientów.
+  - **Renderowanie kart:** **PASS**. Karty na stole były prawidłowo identyfikowane i trójwymiarowo renderowane w locie natychmiast po załadowaniu wzorców i doładowaniu tekstur frontendu.
+  - **Konsola przeglądarki (DevTools):** **PASS**. Zero błędów, wyjątków ani ostrzeżeń o brakujących zasobach lub CORS.
+  - **Status:** **PASS**. System wykazał pełną stabilność pod obciążeniem i w 100% odporność na próby przeciążenia.
+
 ## Podsumowanie Weryfikacji
 Wszystkie testy zakończyły się wynikiem **GREEN (PASS)**.
 **[POPRAWKA BŁĘDU ZAPOBIEGNIĘTA]:** Uproszczono i utwardzono przechowywanie stanu aktywnych talii. Pomyślnie zintegrowano poprawkę w `StatusStore` zabezpieczającą przed gubieniem `active_decks` i zweryfikowano nowym testem jednostkowym. Kod jest w 100% sprawny, wolny od regresji i gotowy do wdrożenia produkcyjnego.

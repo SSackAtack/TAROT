@@ -629,17 +629,20 @@ legacy_pipeline = StateFirstLegacyPipeline(
 )
 
 # 3. Inicjalizacja Kamery — jawnie ustawiamy 720p (1280x720) dla wiecej cech ORB z wiekszej odleglosci
-log_event("[KAMERA] Uruchamianie kamery... (Wcisnij 'q' by zamknac, cyfry '0'-'9' by przelaczac kamery w locie!)")
-if not camera_session.open(0):
-    log_event("[OSTRZEZENIE] Brak kamery pod indeksem 0. Wcisnij np. 1 lub 2 by zmienic.")
+if os.environ.get("TAROTVISION_TEST_MODE") != "1":
+    log_event("[KAMERA] Uruchamianie kamery... (Wcisnij 'q' by zamknac, cyfry '0'-'9' by przelaczac kamery w locie!)")
+    if not camera_session.open(0):
+        log_event("[OSTRZEZENIE] Brak kamery pod indeksem 0. Wcisnij np. 1 lub 2 by zmienic.")
 
-frame_width, frame_height = camera_session.frame_width, camera_session.frame_height
-log_event(f"[KAMERA] Rozdzielczosc: {frame_width}x{frame_height}")
+    frame_width, frame_height = camera_session.frame_width, camera_session.frame_height
+    log_event(f"[KAMERA] Rozdzielczosc: {frame_width}x{frame_height}")
 
 motion_detector = MotionDetector(min_changed_ratio=0.02, settle_frames=2)
 
 # Petla glowna (Live feed)
 while True:
+    if os.environ.get("TAROTVISION_TEST_MODE") == "1":
+        break
     frame_loop_start = time.perf_counter()
     drain_control_messages(camera_session)
     config_values = runtime_config.values

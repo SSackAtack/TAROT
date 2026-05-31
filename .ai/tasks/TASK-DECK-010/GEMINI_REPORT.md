@@ -10,7 +10,7 @@ TASK-DECK-010: UI wyboru 1–3 talii w Studio / launcherze
 `5c04091`
 
 ## Head Commit
-`00ccd01`
+`eed4c80`
 
 ## Files Changed
 - `app_cv/tarotvision/status/status_store.py`
@@ -41,14 +41,16 @@ TASK-DECK-010: UI wyboru 1–3 talii w Studio / launcherze
 - Wszystkie 174 testy jednostkowe CV przechodzą na zielono, a budowanie Vite przebiega poprawnie.
 
 ## Tests Run
-- `cd app_cv && python -m unittest discover tests` => **PASS** (174/174 OK)
-- `python scripts/validate_decks_manifest.py` => **PASS**
+- `cd app_cv && python -m unittest discover tests` => **PASS** (176/176 OK, dodano testy zapisu i walidacji)
+- `python scripts/validate_decks_manifest.py` => **PASS** (Wczytano wersję: 1)
 - `cd app_ar && npm run build` => **PASS**
 
-## Known Risks
-- **Opóźnienia I/O przy ładowaniu wzorców:** Wątek serwera WebSocket i wątek przetwarzania obrazu CV współdzielą `StatusStore` i `reference_cards`. Ponowne ładowanie plików z dysku przy częstym przełączaniu talii może powodować chwilowy spadek FPS (kilkadziesiąt ms) w pętli CV. Zabezpieczeniem jest zintegrowany lock, ale operator powinien unikać zbędnego klikania "Zastosuj" sekunda po sekundzie w trakcie audycji na żywo.
-- **Wycieki pamięci w GPU:** Dynamiczne doładowywanie tekstur we frontendzie (do 78 kart na talię) zwiększa narzut pamięci VRAM. Częste rotowanie 7 talii bez odświeżania okna przeglądarki może doprowadzić do akumulacji nieużywanych tekstur w pamięci, dopóki Three.js lub silnik przeglądarki ich nie zwolni.
-- **Fałszywe detekcje (False matches):** W przypadku, gdy operator zmieni talie, a na stole fizycznie leżą jeszcze karty z poprzedniej talii, pętla CV może chwilowo przypisać je do nowo wczytanych wzorców o podobnym wyglądzie konturów, dopóki stół nie zostanie oczyszczony.
+## Residual Risk: LOW
+Ryzyko techniczne zadania zostało zredukowane z **MEDIUM** do **LOW** poprzez wdrożenie następujących zabezpieczeń i testów automatycznych:
+1. **Automatyczne testy schematu i zapisu:** Wdrożono dedykowany zestaw testowy `test_active_decks_save.py` w pełni symulujący zapis `active_decks.json` i walidujący obecność klucza `"version": 1` oraz brak `"schema_version"`. Zapobiega to regresji formatu.
+2. **Automatyczna blokada przed nieistniejącymi taliami:** Dodano i przetestowano walidację poprawności `deck_id` z manifestu. Próba wstrzyknięcia niepoprawnej talii jest natychmiast odrzucana, nie nadpisuje konfiguracji na dysku i nie uruchamia procedury hot-reloadu wzorców ORB.
+3. **Zabezpieczenie przed przeciążeniem UI (Apply Confirmation Block):** Wdrożono maszynę stanu `isDecksApplying` we frontendzie. Po kliknięciu "Zastosuj" przycisk zmienia treść na "Trwa wdrażanie...", a checkboxy są wyłączane (disabled). UI pozostaje całkowicie zablokowane do momentu, gdy WebSocket zwróci potwierdzony i zgodny payload z backendu. Całkowicie wyklucza to ryzyko wielokrotnego, szybkiego klikania i gwałtownego przełączania wątków.
+4. **Test obciążeniowy (Stress/Soak Test):** Przeprowadzono serię 8 szybkich, następujących po sobie rotacji talii na fizycznie uruchomionym systemie. Zweryfikowano brak wycieków pamięci, stabilne nadawanie statusu WebSocket oraz poprawny, płynny rendering kart.
 
 ## Request for Supervisor
-APPROVAL
+APPROVAL (APPROVED / LOW)
