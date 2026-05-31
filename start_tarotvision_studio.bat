@@ -63,46 +63,57 @@ echo ============================================================
 echo [0/4] Weryfikacja dostępności portu 5173...
 echo ============================================================
 powershell -Command "$conn = Get-NetTCPConnection -LocalPort 5173 -ErrorAction SilentlyContinue; if ($conn) { exit 1 } else { exit 0 }"
-if %ERRORLEVEL% NEQ 0 (
-    color 0C
-    echo.
-    echo ⚠️  [OSTRZEŻENIE] Port 5173 jest obecnie ZAJĘTY!
-    echo Prawdopodobnie inna sesja deweloperska (Vite / Node) działa w tle.
-    echo.
-    echo Konsekwencje kontynuacji:
-    echo Nowa sesja Vite wystartuje na porcie 5174, a przeglądarka spróbuje
-    echo otworzyć port 5173. Spowoduje to brak połączenia z nowym systemem!
-    echo.
-    echo Wybierz akcję:
-    echo ------------------------------------------------------------
-    echo [1] [Zalecane] Automatycznie zatrzymaj wiszące procesy na porcie 5173 i kontynuuj
-    echo [2] Kontynuuj uruchamianie mimo to [na własną odpowiedzialność]
-    echo [3] Przerwij i wyjdź z launchera
-    echo ------------------------------------------------------------
-    echo.
-    set /p PORT_CHOICE="Twój wybór [1-3] [domyślnie 3]: "
-    if "!PORT_CHOICE!"=="" set "PORT_CHOICE=3"
-    
-    if "!PORT_CHOICE!"=="1" (
-        echo.
-        echo [INFO] Zamykam wiszące procesy na porcie 5173...
-        powershell -Command "$proc = Get-NetTCPConnection -LocalPort 5173 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique; foreach ($p in $proc) { Stop-Process -Id $p -Force -ErrorAction SilentlyContinue; Write-Host 'Zatrzymano proces o ID' $p }"
-        echo [INFO] Odczekanie 2 sekund na zwolnienie portu...
-        timeout /t 2 /nobreak >nul
-    )
-    if "!PORT_CHOICE!"=="3" (
-        echo.
-        echo [INFO] Uruchamianie przerwane przez operatora.
-        color 0E
-        pause
-        exit /b 0
-    )
-    color 0E
-    echo.
-) else (
-    echo [OK] Port 5173 jest wolny. Kontynuuję...
-    echo.
-)
+if errorlevel 1 goto PORT_BUSY
+
+echo [OK] Port 5173 jest wolny. Kontynuuję...
+echo.
+goto START_SERVERS
+
+:PORT_BUSY
+color 0C
+echo.
+echo ⚠️  [OSTRZEŻENIE] Port 5173 jest obecnie ZAJĘTY!
+echo Prawdopodobnie inna sesja deweloperska (Vite / Node) działa w tle.
+echo.
+echo Konsekwencje kontynuacji:
+echo Nowa sesja Vite wystartuje na porcie 5174, a przeglądarka spróbuje
+echo otworzyć port 5173. Spowoduje to brak połączenia z nowym systemem!
+echo.
+echo Wybierz akcję:
+echo ------------------------------------------------------------
+echo [1] [Zalecane] Automatycznie zatrzymaj wiszące procesy na porcie 5173 i kontynuuj
+echo [2] Kontynuuj uruchamianie mimo to [na własną odpowiedzialność]
+echo [3] Przerwij i wyjdź z launchera
+echo ------------------------------------------------------------
+echo.
+set /p PORT_CHOICE="Twój wybór [1-3] [domyślnie 3]: "
+if "!PORT_CHOICE!"=="" set "PORT_CHOICE=3"
+
+if "!PORT_CHOICE!"=="1" goto KILL_PORT_PROCESS
+if "!PORT_CHOICE!"=="2" goto START_SERVERS
+if "!PORT_CHOICE!"=="3" goto ABORT_LAUNCH
+
+goto ABORT_LAUNCH
+
+:KILL_PORT_PROCESS
+echo.
+echo [INFO] Zamykam wiszące procesy na porcie 5173...
+powershell -Command "$proc = Get-NetTCPConnection -LocalPort 5173 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique; foreach ($p in $proc) { Stop-Process -Id $p -Force -ErrorAction SilentlyContinue; Write-Host 'Zatrzymano proces o ID' $p }"
+echo [INFO] Odczekanie 2 sekund na zwolnienie portu...
+timeout /t 2 /nobreak >nul
+color 0E
+goto START_SERVERS
+
+:ABORT_LAUNCH
+echo.
+echo [INFO] Uruchamianie przerwane przez operatora.
+color 0E
+pause
+exit /b 0
+
+:START_SERVERS
+color 0E
+echo.
 
 echo [1/4] Uruchamiam serwer AR (Vite)...
 start "TarotVision AR" /D "%~dp0app_ar" powershell -NoExit -ExecutionPolicy Bypass -Command "npm run dev 2>&1 | Tee-Object -FilePath '%LOG_DIR%\ar_vite_studio.log'"
