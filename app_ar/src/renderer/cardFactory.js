@@ -246,7 +246,7 @@ export function handleCardData(detectedCards, scene, arSettings, GRID_SNAP_ENABL
         return
     }
 
-    const detectedNames = detectedCards.map(c => c.name)
+    const detectedNames = detectedCards.map(c => c.card_id || c.name)
     
     Object.keys(appState.activeCards).forEach((name) => {
         if (detectedNames.includes(name)) {
@@ -257,7 +257,7 @@ export function handleCardData(detectedCards, scene, arSettings, GRID_SNAP_ENABL
     })
 
     detectedCards.forEach((cardData) => {
-        const name = cardData.name
+        const name = cardData.card_id || cardData.name
         
         if (!cardNames.includes(name)) return
         if (typeof cardData.x !== 'number' || typeof cardData.y !== 'number') return

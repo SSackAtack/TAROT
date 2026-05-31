@@ -4,6 +4,8 @@ Moduł zarządzania współdzielonym stanem (StatusStore) aplikacji TarotVision.
 """
 import copy
 import threading
+import os
+import json
 from tarotvision.messages import build_status_payload
 
 _UNSET = object()
@@ -40,6 +42,21 @@ class StatusStore:
                 "director_mode": "manual"
             }
         )
+        
+        self._decks_cache = {}
+        try:
+            base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+            manifest_path = os.path.join(base_dir, "app_ar", "public", "decks_manifest.json")
+            if os.path.exists(manifest_path):
+                with open(manifest_path, "r", encoding="utf-8") as f:
+                    manifest_data = json.load(f)
+                for deck in manifest_data.get("decks", []):
+                    prefix = deck.get("prefix")
+                    deck_id = deck.get("id")
+                    if prefix and deck_id:
+                        self._decks_cache[prefix] = deck_id
+        except Exception:
+            pass
 
 
     def get_status(self):
@@ -47,11 +64,48 @@ class StatusStore:
         with self._lock:
             return copy.deepcopy(self._status)
 
+    def _get_deck_id(self, card_name):
+        """Dopasowuje prefiks karty do technicznego ID talii z manifestu z fallbackami ASCII."""
+        for prefix, d_id in self._decks_cache.items():
+            if card_name.startswith(prefix):
+                return d_id
+                
+        # Rezerwowy fallback ASCII w przypadku braku manifestu
+        if card_name.startswith("RWS"):
+            return "rider-waite-smith"
+        elif card_name.startswith("Zodiak"):
+            return "zodiak"
+        elif card_name.startswith("Magic"):
+            return "magic"
+        elif card_name.startswith("Gilded"):
+            return "gilded"
+        elif card_name.startswith("Marchetti"):
+            return "marchetti"
+        elif card_name.startswith("Boski"):
+            return "boski"
+        elif card_name.startswith("Światło") or card_name.startswith("Swiatlo"):
+            return "swiatlo_i_cien"
+            
+        if "_" in card_name:
+            return card_name.split("_")[0].lower()
+        return "rider-waite-smith"
+
     def update_cv_state(self, cards, metrics, runtime, operator, layout=None, warnings=None):
-        """Aktualizuje stan analizy CV."""
+        """Aktualizuje stan analizy CV, wzbogacając payload kart o deck_id i card_id."""
+        enriched_cards = []
+        for card in cards:
+            if isinstance(card, dict):
+                c_copy = copy.deepcopy(card)
+                name = c_copy.get("name", "")
+                c_copy["deck_id"] = self._get_deck_id(name)
+                c_copy["card_id"] = name  # unikalny identyfikator techniczny
+                enriched_cards.append(c_copy)
+            else:
+                enriched_cards.append(card)
+
         with self._lock:
-            self._status["detected"] = len(cards) > 0
-            self._status["cards"] = copy.deepcopy(cards)
+            self._status["detected"] = len(enriched_cards) > 0
+            self._status["cards"] = enriched_cards
             self._status["metrics"] = copy.deepcopy(metrics)
             self._status["runtime"] = copy.deepcopy(runtime)
             self._status["operator"] = copy.deepcopy(operator)
