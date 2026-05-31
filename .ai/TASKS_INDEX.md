@@ -16,6 +16,9 @@ Ten plik stanowi centralny rejestr wszystkich zadań (Tasks) realizowanych w pro
 | **TASK-SCAN-001** | `APPROVED` | `master` | Gemini | Dostosowanie skryptu obróbki skanów pod skaner i jakość Premium | 2026-05-30 | ChatGPT Approved (PR #2) |
 | **TASK-SCAN-002** | `APPROVED` | `master` | Gemini | Diagnostyka i uodpornienie skanowania WIA na flary i tła | 2026-05-31 | Confirmed 5/5 Green |
 | **TASK-DECK-001** | `APPROVED` | `master` | Gemini | Wdrożenie nowej talii Zodiak i obsługa wielu talii w locie | 2026-05-31 | Confirmed 171/171 Green |
+| **TASK-DECK-002** | `APPROVED` | `master` | Gemini | Wdrożenie talii Magic i Gilded z integracją w launcherze i cache | 2026-05-31 | Confirmed 171/171 Green |
+| **TASK-DECK-003** | `APPROVED` | `master` | Gemini | Wdrożenie talii Marchetti z integracją w launcherze i cache | 2026-05-31 | Confirmed 171/171 Green |
+| **TASK-DECK-004** | `APPROVED` | `master` | Gemini | Wdrożenie talii Boski z integracją w launcherze i cache | 2026-05-31 | Confirmed 171/171 Green |
 | **TASK-SCAN-004** | `APPROVED` | `master` | Gemini | Usprawnienie auto-orientacji kart i segmentacji tła | 2026-05-31 | APPROVED BY CHATGPT SUPERVISOR |
 | **TASK-COMM-001** | `APPROVED` | `master` | ChatGPT Supervisor | Standard komunikacji między modelami AI przez GitHub | 2026-05-31 | Self-documented, owner requested |
 

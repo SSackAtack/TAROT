@@ -1,0 +1,322 @@
+{
+  "deck_name": "Boski",
+  "deck_id": "boski_scans",
+  "language": "pl",
+  "copyright": "private",
+  "card_count": 78,
+  "source": "Fizyczne skany uzytkownika z urzadzenia WIA",
+  "cards": [
+    {
+      "id": 0,
+      "file_base": "Boski_00"
+    },
+    {
+      "id": 1,
+      "file_base": "Boski_01"
+    },
+    {
+      "id": 2,
+      "file_base": "Boski_02"
+    },
+    {
+      "id": 3,
+      "file_base": "Boski_03"
+    },
+    {
+      "id": 4,
+      "file_base": "Boski_04"
+    },
+    {
+      "id": 5,
+      "file_base": "Boski_05"
+    },
+    {
+      "id": 6,
+      "file_base": "Boski_06"
+    },
+    {
+      "id": 7,
+      "file_base": "Boski_07"
+    },
+    {
+      "id": 8,
+      "file_base": "Boski_08"
+    },
+    {
+      "id": 9,
+      "file_base": "Boski_09"
+    },
+    {
+      "id": 10,
+      "file_base": "Boski_10"
+    },
+    {
+      "id": 11,
+      "file_base": "Boski_11"
+    },
+    {
+      "id": 12,
+      "file_base": "Boski_12"
+    },
+    {
+      "id": 13,
+      "file_base": "Boski_13"
+    },
+    {
+      "id": 14,
+      "file_base": "Boski_14"
+    },
+    {
+      "id": 15,
+      "file_base": "Boski_15"
+    },
+    {
+      "id": 16,
+      "file_base": "Boski_16"
+    },
+    {
+      "id": 17,
+      "file_base": "Boski_17"
+    },
+    {
+      "id": 18,
+      "file_base": "Boski_18"
+    },
+    {
+      "id": 19,
+      "file_base": "Boski_19"
+    },
+    {
+      "id": 20,
+      "file_base": "Boski_20"
+    },
+    {
+      "id": 21,
+      "file_base": "Boski_21"
+    },
+    {
+      "id": 22,
+      "file_base": "Boski_22"
+    },
+    {
+      "id": 23,
+      "file_base": "Boski_23"
+    },
+    {
+      "id": 24,
+      "file_base": "Boski_24"
+    },
+    {
+      "id": 25,
+      "file_base": "Boski_25"
+    },
+    {
+      "id": 26,
+      "file_base": "Boski_26"
+    },
+    {
+      "id": 27,
+      "file_base": "Boski_27"
+    },
+    {
+      "id": 28,
+      "file_base": "Boski_28"
+    },
+    {
+      "id": 29,
+      "file_base": "Boski_29"
+    },
+    {
+      "id": 30,
+      "file_base": "Boski_30"
+    },
+    {
+      "id": 31,
+      "file_base": "Boski_31"
+    },
+    {
+      "id": 32,
+      "file_base": "Boski_32"
+    },
+    {
+      "id": 33,
+      "file_base": "Boski_33"
+    },
+    {
+      "id": 34,
+      "file_base": "Boski_34"
+    },
+    {
+      "id": 35,
+      "file_base": "Boski_35"
+    },
+    {
+      "id": 36,
+      "file_base": "Boski_36"
+    },
+    {
+      "id": 37,
+      "file_base": "Boski_37"
+    },
+    {
+      "id": 38,
+      "file_base": "Boski_38"
+    },
+    {
+      "id": 39,
+      "file_base": "Boski_39"
+    },
+    {
+      "id": 40,
+      "file_base": "Boski_40"
+    },
+    {
+      "id": 41,
+      "file_base": "Boski_41"
+    },
+    {
+      "id": 42,
+      "file_base": "Boski_42"
+    },
+    {
+      "id": 43,
+      "file_base": "Boski_43"
+    },
+    {
+      "id": 44,
+      "file_base": "Boski_44"
+    },
+    {
+      "id": 45,
+      "file_base": "Boski_45"
+    },
+    {
+      "id": 46,
+      "file_base": "Boski_46"
+    },
+    {
+      "id": 47,
+      "file_base": "Boski_47"
+    },
+    {
+      "id": 48,
+      "file_base": "Boski_48"
+    },
+    {
+      "id": 49,
+      "file_base": "Boski_49"
+    },
+    {
+      "id": 50,
+      "file_base": "Boski_50"
+    },
+    {
+      "id": 51,
+      "file_base": "Boski_51"
+    },
+    {
+      "id": 52,
+      "file_base": "Boski_52"
+    },
+    {
+      "id": 53,
+      "file_base": "Boski_53"
+    },
+    {
+      "id": 54,
+      "file_base": "Boski_54"
+    },
+    {
+      "id": 55,
+      "file_base": "Boski_55"
+    },
+    {
+      "id": 56,
+      "file_base": "Boski_56"
+    },
+    {
+      "id": 57,
+      "file_base": "Boski_57"
+    },
+    {
+      "id": 58,
+      "file_base": "Boski_58"
+    },
+    {
+      "id": 59,
+      "file_base": "Boski_59"
+    },
+    {
+      "id": 60,
+      "file_base": "Boski_60"
+    },
+    {
+      "id": 61,
+      "file_base": "Boski_61"
+    },
+    {
+      "id": 62,
+      "file_base": "Boski_62"
+    },
+    {
+      "id": 63,
+      "file_base": "Boski_63"
+    },
+    {
+      "id": 64,
+      "file_base": "Boski_64"
+    },
+    {
+      "id": 65,
+      "file_base": "Boski_65"
+    },
+    {
+      "id": 66,
+      "file_base": "Boski_66"
+    },
+    {
+      "id": 67,
+      "file_base": "Boski_67"
+    },
+    {
+      "id": 68,
+      "file_base": "Boski_68"
+    },
+    {
+      "id": 69,
+      "file_base": "Boski_69"
+    },
+    {
+      "id": 70,
+      "file_base": "Boski_70"
+    },
+    {
+      "id": 71,
+      "file_base": "Boski_71"
+    },
+    {
+      "id": 72,
+      "file_base": "Boski_72"
+    },
+    {
+      "id": 73,
+      "file_base": "Boski_73"
+    },
+    {
+      "id": 74,
+      "file_base": "Boski_74"
+    },
+    {
+      "id": 75,
+      "file_base": "Boski_75"
+    },
+    {
+      "id": 76,
+      "file_base": "Boski_76"
+    },
+    {
+      "id": 79,
+      "file_base": "Boski_79"
+    }
+  ]
+}

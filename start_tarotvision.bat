@@ -19,12 +19,28 @@ echo.
 echo Wybierz talie tarot, ktora chcesz zaladowac:
 echo 1) Rider-Waite-Smith (domyslna)
 echo 2) Zodiak
+echo 3) Magic (Tarot of Mystical Moments)
+echo 4) Gilded (The Gilded Tarot)
+echo 5) Marchetti (Tarot Marchetti)
+echo 6) Boski (Boski Tarot)
 echo.
-set /p DECK_CHOICE="Twoj wybor [1-2] (domyslnie 1): "
+set /p DECK_CHOICE="Twoj wybor [1-6] (domyslnie 1): "
 
 set "TAROTVISION_DECK=rider-waite-smith"
 if "%DECK_CHOICE%"=="2" (
     set "TAROTVISION_DECK=zodiak"
+)
+if "%DECK_CHOICE%"=="3" (
+    set "TAROTVISION_DECK=magic"
+)
+if "%DECK_CHOICE%"=="4" (
+    set "TAROTVISION_DECK=gilded"
+)
+if "%DECK_CHOICE%"=="5" (
+    set "TAROTVISION_DECK=marchetti"
+)
+if "%DECK_CHOICE%"=="6" (
+    set "TAROTVISION_DECK=boski"
 )
 
 echo.

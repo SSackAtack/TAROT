@@ -1,0 +1,322 @@
+{
+  "deck_name": "Magic",
+  "deck_id": "magic_scans",
+  "language": "pl",
+  "copyright": "private",
+  "card_count": 78,
+  "source": "Fizyczne skany uzytkownika z urzadzenia WIA",
+  "cards": [
+    {
+      "id": 0,
+      "file_base": "Magic_00"
+    },
+    {
+      "id": 1,
+      "file_base": "Magic_01"
+    },
+    {
+      "id": 2,
+      "file_base": "Magic_02"
+    },
+    {
+      "id": 3,
+      "file_base": "Magic_03"
+    },
+    {
+      "id": 4,
+      "file_base": "Magic_04"
+    },
+    {
+      "id": 5,
+      "file_base": "Magic_05"
+    },
+    {
+      "id": 6,
+      "file_base": "Magic_06"
+    },
+    {
+      "id": 7,
+      "file_base": "Magic_07"
+    },
+    {
+      "id": 8,
+      "file_base": "Magic_08"
+    },
+    {
+      "id": 9,
+      "file_base": "Magic_09"
+    },
+    {
+      "id": 10,
+      "file_base": "Magic_10"
+    },
+    {
+      "id": 11,
+      "file_base": "Magic_11"
+    },
+    {
+      "id": 12,
+      "file_base": "Magic_12"
+    },
+    {
+      "id": 13,
+      "file_base": "Magic_13"
+    },
+    {
+      "id": 14,
+      "file_base": "Magic_14"
+    },
+    {
+      "id": 15,
+      "file_base": "Magic_15"
+    },
+    {
+      "id": 16,
+      "file_base": "Magic_16"
+    },
+    {
+      "id": 17,
+      "file_base": "Magic_17"
+    },
+    {
+      "id": 18,
+      "file_base": "Magic_18"
+    },
+    {
+      "id": 19,
+      "file_base": "Magic_19"
+    },
+    {
+      "id": 20,
+      "file_base": "Magic_20"
+    },
+    {
+      "id": 21,
+      "file_base": "Magic_21"
+    },
+    {
+      "id": 22,
+      "file_base": "Magic_22"
+    },
+    {
+      "id": 23,
+      "file_base": "Magic_23"
+    },
+    {
+      "id": 24,
+      "file_base": "Magic_24"
+    },
+    {
+      "id": 25,
+      "file_base": "Magic_25"
+    },
+    {
+      "id": 26,
+      "file_base": "Magic_26"
+    },
+    {
+      "id": 27,
+      "file_base": "Magic_27"
+    },
+    {
+      "id": 28,
+      "file_base": "Magic_28"
+    },
+    {
+      "id": 29,
+      "file_base": "Magic_29"
+    },
+    {
+      "id": 30,
+      "file_base": "Magic_30"
+    },
+    {
+      "id": 31,
+      "file_base": "Magic_31"
+    },
+    {
+      "id": 32,
+      "file_base": "Magic_32"
+    },
+    {
+      "id": 33,
+      "file_base": "Magic_33"
+    },
+    {
+      "id": 34,
+      "file_base": "Magic_34"
+    },
+    {
+      "id": 35,
+      "file_base": "Magic_35"
+    },
+    {
+      "id": 36,
+      "file_base": "Magic_36"
+    },
+    {
+      "id": 37,
+      "file_base": "Magic_37"
+    },
+    {
+      "id": 38,
+      "file_base": "Magic_38"
+    },
+    {
+      "id": 39,
+      "file_base": "Magic_39"
+    },
+    {
+      "id": 40,
+      "file_base": "Magic_40"
+    },
+    {
+      "id": 41,
+      "file_base": "Magic_41"
+    },
+    {
+      "id": 42,
+      "file_base": "Magic_42"
+    },
+    {
+      "id": 43,
+      "file_base": "Magic_43"
+    },
+    {
+      "id": 44,
+      "file_base": "Magic_44"
+    },
+    {
+      "id": 45,
+      "file_base": "Magic_45"
+    },
+    {
+      "id": 46,
+      "file_base": "Magic_46"
+    },
+    {
+      "id": 47,
+      "file_base": "Magic_47"
+    },
+    {
+      "id": 48,
+      "file_base": "Magic_48"
+    },
+    {
+      "id": 49,
+      "file_base": "Magic_49"
+    },
+    {
+      "id": 50,
+      "file_base": "Magic_50"
+    },
+    {
+      "id": 51,
+      "file_base": "Magic_51"
+    },
+    {
+      "id": 52,
+      "file_base": "Magic_52"
+    },
+    {
+      "id": 53,
+      "file_base": "Magic_53"
+    },
+    {
+      "id": 54,
+      "file_base": "Magic_54"
+    },
+    {
+      "id": 55,
+      "file_base": "Magic_55"
+    },
+    {
+      "id": 56,
+      "file_base": "Magic_56"
+    },
+    {
+      "id": 57,
+      "file_base": "Magic_57"
+    },
+    {
+      "id": 58,
+      "file_base": "Magic_58"
+    },
+    {
+      "id": 59,
+      "file_base": "Magic_59"
+    },
+    {
+      "id": 60,
+      "file_base": "Magic_60"
+    },
+    {
+      "id": 61,
+      "file_base": "Magic_61"
+    },
+    {
+      "id": 62,
+      "file_base": "Magic_62"
+    },
+    {
+      "id": 63,
+      "file_base": "Magic_63"
+    },
+    {
+      "id": 64,
+      "file_base": "Magic_64"
+    },
+    {
+      "id": 65,
+      "file_base": "Magic_65"
+    },
+    {
+      "id": 66,
+      "file_base": "Magic_66"
+    },
+    {
+      "id": 67,
+      "file_base": "Magic_67"
+    },
+    {
+      "id": 68,
+      "file_base": "Magic_68"
+    },
+    {
+      "id": 69,
+      "file_base": "Magic_69"
+    },
+    {
+      "id": 70,
+      "file_base": "Magic_70"
+    },
+    {
+      "id": 71,
+      "file_base": "Magic_71"
+    },
+    {
+      "id": 72,
+      "file_base": "Magic_72"
+    },
+    {
+      "id": 73,
+      "file_base": "Magic_73"
+    },
+    {
+      "id": 74,
+      "file_base": "Magic_74"
+    },
+    {
+      "id": 75,
+      "file_base": "Magic_75"
+    },
+    {
+      "id": 76,
+      "file_base": "Magic_76"
+    },
+    {
+      "id": 77,
+      "file_base": "Magic_77"
+    }
+  ]
+}

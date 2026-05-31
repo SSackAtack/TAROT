@@ -477,6 +477,11 @@ def process_scanned_sheet(sheet_path, output_dir, args, start_index=0, custom_pr
         
         saved_count += 1
 
+    # Dodatkowy jasny komunikat o wyniku wyciągania kart z tego konkretnego arkusza
+    print("\n" + "="*70)
+    print(f" >>> [WYNIK ARKUSZA] Z tego skanu wyodrębniono pomyślnie: {saved_count} kart")
+    print("="*70 + "\n")
+
     if args.debug_overlay and len(card_contours) > 0:
         debug_filename = f"debug_{os.path.splitext(os.path.basename(sheet_path))[0]}.jpg"
         debug_path = os.path.join(output_dir, debug_filename)
@@ -622,7 +627,11 @@ def run_interactive_assistant(args):
                 print("=============================================================")
                 break
                 
-            print(f"\n -> [POSTEP] Zeskanowano {scanned_count} z {total_cards} kart. Pozostalo: {total_cards - scanned_count} kart.")
+            print("\n" + "-"*70)
+            print(f" [ARKUSZ ZALICZONY] Arkusz #{sheet_index-1}: wyodrębniono {extracted_count} kart.")
+            print(f" [LICZNIK POSTĘPU] Łącznie zeskanowano już: {scanned_count} z {total_cards} kart.")
+            print(f" [POZOSTAŁO] Do pełnej talii brakuje jeszcze: {total_cards - scanned_count} kart.")
+            print("-"*70 + "\n")
             cont = input("Czy chcesz skanowac kolejny arkusz? [T/N]: ").strip().upper()
             if cont != "T":
                 print(f"\n[INFO] Skanowanie przerwane na prosbe uzytkownika. Zapisano {scanned_count} kart.")
