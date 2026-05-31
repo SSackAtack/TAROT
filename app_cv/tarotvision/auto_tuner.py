@@ -114,6 +114,11 @@ def tune_card_detection_params(frame, search_space=None, max_iterations=250):
         "max_candidates": 10,
     }
 
+    best_candidate_bbox = None
+    best_candidate_area_ratio = 0.0
+    best_candidate_aspect_ratio = 0.0
+    best_candidate_score = 0.0
+
     iterations = 0
     debug_runs = []
     candidates_found = 0
@@ -145,9 +150,10 @@ def tune_card_detection_params(frame, search_space=None, max_iterations=250):
 
                         # Evaluate all candidates, select the highest score
                         run_score = 0.0
+                        best_run_quad = None
                         if len(quads) > 0:
-                            scores = [score_candidate_quad(q, frame.shape) for q in quads]
-                            run_score = max(scores) if scores else 0.0
+                            scores_and_quads = [(score_candidate_quad(q, frame.shape), q) for q in quads]
+                            run_score, best_run_quad = max(scores_and_quads, key=lambda x: x[0]) if scores_and_quads else (0.0, None)
                             candidates_found += len(quads)
 
                         # Update best parameters if score improved
@@ -160,6 +166,18 @@ def tune_card_detection_params(frame, search_space=None, max_iterations=250):
                                 "contour_mode": mode,
                                 "max_candidates": 10,
                             }
+                            if best_run_quad is not None:
+                                x, y, w, h = cv2.boundingRect(best_run_quad)
+                                best_candidate_bbox = [int(x), int(y), int(w), int(h)]
+                                frame_area = frame.shape[0] * frame.shape[1]
+                                best_candidate_area_ratio = float(cv2.contourArea(best_run_quad) / frame_area) if frame_area > 0 else 0.0
+                                best_candidate_aspect_ratio = float(max(w, h) / min(w, h)) if min(w, h) > 0 else 0.0
+                                best_candidate_score = float(run_score)
+                            else:
+                                best_candidate_bbox = None
+                                best_candidate_area_ratio = 0.0
+                                best_candidate_aspect_ratio = 0.0
+                                best_candidate_score = 0.0
 
                         debug_runs.append({
                             "params": {
@@ -211,6 +229,10 @@ def tune_card_detection_params(frame, search_space=None, max_iterations=250):
         "candidates_found": candidates_found,
         "iterations": iterations,
         "confidence": confidence,
+        "best_candidate_bbox": best_candidate_bbox,
+        "best_candidate_area_ratio": best_candidate_area_ratio,
+        "best_candidate_aspect_ratio": best_candidate_aspect_ratio,
+        "best_candidate_score": best_candidate_score,
         "debug": debug_runs,
     }
 

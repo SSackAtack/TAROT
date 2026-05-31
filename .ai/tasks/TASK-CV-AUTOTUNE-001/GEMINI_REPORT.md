@@ -10,7 +10,7 @@ TASK-CV-AUTOTUNE-001 — Offline single-frame rectangle autotune prototype
 `d8f22617f694e9f73c4d5fbc40d210515e0a6d96` (feat: parameterize card rectangle detection - PR #11 merge tip)
 
 ## Head Commit
-`b597b8b` (feat: add offline card detection autotuner prototype)
+`8202760` (fix: strengthen autotuner nested contour validation)
 
 ## Files Changed
 * `app_cv/tarotvision/auto_tuner.py`
@@ -35,7 +35,10 @@ TASK-CV-AUTOTUNE-001 — Offline single-frame rectangle autotune prototype
 * `npm run build` w `app_ar` => `PASS`
 
 ## Known Risks
-* **Brak** — Zmiany leżą wyłącznie w nowych, niezależnych plikach bibliotecznych (`auto_tuner.py` i testach). Runtime mastera nie ulega modyfikacji.
+* **Scoring wyłącznie geometryczny (bez weryfikacji ORB):** Autotuner ocenia jakość konturów wyłącznie na podstawie parametrów geometrycznych (proporcje, powierzchnia, położenie). Istnieje ryzyko, że wykryty idealny prostokąt nie będzie zawierał czytelnych dla algorytmu ORB cech kluczowych karty.
+* **Brak testów fizycznych z kamerą:** Dotychczasowe testy opierają się na danych syntetycznych. Rzeczywiste warunki oświetleniowe, odbicia światła i cienie na fizycznym stole mogą wpłynąć na stabilność progów Canny.
+* **Ryzyko fałszywych kandydatów w trybach RETR_LIST/TREE:** Użycie trybów głębokiego wyszukiwania konturów generuje znacznie większą liczbę prostokątów zagnieżdżonych. Bez sprawnej selekcji i limitu `max_candidates` może to nieznacznie wydłużyć czas przetwarzania klatki w pętli CV.
+* **To jest wyłącznie offline prototyp:** Autotuner działa obecnie w trybie pasywnym / offline i nie integruje się jeszcze z aktywnym rurociągiem wideo w czasie rzeczywistym ani z interfejsem operatora.
 
 ## Request for Supervisor
 APPROVAL

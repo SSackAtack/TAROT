@@ -50,6 +50,9 @@ dist/assets/index-Capq_Fqa.js   617.04 kB │ gzip: 158.60 kB
 Wszystkie scenariusze testowe zaimplementowane w `test_auto_tuner.py` przeszły pomyślnie na zielono:
 * **Idealny scoring:** Funkcja `score_candidate_quad` ocenia prawidłowy prostokąt karty tarota umieszczony centralnie w kadrze na wynik powyżej `0.8` (bardzo blisko `1.0`).
 * **Wykrywanie parametrów na ciemnym tle:** Autotuner poprawnie odnalazł parametry Canny/mode dla syntetycznego prostokąta, zwracając wiarygodność `HIGH` i wysoki score.
-* **Rozwiązanie pułapki zagnieżdżania:** Przetestowano wyszukiwanie na obrazie z A4 i zagnieżdżoną kartą. Autotuner w trybie `list` wykazał większą czułość i poprawną ekstrakcję wewnętrznych krawędzi karty niż w trybie `external`.
+* **Rozwiązanie pułapki zagnieżdżania (A4 trap):** Przetestowano wyszukiwanie na obrazie z dużym arkuszem A4 (jako silnym fałszywym kandydatem o aspect ratio `1.43`) oraz idealnie zagnieżdżoną kartą tarota o proporcji `1.72` na czarnym tle. Test wykazał, że:
+  1. Autotuner w trybie `list` uzyskuje wyższy score (`best_score`) niż w trybie `external` (który widzi wyłącznie zewnętrzny kontur A4).
+  2. Zwycięski kandydat wyselekcjonowany przez tryb `list` ma mniejszy stosunek pola (`best_candidate_area_ratio` pomiędzy `0.05` a `0.15`), co odpowiada rzeczywistej karcie, a nie wielkiemu A4.
+  3. Wyselekcjonowany aspekt zwycięskiego kandydata wynosi dokładnie `1.72` (karta), co udowadnia, że autotuner nie dał się złapać w pułapkę A4 i wybrał właściwego kandydata-kartę.
 * **Puste obrazy:** Blank frame zwraca score `0.0` oraz prawidłową niską wiarygodność (`LOW` confidence).
 * **Budżet iteracji:** Przetestowano wymuszenie budżetu 15 iteracji — autotuner zakończył pętlę zgodnie ze specyfikacją bez przekroczenia limitu.
