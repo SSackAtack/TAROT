@@ -336,6 +336,10 @@ export function createStudioConsole() {
                     <span class="studio-cv-item__value" id="cv-snap-val">holding</span>
                 </div>
             </div>
+            <div class="studio-cv-warning-box" id="cv-warning-box" style="display: none; margin-top: 10px;">
+                <span class="studio-cv-warning-title">⚠️ Ostrzeżenie CV</span>
+                <span class="studio-cv-warning-text" id="cv-warning-text"></span>
+            </div>
         </div>
     `
     hudContainer.appendChild(sidebar)
@@ -822,6 +826,20 @@ export function updateStudioConsole(data) {
     const cvSnap = sidebarEl.querySelector('#cv-snap-val')
     if (cvSnap && data.layout && data.layout.state !== undefined) {
         cvSnap.textContent = data.layout.state
+    }
+
+    // 4b. Ostrzeżenia operatora w Studio HUD
+    const cvWarningBox = sidebarEl.querySelector('#cv-warning-box')
+    const cvWarningText = sidebarEl.querySelector('#cv-warning-text')
+    if (cvWarningBox && cvWarningText) {
+        if (data.warnings && data.warnings.length > 0) {
+            const lastWarning = data.warnings[data.warnings.length - 1]
+            cvWarningText.textContent = lastWarning
+            cvWarningBox.style.display = 'block'
+        } else {
+            cvWarningText.textContent = ''
+            cvWarningBox.style.display = 'none'
+        }
     }
 
     // 5. Synchronizacja stanu aktywnych talii z WebSocketu (data.operator.active_decks)
