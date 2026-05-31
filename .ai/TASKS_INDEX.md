@@ -22,6 +22,7 @@ Ten plik stanowi centralny rejestr wszystkich zadań (Tasks) realizowanych w pro
 | **TASK-SCAN-004** | `APPROVED` | `master` | Gemini | Usprawnienie auto-orientacji kart i segmentacji tła | 2026-05-31 | APPROVED BY CHATGPT SUPERVISOR |
 | **TASK-COMM-001** | `APPROVED` | `master` | ChatGPT Supervisor | Standard komunikacji między modelami AI przez GitHub | 2026-05-31 | Self-documented, owner requested |
 | **TASK-DECK-005** | `APPROVED` | `master` | Gemini | Wdrożenie talii Światło i Cień z integracją oraz uodpornieniem zapisu Unicode na Windowsie | 2026-05-31 | Confirmed 171/171 Green |
+| **TASK-DECK-006** | `TODO` | `task/deck-006-active-session-manifest` | Gemini | Manifest talii i konfiguracja aktywnych talii sesji 1–3 talie | 2026-05-31 | Awaiting Gemini |
 
 ---
 
