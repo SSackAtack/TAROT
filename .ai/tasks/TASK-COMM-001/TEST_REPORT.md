@@ -12,15 +12,17 @@ NOT_REQUIRED — brak zmian w kodzie produkcyjnym, konfiguracji runtime, fronten
 - Sprawdzono, że `.ai/PROJECT_STATE.md` zawiera informację o wdrożeniu standardu komunikacji.
 - Sprawdzono, że `.ai/TASKS_INDEX.md` zawiera wpis `TASK-COMM-001`.
 - Utworzono katalog `.ai/tasks/TASK-COMM-001/` z dokumentacją taska.
+- Zintegrowano brakujące odwołania w pliku startowym `AGENTS.md` i sprawdzono spójność gita (Gemini).
 
 ## Commands Run
-NOT_RUN — nie uruchamiano testów, ponieważ zmiana jest wyłącznie dokumentacyjna.
+- `git diff --check` => PASS
+- Inne testy jednostkowe/budowania: `NOT_RUN — documentation-only workflow update, no production code changes.`
 
 ## Result
-PASS_FOR_DOCUMENTATION_ONLY
+- PASS_FOR_DOCUMENTATION_ONLY (zintegrowano odwołania w AGENTS.md lokalnie przez Gemini)
 
 ## Risk
-LOW — brak zmian w kodzie aplikacji.
+- LOW — brak zmian w kodzie aplikacji.
 
 ## Follow-up
-Przy kolejnych zadaniach Gemini i ChatGPT Supervisor powinny stosować `.ai/AI_AGENT_COMMUNICATION_PROTOCOL.md` jako standard przekazywania informacji.
+Przy kolejnych zadaniach Gemini, ChatGPT Supervisor, Codex i Opus powinny stosować `.ai/AI_AGENT_COMMUNICATION_PROTOCOL.md` jako standard przekazywania informacji.

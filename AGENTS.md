@@ -10,11 +10,12 @@
 Before coding:
 
 1. Read `.ai/PROJECT_STATE.md`.
-2. Read `.ai/TASKS_INDEX.md`.
-3. Read the assigned `.ai/tasks/TASK-XXX/TASK.md`.
-4. Confirm scope and files allowed to change.
-5. Do not change files outside scope without owner approval.
-6. After work, update `STATE.md`, `CHANGELOG.md` and `TEST_REPORT.md`.
+2. Read `.ai/AI_AGENT_COMMUNICATION_PROTOCOL.md`.
+3. Read `.ai/TASKS_INDEX.md`.
+4. Read the assigned `.ai/tasks/TASK-XXX/TASK.md`.
+5. Confirm scope and files allowed to change.
+6. Do not change files outside scope without owner approval.
+7. After work, update `STATE.md`, `CHANGELOG.md` and `TEST_REPORT.md`.
 
 ---
 
@@ -117,6 +118,8 @@ VERIFY: <co Codex faktycznie sprawdzil>
 NEXT: <kolejny bezpieczny krok>
 ```
 
+Szczegółowy standard przekazywania informacji przez GitHub opisuje `.ai/AI_AGENT_COMMUNICATION_PROTOCOL.md`.
+
 Zasady optymalizacji tokenow:
 - Gemini wykonuje szerokie, tokenochlonne sprawdzenia i streszcza wynik.
 - Codex/ChatGPT w pierwszej kolejnosci analizuje `git diff`, nowe/zmienione testy, punkty integracji i ryzyka runtime.
@@ -128,6 +131,7 @@ Zasady optymalizacji tokenow:
 ## 4. Struktura Planow i Dokumentacji
 
 ```
+.ai/AI_AGENT_COMMUNICATION_PROTOCOL.md — standard komunikacji między modelami AI przez GitHub
 docs/superpowers/plans/     — plany wykonawcze (roadmapa, state-first plan, itp.)
 analizy/                    — raporty analityczne i synteza
 README.md                   — glowna dokumentacja projektu
@@ -170,8 +174,9 @@ Natychmiastowe nastepne dzialanie dla nastepnego modelu.
 - ❌ Nie zmieniaj interfejsow publicznych modulow bez aktualizacji wszystkich uzyc.
 - ❌ Nie commituj kodu bez uruchomienia testow (`python -m unittest discover app_cv/tests`).
 - ❌ Nie ignoruj istniejacych planow — przeczytaj je zanim zaczniesz nowa prace.
+- ❌ Nie ignoruj `.ai/AI_AGENT_COMMUNICATION_PROTOCOL.md` przy przekazywaniu pracy między modelami.
 
 ---
 
-*Ostatnia aktualizacja: 2026-05-30 | Autorzy: Opus (Anthropic Claude), Codex (OpenAI)*
+*Ostatnia aktualizacja: 2026-05-31 | Autorzy: Opus (Anthropic Claude), Codex (OpenAI), Gemini (Google DeepMind)*
 *Zatwierdzil: Michal*
