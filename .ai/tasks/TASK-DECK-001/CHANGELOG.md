@@ -1,4 +1,4 @@
-# Rejestr Zmian (CHANGELOG) — TASK-SCAN-003
+# Rejestr Zmian (CHANGELOG) — TASK-DECK-001
 
 Precyzyjny rejestr zmian wprowadzonych w ramach wdrożenia nowej talii Zodiak.
 
@@ -22,7 +22,7 @@ Precyzyjny rejestr zmian wprowadzonych w ramach wdrożenia nowej talii Zodiak.
 ## Modyfikowane pliki produkcyjne
 
 ### Backend CV
-* [app_cv/main.py](file:///e:/Antigravity/Projekty/TAROT/app_cv/main.py) — Dynamiczne ładowanie wzorców z wybranej katalogu talii na podstawie zmiennej środowiskowej `TAROTVISION_DECK`.
+* [app_cv/main.py](file:///e:/Antigravity/Projekty/TAROT/app_cv/main.py) — Dynamiczne ładowanie wzorców z wybranego katalogu talii na podstawie zmiennej środowiskowej `TAROTVISION_DECK`.
 
 ### Frontend AR
 * [app_ar/src/renderer/textureCache.js](file:///e:/Antigravity/Projekty/TAROT/app_ar/src/renderer/textureCache.js) — Rozszerzenie `cardNames` o dynamiczny preload i wsparcie w locie dla obu talii (RWS i Zodiak).
@@ -32,4 +32,4 @@ Precyzyjny rejestr zmian wprowadzonych w ramach wdrożenia nowej talii Zodiak.
 
 ### Dokumentacja AI
 * [.ai/PROJECT_STATE.md](file:///e:/Antigravity/Projekty/TAROT/.ai/PROJECT_STATE.md) — Dodanie opisu integracji nowej talii do listy ukończonych prac.
-* [.ai/TASKS_INDEX.md](file:///e:/Antigravity/Projekty/TAROT/.ai/TASKS_INDEX.md) — Dodanie wpisu o TASK-SCAN-003.
+* [.ai/TASKS_INDEX.md](file:///e:/Antigravity/Projekty/TAROT/.ai/TASKS_INDEX.md) — Dodanie wpisu o TASK-DECK-001.

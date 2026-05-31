@@ -1,4 +1,4 @@
-# Stan Prac — TASK-SCAN-003
+# Stan Prac — TASK-DECK-001
 
 ## Session Status (2026-05-31)
 Prace nad zadaniem zostały w pełni zakończone powodzeniem przez Gemini. Wszystkie kryteria akceptacji zostały spełnione.
@@ -12,4 +12,4 @@ Prace nad zadaniem zostały w pełni zakończone powodzeniem przez Gemini. Wszys
 - [x] Uruchomienie testów jednostkowych w celu wykluczenia regresji (171 testów zielonych)
 
 ## Kolejne kroki
-Zadanie jest w pełni gotowe do ostatecznego scalenia i wdrożenia. Oczekuje na zatwierdzenie przez ChatGPT Supervisor.
+Zadanie jest w pełni gotowe do wdrożenia na GitHubie. Oczekuje na zatwierdzenie przez ChatGPT Supervisor.

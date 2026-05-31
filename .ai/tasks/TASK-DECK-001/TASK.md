@@ -1,4 +1,4 @@
-# TASK-SCAN-003: Wdrożenie nowej talii Zodiak i dynamiczny wybór w locie
+# TASK-DECK-001: Wdrożenie nowej talii Zodiak i dynamiczny wybór w locie
 
 ## Opis zadania
 Zadanie polega na pełnym zaimportowaniu nowej, fizycznie zeskanowanej talii kart o nazwie "Zodiak" do TarotVision, uelastycznieniu backendu CV, frontendu AR oraz skryptu startowego, tak by system dynamicznie obsługiwał wiele talii.
@@ -6,7 +6,7 @@ Zadanie polega na pełnym zaimportowaniu nowej, fizycznie zeskanowanej talii kar
 ## Zakres (Scope)
 * Przygotowanie asystenta importu i przetworzenie 78 awersów oraz 1 rewersu z formatu PNG (z `scans_output/Zodiak`) do formatu WebP (AR, miniatury) oraz JPG (wzorce CV) z optymalnym skalowaniem.
 * Uelastycznienie backendu CV w `app_cv/main.py` – dynamiczne wczytywanie wzorców na podstawie zmiennej środowiskowej `TAROTVISION_DECK`.
-* Uelastycznienie frontendu w `app_ar/src/renderer/textureCache.js` – automatyczny preload i wsparcie dla wczytywania w locie obu talii (RWS i Zodiak).
+* Uelastycznienie frontendu in `app_ar/src/renderer/textureCache.js` – preload i wsparcie dla wczytywania w locie obu talii (RWS i Zodiak).
 * Rozbudowanie skryptu startowego `start_tarotvision.bat` o interaktywne menu wyboru talii przed uruchomieniem serwera.
 
 ## Pliki dopuszczone do zmiany (Files Allowed to Change)
