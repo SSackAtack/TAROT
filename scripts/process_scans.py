@@ -22,6 +22,18 @@ if sys.platform == "win32":
     except ImportError:
         HAS_WIA = False
 
+def log_to_file(message, level="INFO"):
+    """Zapisuje zdarzenie do dedykowanego pliku logów logs/process_scans.log"""
+    try:
+        log_dir = os.path.abspath("logs")
+        os.makedirs(log_dir, exist_ok=True)
+        log_path = os.path.join(log_dir, "process_scans.log")
+        timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+        with open(log_path, "a", encoding="utf-8") as f:
+            f.write(f"[{timestamp}] [{level}] {message}\n")
+    except Exception:
+        pass
+
 def order_points(pts):
     """
     Porządkuje 4 punkty wierzchołkowe w stałej kolejności:
@@ -88,10 +100,12 @@ def scan_image_via_wia():
         print("Powody:")
         print("1. Nie pracujesz na systemie Windows (WIA działa tylko na Windows).")
         print("2. Brak biblioteki pywin32. Uruchom 'install_dependencies.bat', aby ją zainstalować.")
+        log_to_file("Próba skanowania WIA bez zainstalowanej biblioteki pywin32 lub na systemie innym niż Windows", "ERROR")
         return None
 
     try:
         # Tworzymy systemowy obiekt dialogu skanowania WIA
+        log_to_file("Inicjalizacja sprzętowa skanera WIA...", "INFO")
         dialog = win32com.client.Dispatch("WIA.CommonDialog")
         
         print("\n -> [WIA] Inicjalizacja sprzetowa skanera...")
@@ -122,16 +136,26 @@ def scan_image_via_wia():
                 os.remove(temp_path)
                 
             image.SaveFile(temp_path)
+            # Zapisujemy stałą kopię diagnostyczną, która nie jest usuwana
+            try:
+                import shutil
+                shutil.copy2(temp_path, os.path.join(scans_input_dir, "last_wia_scan.jpg"))
+                log_to_file("Zapisano kopię diagnostyczną scans_input/last_wia_scan.jpg", "INFO")
+            except Exception as e:
+                log_to_file(f"Nie udało się zapisać kopii last_wia_scan.jpg: {e}", "ERROR")
             print(" -> [SUKCES] Pobrano skan z urządzenia!")
+            log_to_file(f"Pomyślnie pobrano skan z urządzenia WIA i zapisano jako plik tymczasowy: {temp_path}", "INFO")
             return temp_path
             
     except Exception as e:
         err_str = str(e)
         if "0x800704c7" in err_str.lower() or "anulowano" in err_str.lower() or "canceled" in err_str.lower():
             print("\n[WIA] Skanowanie zostało anulowane przez użytkownika.")
+            log_to_file("Skanowanie WIA zostało anulowane przez użytkownika.", "WARNING")
         else:
             print(f"\n[BŁĄD] Wystąpił błąd komunikacji WIA ze skanerem: {e}")
             print("Upewnij się, że skaner jest podłączony do prądu, włączony i podpięty do komputera USB.")
+            log_to_file(f"Błąd komunikacji WIA ze skanerem: {e}", "ERROR")
     return None
 
 def process_scanned_sheet(sheet_path, output_dir, args, start_index=0, custom_prefix=None, is_back=False):
@@ -141,16 +165,19 @@ def process_scanned_sheet(sheet_path, output_dir, args, start_index=0, custom_pr
     """
     if not os.path.exists(sheet_path):
         print(f"[BŁĄD] Plik skanu nie istnieje: {sheet_path}")
+        log_to_file(f"Plik skanu nie istnieje: {sheet_path}", "ERROR")
         return start_index, 0
 
     # Wczytanie obrazu w oryginalnej wysokiej rozdzielczości
     img = cv2.imread(sheet_path)
     if img is None:
-        print(f"[BŁĄD] Nie można załadować obrazu: {sheet_path}")
+        print(f"[BŁĞD] Nie można załadować obrazu: {sheet_path}")
+        log_to_file(f"Nie można załadować obrazu za pomocą OpenCV: {sheet_path}", "ERROR")
         return start_index, 0
 
     h_orig, w_orig = img.shape[:2]
     print(f"\nPrzetwarzam arkusz: {os.path.basename(sheet_path)} ({w_orig}x{h_orig} px)...")
+    log_to_file(f"Rozpoczęto przetwarzanie arkusza: {sheet_path} ({w_orig}x{h_orig} px)", "INFO")
 
     # Krok 1: Przeskalowanie robocze do wykrywania konturów
     WORK_WIDTH = 1600
@@ -167,9 +194,11 @@ def process_scanned_sheet(sheet_path, output_dir, args, start_index=0, custom_pr
     if args.background == "auto":
         is_dark = detect_background_dark(gray)
         print(f" -> [AUTO] Wykryto tło: {'CIEMNE' if is_dark else 'JASNE'}")
+        log_to_file(f"Autodetekcja tła dla {os.path.basename(sheet_path)}: {'CIEMNE' if is_dark else 'JASNE'}", "INFO")
     else:
         is_dark = (args.background == "dark")
         print(f" -> Tło ustawione jako: {'CIEMNE' if is_dark else 'JASNE'}")
+        log_to_file(f"Ustawiono tło manualnie dla {os.path.basename(sheet_path)}: {'CIEMNE' if is_dark else 'JASNE'}", "INFO")
 
     # Progowanie w zależności od tła
     if is_dark:
@@ -194,11 +223,13 @@ def process_scanned_sheet(sheet_path, output_dir, args, start_index=0, custom_pr
         if min_area <= area <= max_area:
             peri = cv2.arcLength(cnt, True)
             approx = cv2.approxPolyDP(cnt, 0.02 * peri, True)
-            if len(approx) >= 4 and len(approx) <= 6:
+            if len(approx) >= 4 and len(approx) <= 8:
                 card_contours.append(cnt)
 
     print(f" -> Wykryto {len(card_contours)} potencjalnych kart na arkuszu.")
+    log_to_file(f"Wykryto {len(card_contours)} konturów kart spełniających kryteria wymiarów na arkuszu {os.path.basename(sheet_path)}", "INFO")
     if len(card_contours) == 0:
+        log_to_file(f"OSTRZEŻENIE: Wykryto 0 kart na arkuszu: {os.path.basename(sheet_path)}. Prawdopodobnie brak kontrastu z tłem lub złe DPI.", "WARNING")
         print("\n    [INFO] Wykryto 0 kart na arkuszu! Najczestsze przyczyny:")
         print("    1. Brak kontrastu: Jasne karty na jasnym/bialym tle skanera (zamknieta biała pokrywa).")
         print("       -> Rozwiazanie: Skanuj z otwarta pokrywa (ciemne tlo) lub podloz czarna podkladke.")
@@ -308,6 +339,7 @@ def process_scanned_sheet(sheet_path, output_dir, args, start_index=0, custom_pr
                 cv2.imwrite(out_path, warped_jpg, [int(cv2.IMWRITE_JPEG_QUALITY), args.quality])
 
             print(f"   -> Wycięto i zapisano: {filename} ({args.target_width}x{args.target_height} px)")
+            log_to_file(f"Zapisano wyciętą kartę: {filename} w {output_dir}", "INFO")
         
         saved_count += 1
 
@@ -316,6 +348,7 @@ def process_scanned_sheet(sheet_path, output_dir, args, start_index=0, custom_pr
         debug_path = os.path.join(output_dir, debug_filename)
         cv2.imwrite(debug_path, img_debug)
         print(f" -> [DEBUG] Zapisano obraz podglądu detekcji: {debug_filename}")
+        log_to_file(f"Zapisano obraz podglądu detekcji: {debug_path}", "INFO")
 
     return start_index + saved_count, saved_count
 
@@ -332,6 +365,7 @@ def run_interactive_assistant(args):
     
     if mode == "T":
         # Scenariusz A: Skan próbny
+        log_to_file("Rozpoczęto interaktywny SKAN PRÓBNY", "INFO")
         print("\n -> Wybrano tryb SKANU PROBNEGO (prefiks plikow: Test_XX).")
         print(" -> Skaner wykona 1 probny skan, a gotowe karty zapisze jako Test_XX.")
         print(" -> Przygotuj skaner, poloz karty i nacisnij Enter, aby rozpoczac...")
@@ -340,16 +374,30 @@ def run_interactive_assistant(args):
         wia_temp_file = scan_image_via_wia()
         if wia_temp_file is None:
             print("[INFO] Skanowanie probne przerwane.")
+            log_to_file("Skanowanie próbne zostało przerwane (brak pliku ze skanera WIA).", "WARNING")
             return
             
         # Przetwarzamy pojedynczy arkusz testowy
-        process_scanned_sheet(wia_temp_file, args.output_dir, args, start_index=0, custom_prefix="Test")
+        next_idx, extracted_count = process_scanned_sheet(wia_temp_file, args.output_dir, args, start_index=0, custom_prefix="Test")
         
-        # Usuwamy plik tymczasowy
-        try:
-            os.remove(wia_temp_file)
-        except:
-            pass
+        # Jeśli nie wykryto żadnej karty, zachowujemy plik tymczasowy w celach diagnostycznych
+        if extracted_count == 0:
+            failed_filename = f"failed_scan_{int(time.time())}.jpg"
+            failed_path = os.path.join(os.path.dirname(wia_temp_file), failed_filename)
+            try:
+                os.rename(wia_temp_file, failed_path)
+                print(f"\n[DIAGNOSTYKA] Zachowano surowy skan do analizy w: scans_input/{failed_filename}")
+                print("Możesz go otworzyć i sprawdzić, czy obraz jest prawidłowo naświetlony oraz czy tło jest kontrastowe.")
+                log_to_file(f"Nie wykryto kart w skanie próbnym. Zachowano surowy skan jako: {failed_path}", "WARNING")
+            except Exception as e:
+                log_to_file(f"Błąd przy zachowywaniu nieudanego skanu: {e}", "ERROR")
+        else:
+            # Usuwamy plik tymczasowy tylko w przypadku sukcesu
+            try:
+                os.remove(wia_temp_file)
+            except:
+                pass
+            log_to_file(f"Skan próbny zakończony pomyślnie. Wycięto kart: {extracted_count}.", "INFO")
             
         print("\n[SUKCES] Probna obrobka zakonczona pomyslnie!")
         print("Otwieranie folderu scans_output...")
@@ -385,6 +433,7 @@ def run_interactive_assistant(args):
         
         scanned_count = 0
         sheet_index = 1
+        log_to_file(f"Rozpoczęto masowe skanowanie talii '{deck_name}' (oczekiwane karty: {total_cards})", "INFO")
         
         while scanned_count < total_cards:
             print(f"\n=============================================================")
@@ -398,11 +447,13 @@ def run_interactive_assistant(args):
             wia_temp_file = scan_image_via_wia()
             if wia_temp_file is None:
                 print("\n[INFO] Skanowanie tego arkusza nie powiodlo sie.")
+                log_to_file(f"Skanowanie arkusza #{sheet_index} nie powiodło się lub zostało przerwane.", "WARNING")
                 retry = input("Czy chcesz sprobowac ponownie skanowac ten arkusz? [T/N]: ").strip().upper()
                 if retry == "T":
                     continue
                 else:
                     print(f"\n[INFO] Skanowanie przerwane. Zapisano lacznie {scanned_count} kart.")
+                    log_to_file(f"Skanowanie przerwane przez użytkownika. Zapisano łącznie {scanned_count} z {total_cards} kart.", "INFO")
                     break
             
             # Przetwarzamy skan z poprawnym dynamicznym indeksem startowym
@@ -410,14 +461,25 @@ def run_interactive_assistant(args):
                 wia_temp_file, deck_output_dir, args, start_index=scanned_count, custom_prefix=deck_name
             )
             
-            scanned_count += extracted_count
-            sheet_index += 1
-            
-            # Usuwamy plik tymczasowy
-            try:
-                os.remove(wia_temp_file)
-            except:
-                pass
+            # Jeśli nie wykryto żadnej karty, zachowujemy plik tymczasowy do diagnostyki
+            if extracted_count == 0:
+                failed_filename = f"failed_scan_{deck_name}_sheet_{sheet_index}_{int(time.time())}.jpg"
+                failed_path = os.path.join(os.path.dirname(wia_temp_file), failed_filename)
+                try:
+                    os.rename(wia_temp_file, failed_path)
+                    print(f"\n[DIAGNOSTYKA] Z powodu braku wykrycia kart, zachowano surowy skan w: scans_input/{failed_filename}")
+                    log_to_file(f"Nie wykryto kart na arkuszu #{sheet_index} talii '{deck_name}'. Zachowano surowy skan jako: {failed_path}", "WARNING")
+                except Exception as e:
+                    log_to_file(f"Błąd przy zachowywaniu nieudanego skanu: {e}", "ERROR")
+            else:
+                scanned_count += extracted_count
+                sheet_index += 1
+                # Usuwamy plik tymczasowy
+                try:
+                    os.remove(wia_temp_file)
+                except:
+                    pass
+                log_to_file(f"Pomyślnie przetworzono arkusz #{sheet_index-1}. Zeskanowano łącznie {scanned_count} kart.", "INFO")
                 
             if scanned_count >= total_cards:
                 print(f"\n=============================================================")
@@ -434,6 +496,7 @@ def run_interactive_assistant(args):
                 
         # Jeśli zeskanowano całą talię, dodajemy krok na skanowanie rewersu (koszulki)
         if scanned_count >= total_cards:
+            log_to_file("Rozpoczęto dodatkowy krok: skanowanie rewersu kart", "INFO")
             print(f"\n=============================================================")
             print(f"       KROK DODATKOWY: SKANOWANIE REWERSU (KOSZULKI)")
             print(f"=============================================================")
@@ -447,15 +510,28 @@ def run_interactive_assistant(args):
             if wia_temp_file is not None:
                 print(" -> Przetwarzanie skanu rewersu...")
                 # Przetwarzamy obraz z flagą is_back=True
-                process_scanned_sheet(
+                _, extracted_count = process_scanned_sheet(
                     wia_temp_file, deck_output_dir, args, start_index=0, custom_prefix=deck_name, is_back=True
                 )
-                # Usuwamy plik tymczasowy
-                try:
-                    os.remove(wia_temp_file)
-                except:
-                    pass
-                print(f"\n -> [SUKCES] Rewers został pomyślnie zeskanowany i zapisany!")
+                
+                # Jeśli nie wykryto rewersu, zachowujemy plik tymczasowy
+                if extracted_count == 0:
+                    failed_filename = f"failed_scan_{deck_name}_back_{int(time.time())}.jpg"
+                    failed_path = os.path.join(os.path.dirname(wia_temp_file), failed_filename)
+                    try:
+                        os.rename(wia_temp_file, failed_path)
+                        print(f"\n[DIAGNOSTYKA] Nie wykryto rewersu! Zachowano surowy skan w: scans_input/{failed_filename}")
+                        log_to_file(f"Nie wykryto rewersu kart talii '{deck_name}'. Zachowano surowy skan jako: {failed_path}", "WARNING")
+                    except Exception as e:
+                        log_to_file(f"Błąd przy zachowywaniu nieudanego skanu rewersu: {e}", "ERROR")
+                else:
+                    # Usuwamy plik tymczasowy
+                    try:
+                        os.remove(wia_temp_file)
+                    except:
+                        pass
+                    print(f"\n -> [SUKCES] Rewers został pomyślnie zeskanowany i zapisany!")
+                    log_to_file(f"Pomyślnie zeskanowano i zapisano rewers kart talii '{deck_name}'", "INFO")
             else:
                 print("\n[INFO] Skanowanie rewersu zostało pominięte lub nie powiodło się.")
 
@@ -474,7 +550,7 @@ if __name__ == "__main__":
     parser.add_argument("scans_dir", nargs="?", default="scans_input", help="Katalog wejściowy ze skanami (domyślnie: scans_input)")
     parser.add_argument("output_dir", nargs="?", default="scans_output", help="Katalog wyjściowy dla wyciętych kart (domyślnie: scans_output)")
     parser.add_argument("--scan", action="store_true", help="Uruchamia fizyczne skanowanie za pomocą systemowego WIA przed kadrowaniem")
-    parser.add_argument("--background", choices=["dark", "light", "auto"], default="dark", help="Typ tła skanera (domyślnie: dark)")
+    parser.add_argument("--background", choices=["dark", "light", "auto"], default="auto", help="Typ tła skanera (domyślnie: auto)")
     parser.add_argument("--format", choices=["png", "jpg", "webp"], default="webp", help="Format zapisu wyjściowego kart (domyślnie: webp)")
     parser.add_argument("--naming", choices=["arcana", "generic"], default="arcana", help="Styl nazywania kart: arcana lub generic (domyślnie: arcana)")
     parser.add_argument("--start-index", type=int, choices=[0, 1], default=0, help="Indeks startowy numeracji kart (domyślnie: 0)")

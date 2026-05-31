@@ -43,7 +43,7 @@ echo zalecamy skanowanie do bezstratnego formatu PNG/TIFF za pomoca
 echo oprogramowania od skanera i wybranie opcji [2] OBROB GOTOWE PLIKI.
 echo.
 echo Uruchamianie interaktywnego asystenta w Pythonie...
-python scripts/process_scans.py --interactive --format png --naming generic --debug-overlay
+python scripts/process_scans.py --interactive --format png --naming generic --debug-overlay --background auto
 
 if errorlevel 1 goto ERROR_OCCURRED
 goto MENU
