@@ -6,6 +6,9 @@
 > [!NOTE]
 > Wszystkie poniższe testy manualne zostały powtórzone i pomyślnie zwalidowane na systemie Windows **po wdrożeniu poprawki `setlocal EnableDelayedExpansion` oraz zastosowaniu składni `!PORT_CHOICE!`**. Naprawiło to problem wczesnej ewaluacji zmiennej wewnątrz bloku instrukcji warunkowej deweloperskich skryptów dewelopera.
 
+> [!IMPORTANT]
+> **Rozwiązanie błędu składni CMD (Parser Syntax Error):** Wyeliminowano problem natychmiastowego zamykania się okna konsoli zaraz po uruchomieniu pliku. Przyczyną były nawiasy okrągłe używane w komendach `echo` wewnątrz bloku `if` (np. `(Zalecane)`), które interpreter deweloperski CMD traktował jako koniec bloku instrukcji `if (...)`. Zastąpienie ich przez nawiasy kwadratowe `[...]` przywróciło pełną stabilność parsowania pliku wsadowego dewelopera.
+
 ---
 
 ## 2. Raport z Wykonania Testów Manualnych
