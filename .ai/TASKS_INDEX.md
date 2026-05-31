@@ -26,7 +26,7 @@ Ten plik stanowi centralny rejestr wszystkich zadań (Tasks) realizowanych w pro
 | **TASK-DECK-007** | `APPROVED` | `master` | Gemini | Frontend lazy loading tylko aktywnych talii | 2026-05-31 | APPROVED BY CHATGPT SUPERVISOR |
 | **TASK-DECK-008** | `APPROVED` | `master` | Gemini | Backend CV registry tylko dla aktywnych talii | 2026-05-31 | APPROVED BY CHATGPT SUPERVISOR |
 | **TASK-DECK-009** | `APPROVED` | `master` | Gemini | WebSocket payload z deck_id + card_id | 2026-05-31 | APPROVED BY CHATGPT SUPERVISOR |
-| **TASK-DECK-010** | `IN_PROGRESS` | `task/deck-010-studio-active-decks-ui` | Gemini | UI wyboru 1–3 talii w Studio / launcherze | 2026-05-31 | Awaiting Gemini |
+| **TASK-DECK-010** | `DONE` | `task/deck-010-studio-active-decks-ui` | Gemini | UI wyboru 1–3 talii w Studio / launcherze | 2026-05-31 | Awaiting ChatGPT Supervisor |
 
 ---
 
