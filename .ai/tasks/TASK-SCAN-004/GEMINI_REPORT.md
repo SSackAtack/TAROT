@@ -10,7 +10,7 @@ TASK-SCAN-004: Poprawa orientacji i segmentacji tła w skanerze
 `01cfe1a52da816a57e59f4d6291474e1c1bdaf19` (doc: dodanie oficjalnego raportu Gemini do zadania TASK-DECK-001)
 
 ## Head Commit
-`PENDING` (Zostanie wygenerowany po zacommitowaniu zmian w tym kroku)
+`6a12b4e388c57400fc550c84469bf8cf7c4d4efc`
 
 ## Files Changed
 * [scripts/process_scans.py](file:///e:/Antigravity/Projekty/TAROT/scripts/process_scans.py) (Kod główny obróbki i auto-orientacji)
