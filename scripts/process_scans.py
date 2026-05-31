@@ -221,10 +221,23 @@ def process_scanned_sheet(sheet_path, output_dir, args, start_index=0, custom_pr
     for cnt in contours:
         area = cv2.contourArea(cnt)
         if min_area <= area <= max_area:
-            peri = cv2.arcLength(cnt, True)
-            approx = cv2.approxPolyDP(cnt, 0.02 * peri, True)
-            if len(approx) >= 4 and len(approx) <= 8:
-                card_contours.append(cnt)
+            rect = cv2.minAreaRect(cnt)
+            (x, y), (w_rect, h_rect), angle = rect
+            if min(w_rect, h_rect) > 0:
+                aspect_ratio = max(w_rect, h_rect) / min(w_rect, h_rect)
+                
+                # Solidity zapobiega wykrywaniu dziwnych, ażurowych kształtów
+                hull = cv2.convexHull(cnt)
+                hull_area = cv2.contourArea(hull)
+                solidity = area / hull_area if hull_area > 0 else 0
+                
+                # Karty Tarota mają Aspect Ratio w okolicach 1.6-1.7, dajemy bezpieczny przedział 1.3 - 2.1
+                # Solidity na poziomie >= 0.6 pozwala na wykrycie kart z refleksami świetlnymi
+                if 1.3 <= aspect_ratio <= 2.1 and solidity >= 0.6:
+                    card_contours.append(cnt)
+                    log_to_file(f"Zaakceptowano kontur karty: pow={area:.1f}, AR={aspect_ratio:.2f}, solidity={solidity:.2f}", "INFO")
+                else:
+                    log_to_file(f"Odrzucono kontur: pow={area:.1f}, AR={aspect_ratio:.2f}, solidity={solidity:.2f} (złe AR lub solidity)", "DEBUG")
 
     print(f" -> Wykryto {len(card_contours)} potencjalnych kart na arkuszu.")
     log_to_file(f"Wykryto {len(card_contours)} konturów kart spełniających kryteria wymiarów na arkuszu {os.path.basename(sheet_path)}", "INFO")
