@@ -10,7 +10,7 @@ TASK-DECK-006: Manifest talii i konfiguracja aktywnych talii sesji (1–3 talie)
 `cf8e19f6c2bfa7d81d0fa5681ab9bb426f51c6e8`
 
 ## Head Commit
-`feat: add deck manifest and active session deck config` (Commit w trakcie tworzenia na branchu roboczym)
+`d4a97eb825fd76a22d851c79631cbb481bfac9e3`
 
 ## Files Changed
 - `app_ar/public/decks_manifest.json` [NEW]
@@ -31,7 +31,7 @@ Pomyślnie zrealizowano pierwszy etap architektury obsługi wielu talii jednocze
    * **Gilded** (`gilded`) — 78 kart, prefiks `Gilded`, rewers i wzorce CV w pełni aktywne.
    * **Marchetti** (`marchetti`) — 78 kart, prefiks `Marchetti`, rewers i wzorce CV w pełni aktywne.
    * **Boski** (`boski`) — 78 kart, prefiks `Boski`, rewers i wzorce CV w pełni aktywne.
-   * **Światło i Cień** (`światło_i_cień`) — 78 kart, prefiks `Światło_i_Cień`, rewers i wzorce CV w pełni aktywne.
+   * **Światło i Cień** (`swiatlo_i_cien`) — 78 kart, prefiks `Światło_i_Cień`, rewers i wzorce CV w pełni aktywne.
 
 2. **Utworzono Konfigurację Aktywnej Sesji (`active_decks.json`)** - domyślnie wskazano 3 aktywne talie używane w czytaniu:
    * `rider-waite-smith`
