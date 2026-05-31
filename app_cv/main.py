@@ -383,57 +383,123 @@ flann = cv2.FlannBasedMatcher(index_params, search_params)
 clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
 
 # 2. Ladowanie szablonow (naszych wygenerowanych kart JPG)
-log_event(f"[INFO] Ladowanie cyfrowych wzorcow z {CV_ASSETS_DIR}")
 reference_cards = {}
-file_paths = glob.glob(os.path.join(CV_ASSETS_DIR, "*.jpg"))
 
-if not file_paths:
-    log_event("[BLAD] Nie znaleziono zadnych plikow wzorcow .jpg w katalogu!")
-    exit(1)
+active_decks_path = os.path.join(PROJECT_ROOT, "app_ar", "public", "active_decks.json")
+decks_manifest_path = os.path.join(PROJECT_ROOT, "app_ar", "public", "decks_manifest.json")
 
-for file_path in file_paths:
-    card_name = os.path.basename(file_path).replace(".jpg", "")
-    
-    # Wczytywanie w odcieniach szarosci
-    img = cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)
-    
-    if img is None:
-        continue
-    
-    # Stosujemy CLAHE takze na wzorcach — zapewnia spojnosc z klatkami kamery
-    img = clahe.apply(img)
+loaded_from_active = False
+
+if os.path.exists(active_decks_path) and os.path.exists(decks_manifest_path):
+    try:
+        with open(active_decks_path, "r", encoding="utf-8") as f:
+            active_data = json.load(f)
+        with open(decks_manifest_path, "r", encoding="utf-8") as f:
+            manifest_data = json.load(f)
+            
+        active_ids = active_data.get("active_decks", [])
+        manifest_decks = manifest_data.get("decks", [])
         
-    kp, des = orb.detectAndCompute(img, None)
-    if des is not None:
-        kp = kp[:500]
-        des = des[:500]
+        active_decks = [d for d in manifest_decks if d.get("id") in active_ids]
+        
+        if active_decks:
+            log_event(f"[INFO] Wykryto {len(active_decks)} aktywne talie z konfiguracji sesji: {[d.get('id') for d in active_decks]}")
+            for deck in active_decks:
+                deck_id = deck.get("id")
+                cv_path_rel = deck.get("cv_path")
+                cv_path_full = os.path.abspath(os.path.join(PROJECT_ROOT, cv_path_rel))
+                
+                log_event(f"[INFO] Ladowanie cyfrowych wzorcow dla talii '{deck.get('display_name')}' z {cv_path_full}")
+                file_paths = glob.glob(os.path.join(cv_path_full, "*.jpg"))
+                
+                if not file_paths:
+                    log_event(f"[OSTRZEZENIE] Brak plikow wzorcow .jpg w katalogu: {cv_path_full}")
+                    continue
+                    
+                deck_loaded_count = 0
+                for file_path in file_paths:
+                    card_name = os.path.basename(file_path).replace(".jpg", "")
+                    img = cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)
+                    if img is None:
+                        continue
+                    
+                    img = clahe.apply(img)
+                    kp, des = orb.detectAndCompute(img, None)
+                    if des is not None:
+                        kp = kp[:500]
+                        des = des[:500]
+                        
+                    img_reversed = cv2.rotate(img, cv2.ROTATE_180)
+                    kp_rev, des_rev = orb.detectAndCompute(img_reversed, None)
+                    
+                    card_matcher = None
+                    if des is not None and len(des) > 0:
+                        try:
+                            card_matcher = cv2.BFMatcher(cv2.NORM_HAMMING)
+                            card_matcher.add([des])
+                            card_matcher.train()
+                        except cv2.error:
+                            card_matcher = None
+                            
+                    reference_cards[card_name] = {
+                        "image": img,
+                        "keypoints": kp,
+                        "descriptors": des,
+                        "reversed_image": img_reversed,
+                        "reversed_keypoints": kp_rev,
+                        "reversed_descriptors": des_rev,
+                        "matcher": card_matcher,
+                    }
+                    deck_loaded_count += 1
+                log_event(f"[OK] Zaladowano {deck_loaded_count} wzorcow dla talii '{deck.get('display_name')}'!")
+            loaded_from_active = True
+    except Exception as e:
+        log_event(f"[OSTRZEZENIE] Blad wczytywania dynamicznej konfiguracji sesji: {e}. Uruchamianie trybu awaryjnego.")
 
-    # Obrocona o 180 stopni — karta postawiona do gory nogami (reversed)
-    img_reversed = cv2.rotate(img, cv2.ROTATE_180)
-    kp_rev, des_rev = orb.detectAndCompute(img_reversed, None)
+# Fallback - if loading from active decks configuration failed or was empty, load single deck from env
+if not loaded_from_active or not reference_cards:
+    log_event(f"[TRYB AWARYJNY] Ladowanie wzorcow dla pojedynczej talii '{DECK_NAME}' z {CV_ASSETS_DIR}")
+    file_paths = glob.glob(os.path.join(CV_ASSETS_DIR, "*.jpg"))
     
-    # Pre-trenowany BF Matcher dla upright wariantu karty (50x szybszy i dokładniejszy niż FLANN)
-    card_matcher = None
-    if des is not None and len(des) > 0:
-        try:
-            card_matcher = cv2.BFMatcher(cv2.NORM_HAMMING)
-            card_matcher.add([des])
-            card_matcher.train()
-        except cv2.error:
-            card_matcher = None
+    if not file_paths:
+        log_event("[BLAD] Nie znaleziono zadnych plikow wzorcow .jpg w katalogu!")
+        exit(1)
+        
+    for file_path in file_paths:
+        card_name = os.path.basename(file_path).replace(".jpg", "")
+        img = cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)
+        if img is None:
+            continue
+            
+        img = clahe.apply(img)
+        kp, des = orb.detectAndCompute(img, None)
+        if des is not None:
+            kp = kp[:500]
+            des = des[:500]
+            
+        img_reversed = cv2.rotate(img, cv2.ROTATE_180)
+        kp_rev, des_rev = orb.detectAndCompute(img_reversed, None)
+        
+        card_matcher = None
+        if des is not None and len(des) > 0:
+            try:
+                card_matcher = cv2.BFMatcher(cv2.NORM_HAMMING)
+                card_matcher.add([des])
+                card_matcher.train()
+            except cv2.error:
+                card_matcher = None
+                
+        reference_cards[card_name] = {
+            "image": img,
+            "keypoints": kp,
+            "descriptors": des,
+            "reversed_image": img_reversed,
+            "reversed_keypoints": kp_rev,
+            "reversed_descriptors": des_rev,
+            "matcher": card_matcher,
+        }
 
-    # Zapisujemy do pamieci referencyjnej
-    reference_cards[card_name] = {
-        "image": img,
-        "keypoints": kp,
-        "descriptors": des,
-        "reversed_image": img_reversed,
-        "reversed_keypoints": kp_rev,
-        "reversed_descriptors": des_rev,
-        "matcher": card_matcher,
-    }
-
-log_event(f"[OK] Zaladowano {len(reference_cards)} wzorcow do pamieci (upright + reversed)!")
+log_event(f"[OK] Zaladowano lacznie {len(reference_cards)} wzorcow do pamieci (upright + reversed)!")
 table_state = TableState(reference_cards.keys())
 table_calibration = TableCalibration(table_width=CAMERA_WIDTH, table_height=CAMERA_HEIGHT)
 log_event("[ARUCO] Modul kalibracji stolu zainicjalizowany (markery ID 10-13, DICT_4X4_50)")
