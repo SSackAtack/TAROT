@@ -10,7 +10,7 @@ TASK-CV-RECT-001 — Parameterize card rectangle detection for autotuning
 `5a6bc541efdf7515cf530fcd07fb773fb94ea088` (docs: update project state after final studio launcher fix)
 
 ## Head Commit
-`6f916a8` (feat: parameterize card rectangle detection)
+`f82365a` (docs: narrow cv rect task scope after review)
 
 ## Files Changed
 * `app_cv/tarotvision/card_detection.py`

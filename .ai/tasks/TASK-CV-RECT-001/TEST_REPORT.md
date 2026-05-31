@@ -62,13 +62,16 @@ Eksperyment potwierdza matematyczną słuszność koncepcji i skuteczność tryb
 
 ---
 
-## 4. Manualne Notatki Diagnostyczne (Symulacja Parametrów)
+## 4. Teoretyczne Notatki Diagnostyczne (THEORETICAL_DIAGNOSTIC_NOTES / NOT_RUN)
 
-Dla ciemnego tła i karty o słabo widocznej ramce (Boski Tarot na ciemnej macie):
-1. **external, Canny 50/150 (Domyślny)**: Niski kontrast ramki sprawia, że krawędzie karty są poszarpane i nie tworzą zamkniętej pętli w detekcji zewnętrznej. Wykrywalność = 0.
-2. **external, Canny 30/100**: Canny wychwytuje słabsze krawędzie, ale w trybie `external` szum brzegowy stołu lub cienie mogą "połknąć" kartę. Wykrywalność = niska/niestabilna.
+> [!NOTE]
+> Poniższa analiza ma charakter wyłącznie teoretyczno-diagnostyczny (NOT_RUN w rzeczywistym wdrożeniu operatorskim z kamerą). Parametryzacja ta nie została jeszcze zmierzona na fizycznym wideo, a ich rzeczywista skuteczność zostanie zweryfikowana w kolejnych etapach autotuningu.
+
+Dla ciemnego tła i karty o słabo widocznej ramce (np. Boski Tarot na ciemnej macie):
+1. **external, Canny 50/150 (Domyślny)**: Niski kontrast ramki sprawia, że krawędzie karty są poszarpane i nie tworzą zamkniętej pętli w detekcji zewnętrznej. Spodziewana wykrywalność = niska lub zerowa.
+2. **external, Canny 30/100**: Canny wychwytuje słabsze krawędzie, ale w trybie `external` szum brzegowy stołu lub cienie mogą "połknąć" kartę. Spodziewana wykrywalność = niestabilna.
 3. **list, Canny 50/150**: Canny przy standardowych progach może gubić słabo kontrastujące krawędzie, ale dzięki trybowi `list` brak zewnętrznej spójności nie blokuje innych wewnętrznych krawędzi (np. ramki wewnętrznej rysunku karty). Liczba kandydatów wzrasta umiarkowanie.
-4. **list, Canny 30/100**: Najbardziej optymalna kombinacja dla trudnych warunków. Canny wykrywa subtelne przejścia tonalne ramki na ciemnym tle, a tryb `list` gwarantuje wyciągnięcie konturu karty zagnieżdżonej na podkładce. Liczba konturów rośnie (ok. 30-50), ale dzięki filtrom powierzchni/proporcji oraz sortowaniu i limitowaniu `max_candidates=10`, algorytm skutecznie pozycjonuje właściwe quady bez obciążania wątku CV.
+4. **list, Canny 30/100**: Canny pozwala na wykrycie subtelniejszych przejść tonalnych ramki na ciemnym tle, a tryb `list` gwarantuje wyciągnięcie konturu karty zagnieżdżonej na podkładce. Liczba konturów rośnie, ale dzięki filtrom powierzchni/proporcji oraz sortowaniu i limitowaniu `max_candidates=10`, algorytm powinien skutecznie pozycjonować właściwe quady bez obciążania wątku CV.
 5. **tree, Canny 30/100**: Działa analogicznie do `list` w kwestii detekcji, buduje dodatkową hierarchię rodzic-dziecko. Przydatne, gdybyśmy w przyszłości chcieli odrzucić kontur nadrzędny (A4) na rzecz podrzędnego (karty).
 
 ---
