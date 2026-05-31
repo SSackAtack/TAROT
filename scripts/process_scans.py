@@ -379,6 +379,19 @@ def process_scanned_sheet(sheet_path, output_dir, args, start_index=0, custom_pr
         (x_mid, y_mid), (w_rect, h_rect), angle_rect = rect
         aspect_ratio = max(w_rect, h_rect) / min(w_rect, h_rect) if min(w_rect, h_rect) > 0 else 1.0
 
+        # Wyliczamy rzeczywistą szerokość i wysokość karty na skanie na podstawie ordered_box
+        width_real = (
+            np.linalg.norm(ordered_box[0] - ordered_box[1]) +
+            np.linalg.norm(ordered_box[3] - ordered_box[2])
+        ) / 2.0
+
+        height_real = (
+            np.linalg.norm(ordered_box[0] - ordered_box[3]) +
+            np.linalg.norm(ordered_box[1] - ordered_box[2])
+        ) / 2.0
+
+        is_landscape_on_scan = width_real > height_real
+
         # Wycinek standardowy (pionowy: 600x1032)
         dst_pts_pion = np.array([
             [0, 0],
@@ -399,13 +412,17 @@ def process_scanned_sheet(sheet_path, output_dir, args, start_index=0, custom_pr
         M_poziom = cv2.getPerspectiveTransform(ordered_box, dst_pts_poziom)
         warped_poziom = cv2.warpPerspective(img, M_poziom, (args.target_height, args.target_width), flags=cv2.INTER_CUBIC)
 
-        # Generujemy 4 warianty o docelowych wymiarach pionowych (600x1032)
-        candidates = {
-            "rot_0": warped_pion,
-            "rot_180": cv2.rotate(warped_pion, cv2.ROTATE_180),
-            "rot_90_cw": cv2.rotate(warped_poziom, cv2.ROTATE_90_CLOCKWISE),
-            "rot_90_ccw": cv2.rotate(warped_poziom, cv2.ROTATE_90_COUNTERCLOCKWISE)
-        }
+        # Generujemy warianty o docelowych wymiarach pionowych (600x1032) w zależności od fizycznej orientacji na skanie
+        if is_landscape_on_scan:
+            candidates = {
+                "rot_90_cw": cv2.rotate(warped_poziom, cv2.ROTATE_90_CLOCKWISE),
+                "rot_90_ccw": cv2.rotate(warped_poziom, cv2.ROTATE_90_COUNTERCLOCKWISE)
+            }
+        else:
+            candidates = {
+                "rot_0": warped_pion,
+                "rot_180": cv2.rotate(warped_pion, cv2.ROTATE_180)
+            }
 
         # Obliczamy scoring jasności dla każdego z wariantów
         best_cand_name = "rot_0"
