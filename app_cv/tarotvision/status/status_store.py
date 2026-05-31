@@ -118,11 +118,19 @@ class StatusStore:
                 enriched_cards.append(card)
 
         with self._lock:
+            # Zachowaj active_decks z obecnego stanu przed nadpisaniem słownika operator
+            old_active_decks = self._status["operator"].get("active_decks")
+
             self._status["detected"] = len(enriched_cards) > 0
             self._status["cards"] = enriched_cards
             self._status["metrics"] = copy.deepcopy(metrics)
             self._status["runtime"] = copy.deepcopy(runtime)
-            self._status["operator"] = copy.deepcopy(operator)
+            
+            new_operator = copy.deepcopy(operator)
+            if ("active_decks" not in new_operator or not new_operator["active_decks"]) and old_active_decks is not None:
+                new_operator["active_decks"] = old_active_decks
+            self._status["operator"] = new_operator
+
             if layout is not None:
                 self._status["layout"] = copy.deepcopy(layout)
             if warnings is not None:
