@@ -14,7 +14,7 @@ ChatGPT Supervisor
 
 ## Current State
 Zadanie zostało w pełni zaimplementowane, przetestowane i zintegrowane!
-Panel wyboru talii w konsoli Studio pozwala na interaktywny wybór od 1 do 3 aktywnych talii, zapisuje plik konfiguracyjny, dynamicznie przeładowuje wzorce CV w locie pod lockiem w backendzie oraz asynchronicznie preloaduje tekstury we frontendowym cache Three.js. Kod pomyślnie przechodzi 173 testy jednostkowe backendu, walidację manifestów i produkcyjne budowanie Vite. Zmiany są zacommitowane na branchu roboczym i wypchnięte na GitHuba. Oczekuje na review.
+Panel wyboru talii w konsoli Studio pozwala na interaktywny wybór od 1 do 3 aktywnych talii, zapisuje plik konfiguracyjny, dynamicznie przeładowuje wzorce CV w locie pod lockiem w backendzie oraz asynchronicznie preloaduje tekstury we frontendowym cache Three.js. Kod pomyślnie przechodzi 174 testy jednostkowe backendu, walidację manifestów i produkcyjne budowanie Vite. Zmiany są zacommitowane na branchu roboczym i wypchnięte na GitHuba. Oczekuje na review.
 
 ## What Was Done By Gemini
 1. Opracowano pełny schemat i kryteria akceptacji w `TASK.md`.
@@ -24,7 +24,7 @@ Panel wyboru talii w konsoli Studio pozwala na interaktywny wybór od 1 do 3 akt
 5. Zbudowano nowoczesny premium interfejs wyboru talii w Sidebarze Studio w `studioConsole.js` z limitami 1-3 talii i reaktywną synchronizacją stanów z WebSocketu.
 6. Wdrożono asynchroniczne doładowywanie tekstur w locie w `textureCache.js` (poprzez dynamiczne importy i preloading brakujących 78 tekstur).
 7. Ostylowano panel w `studio.css` z premium micro-animations i zgaszonymi efektami miedzianego akcentu `#d67d3e`.
-8. Zweryfikowano działanie za pomocą 173 testów jednostkowych CV, testu manifestów oraz Vite build.
+8. Zweryfikowano działanie za pomocą 174 testów jednostkowych CV, testu manifestów oraz Vite build.
 9. Przygotowano pełny zestaw dokumentacji sesyjnej (`CHANGELOG.md`, `TEST_REPORT.md` i `GEMINI_REPORT.md`).
 
 ## What Gemini Should Do Next

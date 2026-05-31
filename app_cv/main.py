@@ -309,7 +309,7 @@ def handle_control_message(message, camera_session):
                     return
             
             active_data = {
-                "schema_version": 1,
+                "version": 1,
                 "active_decks": message.active_decks
             }
             with open(active_decks_path, "w", encoding="utf-8") as f:
