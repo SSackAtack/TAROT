@@ -1,0 +1,76 @@
+{
+  "version": 1,
+  "default_max_active_decks": 3,
+  "decks": [
+    {
+      "id": "rider-waite-smith",
+      "display_name": "Rider-Waite-Smith",
+      "prefix": "RWS",
+      "card_count": 78,
+      "has_back": true,
+      "ar_path_template": "/karty/RWS_{index}.webp",
+      "back_texture": "/karty/RWS_back.webp",
+      "cv_path": "biblioteka_talii/rider-waite-smith/produkcja/wzorce_cv"
+    },
+    {
+      "id": "zodiak",
+      "display_name": "Zodiak",
+      "prefix": "Zodiak",
+      "card_count": 78,
+      "has_back": true,
+      "ar_path_template": "/karty/Zodiak_{index}.webp",
+      "back_texture": "/karty/Zodiak_back.webp",
+      "cv_path": "biblioteka_talii/zodiak/produkcja/wzorce_cv"
+    },
+    {
+      "id": "magic",
+      "display_name": "Magic",
+      "prefix": "Magic",
+      "card_count": 78,
+      "has_back": true,
+      "ar_path_template": "/karty/Magic_{index}.webp",
+      "back_texture": "/karty/Magic_back.webp",
+      "cv_path": "biblioteka_talii/magic/produkcja/wzorce_cv"
+    },
+    {
+      "id": "gilded",
+      "display_name": "Gilded",
+      "prefix": "Gilded",
+      "card_count": 78,
+      "has_back": true,
+      "ar_path_template": "/karty/Gilded_{index}.webp",
+      "back_texture": "/karty/Gilded_back.webp",
+      "cv_path": "biblioteka_talii/gilded/produkcja/wzorce_cv"
+    },
+    {
+      "id": "marchetti",
+      "display_name": "Marchetti",
+      "prefix": "Marchetti",
+      "card_count": 78,
+      "has_back": true,
+      "ar_path_template": "/karty/Marchetti_{index}.webp",
+      "back_texture": "/karty/Marchetti_back.webp",
+      "cv_path": "biblioteka_talii/marchetti/produkcja/wzorce_cv"
+    },
+    {
+      "id": "boski",
+      "display_name": "Boski",
+      "prefix": "Boski",
+      "card_count": 78,
+      "has_back": true,
+      "ar_path_template": "/karty/Boski_{index}.webp",
+      "back_texture": "/karty/Boski_back.webp",
+      "cv_path": "biblioteka_talii/boski/produkcja/wzorce_cv"
+    },
+    {
+      "id": "światło_i_cień",
+      "display_name": "Światło i Cień",
+      "prefix": "Światło_i_Cień",
+      "card_count": 78,
+      "has_back": true,
+      "ar_path_template": "/karty/Światło_i_Cień_{index}.webp",
+      "back_texture": "/karty/Światło_i_Cień_back.webp",
+      "cv_path": "biblioteka_talii/światło_i_cień/produkcja/wzorce_cv"
+    }
+  ]
+}

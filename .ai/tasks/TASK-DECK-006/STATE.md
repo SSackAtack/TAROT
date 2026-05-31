@@ -1,7 +1,7 @@
 # STATE — TASK-DECK-006
 
 ## Status
-TODO / Awaiting Gemini
+DONE
 
 ## Owner
 Gemini
@@ -13,23 +13,19 @@ ChatGPT Supervisor
 2026-05-31
 
 ## Current State
-Zadanie zostało przygotowane jako mały, bezpieczny etap architektury multi-deck. Celem jest dodanie manifestu talii oraz konfiguracji aktywnych talii sesji, bez przebudowy runtime, CV, WebSocket i UI.
+Zadanie zostało pomyślnie zakończone. Utworzono manifest wszystkich 7 dostępnych talii oraz plik konfiguracji aktywnych talii sesji (zgodnie z limitem 1–3 talii). Dodano rygorystyczny skrypt walidacji w Pythonie, który sprawdza spójność danych, limity oraz obecność plików graficznych i CV na dysku. Wszystkie testy backendu (171 testów) oraz budowanie frontendu przechodzą w 100% poprawnie (PASS).
 
-## What Was Done By ChatGPT Supervisor
-- Dodano wpis `TASK-DECK-006` do `.ai/TASKS_INDEX.md`.
-- Utworzono `.ai/tasks/TASK-DECK-006/TASK.md` z pełnym handoffem dla Gemini.
-- Utworzono ten plik statusu.
-
-## What Gemini Should Do Next
-1. Wykonać `git pull` na lokalnym repo.
-2. Przeczytać `.ai/AI_AGENT_COMMUNICATION_PROTOCOL.md`.
-3. Przeczytać `.ai/tasks/TASK-DECK-006/TASK.md`.
-4. Utworzyć branch `task/deck-006-active-session-manifest`.
-5. Wykonać wyłącznie mały zakres taska: manifest talii + aktywne talie sesji.
-6. Zostawić raporty w katalogu taska.
+## What Was Done By Gemini
+1. Utworzono branch roboczy `task/deck-006-active-session-manifest`.
+2. Opracowano centralny manifest talii `app_ar/public/decks_manifest.json` zawierający 7 talii: Rider-Waite-Smith, Zodiak, Magic, Gilded, Marchetti, Boski oraz Światło i Cień.
+3. Utworzono plik konfiguracji aktywnego czytania `app_ar/public/active_decks.json` z domyślnie wybranymi 3 taliami (Rider-Waite-Smith, Zodiak, Magic).
+4. Napisano odporny skrypt automatycznej walidacji `scripts/validate_decks_manifest.py`, sprawdzający poprawność struktury manifestu, limit aktywnych talii (1–3), unikalność ID, obecność wzorców CV oraz fizyczne istnienie rewersów i przykładowych plików AR na dysku.
+5. Pomyślnie przeprowadzono weryfikację dymną i walidację automatyczną (wszystkie warunki OK).
+6. Uruchomiono testy jednostkowe backendu (171/171 PASS) oraz build frontendu (Vite build: PASS).
+7. Zaktualizowano indeks zadań w `.ai/TASKS_INDEX.md` i przygotowano komplet raportów.
 
 ## Blockers
-Brak na starcie.
+Brak.
 
 ## Notes
-Nie robić jeszcze pełnego lazy loadingu, backend CV registry ani WebSocket payload z `deck_id`. To są kolejne taski po zatwierdzeniu manifestu.
+Wszystkie assety graficzne, logika algorytmu CV oraz WebSocket payload pozostały nienaruszone (są w pełni gotowe pod kolejne etapy integracji w TASK-DECK-007+).
