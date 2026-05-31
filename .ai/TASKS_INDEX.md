@@ -28,7 +28,7 @@ Ten plik stanowi centralny rejestr wszystkich zadań (Tasks) realizowanych w pro
 | **TASK-DECK-009** | `APPROVED` | `master` | Gemini | WebSocket payload z deck_id + card_id | 2026-05-31 | APPROVED BY CHATGPT SUPERVISOR |
 | **TASK-DECK-010** | `APPROVED` | `master` | Gemini | UI wyboru 1–3 talii w Studio / launcherze | 2026-05-31 | APPROVED BY CHATGPT SUPERVISOR (PR #4) |
 | **TASK-STUDIO-006** | `APPROVED` | `master` | Gemini | Diagnostyka CV Health Minimal i Dedykowany Launcher Studio | 2026-05-31 | APPROVED BY CHATGPT SUPERVISOR (PR #5) |
-| **TASK-STUDIO-007** | `APPROVED` | `master` | Gemini | Uodpornienie launchera Studio pod zajęty port 5173 | 2026-05-31 | APPROVED BY CHATGPT SUPERVISOR (PR #6) |
+| **TASK-STUDIO-007** | `APPROVED` | `master` | Gemini | Uodpornienie launchera Studio pod zajęty port 5173 | 2026-05-31 | APPROVED BY CHATGPT SUPERVISOR (PR #6 + PR #7 hotfix) |
 
 
 
