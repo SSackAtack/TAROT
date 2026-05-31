@@ -2,7 +2,7 @@
 
 Ten plik przedstawia aktualny status techniczny oraz architekturę projektu TarotVision w pigułce. Służy jako punkt startowy dla każdego agenta AI wchodzącego do projektu.
 
-* **Ostatnia weryfikacja procesu:** 2026-05-31 (Wdrożenie poprawek detekcji tła, geometrii wierzchołków i diagnostyki WIA)
+* **Ostatnia weryfikacja procesu:** 2026-05-31 (Ustandaryzowanie komunikacji między modelami AI przez GitHub)
 
 ---
 
@@ -10,7 +10,7 @@ Ten plik przedstawia aktualny status techniczny oraz architekturę projektu Taro
 
 * **Projekt:** TarotVision / TAROT
 * **Branch stabilny (produkcyjny):** `master`
-* **Aktualna gałąź robocza:** `workflow/ci-bootstrap` (poprzednio `codex/snapshot-first-cv`)
+* **Aktualna gałąź robocza:** `master` / task branches według bieżącego zadania
 * **Aktualny etap:** Zaawansowany Proof of Concept (PoC) / Wczesne MVP Techniczne
 * **Architektura przetwarzania (Pipeline):**
   `Kamera USB (fizyczna / mock)` ➔ `Python/OpenCV (Detekcja kart)` ➔ `WebSocket (Protokół Payload v1)` ➔ `Aplikacja Frontend AR / Studio (Vite + Three.js)` ➔ `OBS Studio (Nakładka graficzna)`
@@ -39,8 +39,9 @@ Ten plik przedstawia aktualny status techniczny oraz architekturę projektu Taro
 
 ## 3. Ostatnie Ukończone Duże Prace
 
+* **TASK-COMM-001 (Standard komunikacji modeli AI):** Dodano `.ai/AI_AGENT_COMMUNICATION_PROTOCOL.md` jako wspólny standard przekazywania pracy między ChatGPT Supervisor, Gemini, Codex i Opus. Michał nie musi decydować, czy instrukcja ma trafić do issue, PR review, komentarza czy pliku `.md`; model zapisujący informację wybiera właściwy kanał GitHuba.
 * **TASK-SCAN-001 (Obróbka Skanów - Hardening):** Kompleksowe utwardzenie i parametryzacja skryptu `scripts/process_scans.py` (CLI, autodetekcja tła, robust corner ordering, PNG/JPG/WebP, podgląd debug i dry-run). Skrypt pomyślnie przeszedł weryfikację na danych syntetycznych (reprodukowalne testy dodane do repozytorium) i jest w pełni gotowy do pierwszych prób kalibracyjnych na fizycznych skanach z urządzenia.
-* **Diagnostyka i Uodpornienie Skanowania WIA (2026-05-31):** Wykryto i rozwiązano problem ze zlewaniem się białych ramek kart tarota z jasnym tłem zamkniętej pokrywy skanera. Wdrożono autodetekcję tła jako domyślny tryb (`--background auto`), zwiększono limit wierzchołków aproksymacji konturu z 6 do 8 w celu obsługi zaokrąglonych rogów fizycznych kart, oraz dodano system rejestrowania logów (`logs/process_scans.log`) i stałego zapisu kopii diagnostycznej (`scans_input/last_wia_scan.jpg`). Stworzono szczegółowy raport: [diagnostyka_skanowania_2026-05-31.md](file:///e:/Antigravity/Projekty/TAROT/analizy/diagnostyka_skanowania_2026-05-31.md).
+* **Diagnostyka i Uodpornienie Skanowania WIA (2026-05-31):** Wykryto i rozwiązano problem ze zlewaniem się białych ramek kart tarota z jasnym tłem zamkniętej pokrywy skanera. Wdrożono autodetekcję tła jako domyślny tryb (`--background auto`), zwiększono limit wierzchołków aproksymacji konturu z 6 do 8 w celu obsługi zaokrąglonych rogów fizycznych kart, oraz dodano system rejestrowania logów (`logs/process_scans.log`) i stałego zapisu kopii diagnostycznej (`scans_input/last_wia_scan.jpg`). Stworzono szczegółowy raport: `analizy/diagnostyka_skanowania_2026-05-31.md`.
 * **Wdrożenie Pełnej Ustandardyzowanej Talii RWS (78 skanów + rewers):** Zastąpiono stare, internetowe assety kart pełną, fizycznie zeskanowaną talią Rider-Waite-Smith (78 awersów oraz 1 rewers), wprowadzając w 100% ustandardyzowane nazewnictwo w formacie `RWS_00` do `RWS_77` oraz `RWS_back` (całkowita rezygnacja z nazw postaci). Zmiany zostały zintegrowane w kodzie frontendu (dynamiczny preload 78 tekstur w locie w `textureCache.js`), w pełni zwalidowane jednostkowo (171 testów zielonych) oraz pomyślnie skompilowane w Vite. Zmiany zostały zacommitowane i spushowane do gałęzi `master` na serwerze, co rozwiązało zgłaszane przez użytkownika ograniczenie do 22 kart.
 * **Task Studio Console 5 & 5b-fix:** Pełne wdrożenie trybu Automatycznego Reżysera z 1.5s histerezą chroniącą przed migotaniem scen, wdrożenie paska osi czasu (Timeline Tracker) z automatycznym generowaniem i eksportem pliku JSON na frontendzie i backendzie oraz rygorystyczna walidacja struktur markerów i dozwolonych scen (allowlista).
 * **Task Studio Console 6:** Zmiana szaty graficznej (akcent z jaskrawej żółci na zgaszoną miedź `#d67d3e`), podbicie czytelności czcionek diagnostyki CV Health oraz znaczne usprawnienie kontrastu i widoczności nieaktywnych (disabled) przycisków w bottombarze.
@@ -49,8 +50,9 @@ Ten plik przedstawia aktualny status techniczny oraz architekturę projektu Taro
 
 ## 4. Status Integracji i Jakości (Workflow / CI)
 
+* **Komunikacja między modelami AI (WDROŻONA):** Standard zapisany w `.ai/AI_AGENT_COMMUNICATION_PROTOCOL.md`. Komenda Michała „Zapisz to w GitHubie” oznacza zgodę na zapis komunikacji projektowej (issue, komentarz, PR review, plik `.md` w `.ai/`), ale nie oznacza zgody na zmianę kodu produkcyjnego, merge, kasowanie plików ani refaktor.
 * **Automatyzacja CI (WDROŻONA & ZWERYFIKOWANA):** Skonfigurowano automatyczną weryfikację jakości w `.github/workflows/ci.yml`. Pierwszy oficjalny run GitHub Actions na gałęzi `master` (run **`26684570640`**) zakończył się **pełnym sukcesem na zielono (PASS)**. Zarówno testy Pythona (171 testów), jak i kompilacja frontendu przechodzą bezbłędnie w chmurze.
-* **Standardy Workflow (WDROŻONE):** Wdrożono katalog `.ai/` wraz z instrukcją `AI_WORKFLOW_FAILOVER.md`, rejestrem zadań `TASKS_INDEX.md` oraz szablonami szczegółów zadań pod `.ai/tasks/_TEMPLATE/`. Obowiązuje startup sequence zdefiniowany w `AGENTS.md`.
+* **Standardy Workflow (WDROŻONE):** Wdrożono katalog `.ai/` wraz z instrukcją `AI_WORKFLOW_FAILOVER.md`, rejestrem zadań `TASKS_INDEX.md`, protokołem komunikacji `AI_AGENT_COMMUNICATION_PROTOCOL.md` oraz szablonami szczegółów zadań pod `.ai/tasks/_TEMPLATE/`.
 * **Szablon PR (WDROŻONY):** Każdy Pull Request korzysta teraz ze zintegrowanego szablonu `.github/pull_request_template.md` dla lepszej weryfikacji kryteriów i raportów testowych.
 * **Zależności Python (WDROŻONE):** Utworzono plik `app_cv/requirements.txt` ze zwalidowanym zestawem paczek (OpenCV, NumPy, websockets, Pillow) stabilizujący proces instalacji w kontenerach CI.
 
