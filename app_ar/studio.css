@@ -77,7 +77,26 @@ body.studio-mode-active {
 
 .studio-indicators {
     display: flex;
+    align-items: center;
     gap: 16px;
+}
+
+.studio-operator-link {
+    height: 28px;
+    background: rgba(214, 125, 62, 0.15);
+    border: 1px solid rgba(214, 125, 62, 0.45);
+    color: #f1c6a6;
+    border-radius: 6px;
+    padding: 0 12px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    text-transform: uppercase;
+}
+
+.studio-operator-link:hover {
+    background: rgba(214, 125, 62, 0.28);
+    color: #ffffff;
 }
 
 .studio-indicator {

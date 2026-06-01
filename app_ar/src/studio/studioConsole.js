@@ -174,6 +174,9 @@ export function createStudioConsole() {
             <div class="studio-logo__badge">Console v1</div>
         </div>
         <div class="studio-indicators">
+            <button type="button" class="studio-operator-link" id="btn-open-operator" title="Otwórz Panel Operatora w nowej karcie">
+                Operator
+            </button>
             <div class="studio-indicator studio-indicator--active" id="indicator-ws">
                 <div class="dot"></div> WS
             </div>
@@ -395,6 +398,13 @@ function initStudioConsoleEvents() {
 
     // Automatyczna inicjalizacja mikrofonu i miksera audio w tle
     startStudioMicrophone().catch(err => console.warn('Deferred microphone authorization:', err))
+
+    const operatorBtn = topbarEl ? topbarEl.querySelector('#btn-open-operator') : null
+    if (operatorBtn) {
+        operatorBtn.addEventListener('click', () => {
+            window.open(`${window.location.origin}${window.location.pathname}?operator=1`, '_blank', 'noopener')
+        })
+    }
 
     // 1. Zmiana katalogu zapisu (Wysyła komendę konfiguracji zapisu)
     const pathBtn = sidebarEl.querySelector('#studio-path-btn')
