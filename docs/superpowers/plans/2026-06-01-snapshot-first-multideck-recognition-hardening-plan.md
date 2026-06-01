@@ -129,6 +129,12 @@ Weryfikacja:
 
 Następny krok: review `TASK-CV-SNAPSHOT-008`, a później decyzja, czy benchmark podpinamy od razu do realnego `SnapshotAnalyzer`, czy najpierw robimy smoke test kamery.
 
+## Session Status (2026-06-01, Codex, Live Test Handoff)
+
+Przygotowano `TASK-CV-SNAPSHOT-LIVE-001` jako instrukcję dla Gemini i Michała do fizycznego smoke testu snapshot-first z kamerą i Studio. Zakres Gemini jest ograniczony do prowadzenia testów, klasyfikacji wyników i dokumentacji raportu; zmiany w kodzie wymagają osobnego taska i zgody Michała.
+
+Następny krok: Michał uruchamia testy z kamerą, a Gemini uzupełnia `.ai/tasks/TASK-CV-SNAPSHOT-LIVE-001/TEST_REPORT.md` i `GEMINI_REPORT.md`.
+
 ---
 
 ## Zasady Projektowe
