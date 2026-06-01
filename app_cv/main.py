@@ -1,6 +1,5 @@
 import cv2
 import numpy as np
-import glob
 import os
 import asyncio
 import threading
@@ -19,6 +18,7 @@ from tarotvision.camera_controls import read_camera_control
 from tarotvision.calibration_session import choose_best_candidate
 from tarotvision.table_calibration import TableCalibration
 from tarotvision.card_recognition import recognize_card_crop
+from tarotvision.reference_loader import load_active_reference_cards
 from tarotvision.snapshot_gate import SnapshotGate, SnapshotGateConfig
 from tarotvision.snapshot_analyzer import SnapshotAnalyzer
 from tarotvision.camera import CameraSession
@@ -387,128 +387,31 @@ active_decks_path = os.path.join(PROJECT_ROOT, "app_ar", "public", "active_decks
 decks_manifest_path = os.path.join(PROJECT_ROOT, "app_ar", "public", "decks_manifest.json")
 
 def load_reference_cards(active_ids=None):
-    """Wczytuje cyfrowe wzorce kart dla aktywnych talii sesji (od 1 do 3) w locie pod lockiem."""
+    """Wczytuje cyfrowe wzorce kart dla aktywnych talii sesji pod lockiem."""
     global reference_cards
-    new_reference_cards = {}
-    loaded_from_active = False
-    
-    target_ids = active_ids
-    if target_ids is None:
-        if os.path.exists(active_decks_path) and os.path.exists(decks_manifest_path):
-            try:
-                with open(active_decks_path, "r", encoding="utf-8") as f:
-                    active_data = json.load(f)
-                target_ids = active_data.get("active_decks", [])
-            except Exception as e:
-                log_event(f"[OSTRZEZENIE] Blad odczytu active_decks.json przy start: {e}")
-                target_ids = []
-
-    if target_ids and os.path.exists(decks_manifest_path):
-        try:
-            with open(decks_manifest_path, "r", encoding="utf-8") as f:
-                manifest_data = json.load(f)
-            manifest_decks = manifest_data.get("decks", [])
-            active_decks = [d for d in manifest_decks if d.get("id") in target_ids]
-            
-            if active_decks:
-                log_event(f"[INFO] Wykryto {len(active_decks)} aktywne talie do zaladowania w locie: {[d.get('id') for d in active_decks]}")
-                for deck in active_decks:
-                    cv_path_rel = deck.get("cv_path")
-                    cv_path_full = os.path.abspath(os.path.join(PROJECT_ROOT, cv_path_rel))
-                    
-                    log_event(f"[INFO] Ladowanie cyfrowych wzorcow dla talii '{deck.get('display_name')}' z {cv_path_full}")
-                    file_paths = glob.glob(os.path.join(cv_path_full, "*.jpg"))
-                    
-                    if not file_paths:
-                        log_event(f"[OSTRZEZENIE] Brak plikow wzorcow .jpg w katalogu: {cv_path_full}")
-                        continue
-                        
-                    deck_loaded_count = 0
-                    for file_path in file_paths:
-                        card_name = os.path.basename(file_path).replace(".jpg", "")
-                        img = cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)
-                        if img is None:
-                            continue
-                        
-                        img = clahe.apply(img)
-                        kp, des = orb.detectAndCompute(img, None)
-                        if des is not None:
-                            kp = kp[:500]
-                            des = des[:500]
-                            
-                        img_reversed = cv2.rotate(img, cv2.ROTATE_180)
-                        kp_rev, des_rev = orb.detectAndCompute(img_reversed, None)
-                        
-                        card_matcher = None
-                        if des is not None and len(des) > 0:
-                            try:
-                                card_matcher = cv2.BFMatcher(cv2.NORM_HAMMING)
-                                card_matcher.add([des])
-                                card_matcher.train()
-                            except cv2.error:
-                                card_matcher = None
-                                
-                        new_reference_cards[card_name] = {
-                            "image": img,
-                            "keypoints": kp,
-                            "descriptors": des,
-                            "reversed_image": img_reversed,
-                            "reversed_keypoints": kp_rev,
-                            "reversed_descriptors": des_rev,
-                            "matcher": card_matcher,
-                        }
-                        deck_loaded_count += 1
-                    log_event(f"[OK] Zaladowano {deck_loaded_count} wzorcow dla talii '{deck.get('display_name')}'!")
-                loaded_from_active = True
-        except Exception as e:
-            log_event(f"[OSTRZEZENIE] Blad wczytywania dynamicznej konfiguracji sesji: {e}. Uruchamianie trybu awaryjnego.")
-
-    # Fallback to single deck
-    if not loaded_from_active or not new_reference_cards:
-        log_event(f"[TRYB AWARYJNY] Ladowanie wzorcow dla pojedynczej talii '{DECK_NAME}' z {CV_ASSETS_DIR}")
-        file_paths = glob.glob(os.path.join(CV_ASSETS_DIR, "*.jpg"))
-        
-        if not file_paths:
-            log_event("[BLAD] Nie znaleziono zadnych plikow wzorcow .jpg w katalogu!")
-            exit(1)
-            
-        for file_path in file_paths:
-            card_name = os.path.basename(file_path).replace(".jpg", "")
-            img = cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)
-            if img is None:
-                continue
-                
-            img = clahe.apply(img)
-            kp, des = orb.detectAndCompute(img, None)
-            if des is not None:
-                kp = kp[:500]
-                des = des[:500]
-                
-            img_reversed = cv2.rotate(img, cv2.ROTATE_180)
-            kp_rev, des_rev = orb.detectAndCompute(img_reversed, None)
-            
-            card_matcher = None
-            if des is not None and len(des) > 0:
-                try:
-                    card_matcher = cv2.BFMatcher(cv2.NORM_HAMMING)
-                    card_matcher.add([des])
-                    card_matcher.train()
-                except cv2.error:
-                    card_matcher = None
-                    
-            new_reference_cards[card_name] = {
-                "image": img,
-                "keypoints": kp,
-                "descriptors": des,
-                "reversed_image": img_reversed,
-                "reversed_keypoints": kp_rev,
-                "reversed_descriptors": des_rev,
-                "matcher": card_matcher,
-            }
-            
+    result = load_active_reference_cards(
+        project_root=PROJECT_ROOT,
+        manifest_path=decks_manifest_path,
+        active_decks_path=active_decks_path,
+        fallback_deck_id=DECK_NAME,
+        orb=orb,
+        clahe=clahe,
+        active_ids=active_ids,
+        fallback_cv_path=CV_ASSETS_DIR,
+    )
     reference_cards.clear()
-    reference_cards.update(new_reference_cards)
-    log_event(f"[OK] Zaladowano lacznie {len(reference_cards)} wzorcow do pamieci (upright + reversed)!")
+    reference_cards.update(result.cards)
+
+    if not reference_cards:
+        log_event("[BLAD] Nie zaladowano zadnych wzorcow CV dla aktywnych talii.")
+        exit(1)
+
+    log_event(
+        f"[OK] Zaladowano talie aktywne: {result.loaded_deck_ids}; "
+        f"wzorce={len(reference_cards)}, pominiete={len(result.skipped_files)}"
+    )
+    for skipped in result.skipped_files[:10]:
+        log_event(f"[OSTRZEZENIE] Pominieto nieczytelny wzorzec CV: {skipped}")
     
 # Pierwsze wczytanie przy starcie systemu
 load_reference_cards()

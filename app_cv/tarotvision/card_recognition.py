@@ -15,6 +15,8 @@ import os
 import cv2
 import numpy as np
 
+from tarotvision.image_io import imread_grayscale_unicode
+
 
 # Znormalizowany rozmiar cropa karty — zachowuje aspect ratio ~1.72
 NORMALIZED_CARD_WIDTH = 300
@@ -152,7 +154,7 @@ def load_reference_cards(cv_assets_dir, orb, clahe):
     for file_path in file_paths:
         card_name = os.path.basename(file_path).replace(".jpg", "")
 
-        img = cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)
+        img = imread_grayscale_unicode(file_path)
         if img is None:
             continue
 

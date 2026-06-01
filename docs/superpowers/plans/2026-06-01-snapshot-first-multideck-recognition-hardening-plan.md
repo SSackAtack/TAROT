@@ -30,6 +30,7 @@
 - `TASK-CV-AUTOTUNE-001` dodał offline autotuner geometrii prostokąta, zatwierdzony przez Codex review jako `LIGHT: GREEN`.
 - Operator console i profile runtime już istnieją, ale aktualny autotuning nie jest jeszcze częścią live snapshot-first flow.
 - `TASK-CV-SNAPSHOT-001` usunął runtime legacy state-first z `main.py`, eksportów i testów kontraktowych; snapshot-first jest teraz bezwarunkową ścieżką backendu CV.
+- `TASK-CV-SNAPSHOT-002` dodał Unicode-safe image I/O i przeniósł ładowanie aktywnych talii do `reference_loader.py`.
 
 ### Kolejne kroki
 
@@ -50,6 +51,16 @@ Weryfikacja:
 - `python -m py_compile app_cv\main.py app_cv\tarotvision\pipelines\__init__.py app_cv\tarotvision\pipelines\snapshot_first.py` -> PASS.
 
 Następny krok: `TASK-CV-SNAPSHOT-002`, czyli Unicode-safe image I/O i przeniesienie loadera wzorców poza `main.py`.
+
+## Session Status (2026-06-01, Codex, Task 2)
+
+Zrealizowano `TASK-CV-SNAPSHOT-002`: dodano `image_io.py`, `reference_loader.py`, testy dla polskich ścieżek i diagnostyki pominietych wzorców; `main.py` używa `load_active_reference_cards()`, a `card_recognition.load_reference_cards()` nie używa już `cv2.imread()` bezpośrednio.
+
+Weryfikacja:
+- `python -m unittest app_cv.tests.test_image_io app_cv.tests.test_reference_loader app_cv.tests.test_card_recognition -v` -> PASS, 19 testów.
+- `python -m py_compile app_cv\main.py app_cv\tarotvision\image_io.py app_cv\tarotvision\reference_loader.py app_cv\tarotvision\card_recognition.py` -> PASS.
+
+Następny krok: `TASK-CV-SNAPSHOT-003`, czyli analiza snapshotu na klatce po warp ArUco.
 
 ---
 
@@ -340,7 +351,7 @@ git -C E:\Antigravity\Projekty\TAROT commit -m "refactor: utrwal snapshot-first 
 - Modify: `app_cv/main.py`
 - Modify: `app_cv/tarotvision/card_recognition.py`
 
-- [ ] **Step 1: Write image I/O tests**
+- [x] **Step 1: Write image I/O tests**
 
 Create `app_cv/tests/test_image_io.py`:
 
@@ -390,7 +401,7 @@ if __name__ == "__main__":
     unittest.main()
 ```
 
-- [ ] **Step 2: Run image I/O tests and verify failure**
+- [x] **Step 2: Run image I/O tests and verify failure**
 
 Run:
 
@@ -400,7 +411,7 @@ cmd /c "cd /d E:\Antigravity\Projekty\TAROT && set PYTHONPATH=C:\tmp\tarot_pydep
 
 Expected: FAIL because `tarotvision.image_io` does not exist.
 
-- [ ] **Step 3: Implement `image_io.py`**
+- [x] **Step 3: Implement `image_io.py`**
 
 Create `app_cv/tarotvision/image_io.py`:
 
@@ -436,7 +447,7 @@ def imwrite_unicode(path, image, params=None):
     return True
 ```
 
-- [ ] **Step 4: Verify image I/O tests pass**
+- [x] **Step 4: Verify image I/O tests pass**
 
 Run:
 
@@ -446,7 +457,7 @@ cmd /c "cd /d E:\Antigravity\Projekty\TAROT && set PYTHONPATH=C:\tmp\tarot_pydep
 
 Expected: `Ran 3 tests ... OK`.
 
-- [ ] **Step 5: Write reference loader tests**
+- [x] **Step 5: Write reference loader tests**
 
 Create `app_cv/tests/test_reference_loader.py`:
 
@@ -539,7 +550,7 @@ if __name__ == "__main__":
     unittest.main()
 ```
 
-- [ ] **Step 6: Implement `reference_loader.py`**
+- [x] **Step 6: Implement `reference_loader.py`**
 
 Create `app_cv/tarotvision/reference_loader.py`:
 
@@ -644,7 +655,7 @@ def load_active_reference_cards(project_root, manifest_path, active_decks_path,
     )
 ```
 
-- [ ] **Step 7: Replace duplicate loader code in `main.py`**
+- [x] **Step 7: Replace duplicate loader code in `main.py`**
 
 In `main.py`, import:
 
@@ -686,7 +697,7 @@ def load_reference_cards(active_ids=None):
 
 If `table_state` is removed later with legacy cleanup, remove only the guarded block in the same task that removes `TableState` usage.
 
-- [ ] **Step 8: Update `card_recognition.load_reference_cards`**
+- [x] **Step 8: Update `card_recognition.load_reference_cards`**
 
 In `app_cv/tarotvision/card_recognition.py`, replace `cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)` with:
 
@@ -700,7 +711,7 @@ and:
 img = imread_grayscale_unicode(file_path)
 ```
 
-- [ ] **Step 9: Verify**
+- [x] **Step 9: Verify**
 
 Run:
 
