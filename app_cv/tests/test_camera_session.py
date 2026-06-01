@@ -110,5 +110,20 @@ class TestCameraSession(unittest.TestCase):
         mock_vc.set.assert_any_call(28, 75.0) # 28 to cv2.CAP_PROP_FOCUS
         self.assertEqual(self.session.camera_set_cache.get("CAP_PROP_FOCUS"), 75.0)
 
+    @patch('cv2.VideoCapture')
+    def test_save_settings_prefers_operator_set_value_over_stale_readback(self, mock_vc_class):
+        mock_vc = MagicMock()
+        mock_vc.isOpened.return_value = True
+        mock_vc.get.side_effect = lambda prop_id: 0.0 if prop_id == 28 else -1.0
+        mock_vc_class.return_value = mock_vc
+
+        self.session.open(0)
+        self.session.set_control("CAP_PROP_FOCUS", 185.0)
+
+        with open(os.path.join(self.test_dir, "camera_settings.json"), "r") as f:
+            settings = json.load(f)
+
+        self.assertEqual(settings["CAP_PROP_FOCUS"], 185.0)
+
 if __name__ == '__main__':
     unittest.main()
