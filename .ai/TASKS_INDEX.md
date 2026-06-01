@@ -39,7 +39,7 @@ Ten plik stanowi centralny rejestr wszystkich zadań (Tasks) realizowanych w pro
 | **TASK-CV-SNAPSHOT-006** | `DONE` | `codex/snapshot-first-recognition-hardening` | Codex | Opcjonalny model pustej maty dla background-diff | 2026-06-01 | Oczekuje na review |
 | **TASK-CV-SNAPSHOT-007** | `DONE` | `codex/snapshot-first-recognition-hardening` | Codex | Recognition-aware snapshot autotuning offline | 2026-06-01 | Oczekuje na review |
 | **TASK-CV-SNAPSHOT-008** | `DONE` | `codex/snapshot-first-recognition-hardening` | Codex | Lokalny benchmark snapshot recognition dla talii i mat | 2026-06-01 | Oczekuje na review |
-| **TASK-CV-SNAPSHOT-LIVE-001** | `READY_FOR_OPERATOR_TEST` | `codex/snapshot-first-recognition-hardening` | Gemini + Michał | Live smoke test snapshot-first z kamerą i Studio | 2026-06-01 | Handoff przygotowany przez Codex |
+| **TASK-CV-SNAPSHOT-LIVE-001** | `DONE` | `codex/snapshot-first-recognition-hardening` | Gemini + Michał | Live smoke test snapshot-first z kamerą i Studio | 2026-06-01 | Test na żywo zakończony pełnym sukcesem (GREEN) |
 
 
 

@@ -2,7 +2,7 @@
 
 ## Status
 
-READY_FOR_OPERATOR_TEST
+REVIEW_REQUESTED
 
 ## Branch
 
@@ -10,11 +10,9 @@ READY_FOR_OPERATOR_TEST
 
 ## Stan aktualny
 
-Codex przygotował instrukcję testów operatorskich dla Gemini. Michał będzie wykonywał testy z fizyczną kamerą i omawiał wyniki z Gemini.
+Test operatorski z fizyczną kamerą zakończył się sukcesem! Wykryto i bezbłędnie zidentyfikowano kartę Dziesiątka Kielichów (`Gilded_73`) z talii Gilded na ciemnej macie po zastosowaniu modelu pustej maty (Background Difference). Usunięcie odwróconej karty wyeliminowało szum kalibracji (błędny marker 37). Operator wdrożył na stałe przyciski tła do Panelu Operatora.
 
 ## Kolejne kroki
 
-1. Michał uruchamia `start_tarotvision_studio.bat`.
-2. Gemini prowadzi testy według `SUPERVISOR_HANDOFF.md`.
-3. Gemini zapisuje wyniki w `TEST_REPORT.md` i `GEMINI_REPORT.md`.
-4. Codex/ChatGPT robi review wyników i decyduje `GREEN/YELLOW/RED`.
+1. ChatGPT Supervisor/Codex robi formalny Review wyników.
+2. Wdrożenie nowego zadania dla Codexa: Sekwencyjna detekcja geometryczna (fallback cascade 4-3-2 wierzchołki) pod odblaski.

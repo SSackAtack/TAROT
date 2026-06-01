@@ -35,11 +35,48 @@ class SnapshotAnalyzer:
             "recognition_rejections": 0,
         }
         frame_height, frame_width = frame.shape[:2]
-        quads = self.find_quads(frame)
+        
+        # DIAGNOSTYKA DETEKCJI
+        from tarotvision.card_detection_profiles import find_card_quads_multi_profile
+        result_multi = find_card_quads_multi_profile(frame, background_model=self.background_model)
+        quads = result_multi.quads
+        
+        try:
+            import logging
+            import cv2
+            import os
+            log_dir_env = os.environ.get("TAROTVISION_LOG_DIR", os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "logs")))
+            os.makedirs(log_dir_env, exist_ok=True)
+            
+            logging.info(f"[DIAGNOSTYKA DETEKCJI] Znalazlem finalnie quads: {len(quads)}")
+            for prof in result_multi.debug.get("profiles", []):
+                logging.info(f"  - Profil: {prof['name']} | mode: {prof['mode']} | quads: {prof['quads']} | contours: {prof['contours_total']} | candidates: {prof['candidates_after_quad']}")
+                
+            if self.background_model is not None and self.background_model.active:
+                mask = self.background_model.foreground_mask(frame)
+                if mask is not None:
+                    mask_path = os.path.join(log_dir_env, "debug_mask.jpg")
+                    cv2.imwrite(mask_path, mask)
+                    logging.info(f"  [OK] Zapisano debug_mask.jpg w {mask_path}")
+        except Exception as e:
+            pass
+
         diagnostics["quads_found"] = len(quads)
         for quad in quads:
             crop = self.crop_card(frame, quad)
             diagnostics["recognition_attempts"] += 1
+            
+            # DIAGNOSTYKA: Zapisz crop na dysku
+            import cv2
+            import os
+            try:
+                log_dir_env = os.environ.get("TAROTVISION_LOG_DIR", os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "logs")))
+                os.makedirs(log_dir_env, exist_ok=True)
+                crop_path = os.path.join(log_dir_env, f"debug_crop_{diagnostics['recognition_attempts']}.jpg")
+                cv2.imwrite(crop_path, crop)
+            except Exception:
+                pass
+                
             recognition = self.recognize_crop(crop) if self.recognize_crop else None
             if not recognition:
                 diagnostics["recognition_rejections"] += 1

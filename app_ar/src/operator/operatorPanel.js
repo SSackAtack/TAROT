@@ -131,6 +131,8 @@ export function createOperatorPanel() {
                 <button type="button" data-action="tuning_rollback">Cofnij</button>
                 <button type="button" data-action="camera_probe">Odczyt kamery</button>
                 <button type="button" data-action="calibration_start">Kalibracja</button>
+                <button type="button" data-action="background_capture">Ucz maty (Capture)</button>
+                <button type="button" data-action="background_clear">Wyczyść matę (Clear)</button>
             </div>
         </details>
         <details class="operator-panel__section">
