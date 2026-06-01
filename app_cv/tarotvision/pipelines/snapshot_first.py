@@ -149,6 +149,10 @@ class SnapshotFirstPipeline(VisionPipeline):
 
                 analysis_start = time.perf_counter()
                 result = self.snapshot_analyzer.analyze(analysis_frame)
+                diagnostics = result.diagnostics if isinstance(result.diagnostics, dict) else {}
+                self.runtime_metrics.add("snapshot_quads_found", diagnostics.get("quads_found", 0))
+                self.runtime_metrics.add("snapshot_recognition_attempts", diagnostics.get("recognition_attempts", 0))
+                self.runtime_metrics.add("snapshot_recognition_rejections", diagnostics.get("recognition_rejections", 0))
                 analysis_ms = (time.perf_counter() - analysis_start) * 1000.0
                 self.runtime_metrics.add("snapshot_analysis_ms", analysis_ms)
                 self.runtime_metrics.add("snapshot_quality_score", selected.quality.quality_score)

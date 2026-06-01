@@ -16,6 +16,7 @@ import cv2
 import numpy as np
 
 from tarotvision.image_io import imread_grayscale_unicode
+from tarotvision.recognition_debug import RecognitionDebug
 
 
 # Znormalizowany rozmiar cropa karty — zachowuje aspect ratio ~1.72
@@ -384,3 +385,40 @@ def recognize_card_crop(gray_crop, reference_cards, orb, matcher,
             )
 
     return best_result
+
+
+def recognize_card_crop_with_debug(gray_crop, reference_cards, orb, matcher,
+                                   min_good_matches=MIN_GOOD_MATCHES,
+                                   lowe_ratio=LOWE_RATIO,
+                                   min_inlier_ratio=MIN_INLIER_RATIO):
+    result = recognize_card_crop(
+        gray_crop,
+        reference_cards,
+        orb,
+        matcher,
+        min_good_matches=min_good_matches,
+        lowe_ratio=lowe_ratio,
+        min_inlier_ratio=min_inlier_ratio,
+    )
+    orb_crop = cv2.ORB_create(nfeatures=500)
+    keypoints, descriptors = orb_crop.detectAndCompute(gray_crop, None)
+    crop_keypoints = len(keypoints or [])
+    if descriptors is None or len(descriptors) < min_good_matches:
+        debug = RecognitionDebug(
+            crop_keypoints=crop_keypoints,
+            top_matches=[],
+            reject_reason="not_enough_crop_descriptors",
+        )
+        return result, debug
+
+    debug = RecognitionDebug(
+        crop_keypoints=crop_keypoints,
+        top_matches=[] if result is None else [{
+            "name": result["name"],
+            "score": float(result.get("match_count", 0)) * float(result.get("inlier_ratio", 0.0)),
+            "match_count": int(result.get("match_count", 0)),
+            "inlier_ratio": float(result.get("inlier_ratio", 0.0)),
+        }],
+        reject_reason=None if result is not None else "no_match_above_thresholds",
+    )
+    return result, debug

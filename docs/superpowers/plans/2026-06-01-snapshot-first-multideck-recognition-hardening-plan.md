@@ -32,6 +32,7 @@
 - `TASK-CV-SNAPSHOT-001` usunął runtime legacy state-first z `main.py`, eksportów i testów kontraktowych; snapshot-first jest teraz bezwarunkową ścieżką backendu CV.
 - `TASK-CV-SNAPSHOT-002` dodał Unicode-safe image I/O i przeniósł ładowanie aktywnych talii do `reference_loader.py`.
 - `TASK-CV-SNAPSHOT-003` podłączył analizę snapshotu do klatki sprostowanej przez ArUco, gdy kalibracja jest dostępna.
+- `TASK-CV-SNAPSHOT-004` dodał podstawową diagnostykę porażek detekcji i rozpoznania snapshot-first.
 
 ### Kolejne kroki
 
@@ -72,6 +73,16 @@ Weryfikacja:
 - `python -m py_compile app_cv\tarotvision\pipelines\snapshot_first.py` -> PASS.
 
 Następny krok: `TASK-CV-SNAPSHOT-004`, czyli diagnostyka porażek detekcji i rozpoznania.
+
+## Session Status (2026-06-01, Codex, Task 4)
+
+Zrealizowano `TASK-CV-SNAPSHOT-004`: dodano `RecognitionDebug`, `card_detection_debug.py`, diagnostykę `SnapshotAnalysisResult` oraz metryki `snapshot_quads_found`, `snapshot_recognition_attempts`, `snapshot_recognition_rejections` w pipeline snapshot-first.
+
+Weryfikacja:
+- `python -m unittest app_cv.tests.test_recognition_debug app_cv.tests.test_snapshot_analyzer app_cv.tests.test_pipelines_contract -v` -> PASS, 12 testów.
+- `python -m py_compile app_cv\tarotvision\card_detection_debug.py app_cv\tarotvision\recognition_debug.py app_cv\tarotvision\card_recognition.py app_cv\tarotvision\snapshot_analyzer.py app_cv\tarotvision\pipelines\snapshot_first.py` -> PASS.
+
+Następny krok: `TASK-CV-SNAPSHOT-005`, czyli multi-profile detector dla ciemnych talii i mat.
 
 ---
 
@@ -901,7 +912,7 @@ git -C E:\Antigravity\Projekty\TAROT commit -m "feat: analizuj snapshot na spros
 - Modify: `app_cv/tarotvision/card_recognition.py`
 - Modify: `app_cv/tarotvision/pipelines/snapshot_first.py`
 
-- [ ] **Step 1: Add recognition debug tests**
+- [x] **Step 1: Add recognition debug tests**
 
 Create `app_cv/tests/test_recognition_debug.py`:
 
@@ -941,7 +952,7 @@ if __name__ == "__main__":
     unittest.main()
 ```
 
-- [ ] **Step 2: Implement recognition debug data model**
+- [x] **Step 2: Implement recognition debug data model**
 
 Create `app_cv/tarotvision/recognition_debug.py`:
 
@@ -973,7 +984,7 @@ def top_match_summary(debug, limit=5):
     ]
 ```
 
-- [ ] **Step 3: Extend recognition without breaking existing API**
+- [x] **Step 3: Extend recognition without breaking existing API**
 
 In `app_cv/tarotvision/card_recognition.py`, import:
 
@@ -1022,7 +1033,7 @@ def recognize_card_crop_with_debug(gray_crop, reference_cards, orb, matcher,
 
 This first debug function is intentionally conservative: it records crop feature availability and accepted match. Task 8 expands it to top-k candidates.
 
-- [ ] **Step 4: Add card detection debug artifact writer**
+- [x] **Step 4: Add card detection debug artifact writer**
 
 Create `app_cv/tarotvision/card_detection_debug.py`:
 
@@ -1068,7 +1079,7 @@ def save_snapshot_debug_artifacts(directory, frame, quads, metadata):
     }
 ```
 
-- [ ] **Step 5: Add analyzer diagnostics fields**
+- [x] **Step 5: Add analyzer diagnostics fields**
 
 Modify `SnapshotAnalysisResult` in `snapshot_analyzer.py`:
 
@@ -1120,7 +1131,7 @@ Return:
         )
 ```
 
-- [ ] **Step 6: Publish diagnostics metrics**
+- [x] **Step 6: Publish diagnostics metrics**
 
 In `snapshot_first.py`, after `result = self.snapshot_analyzer.analyze(analysis_frame)`, add:
 
@@ -1131,7 +1142,7 @@ In `snapshot_first.py`, after `result = self.snapshot_analyzer.analyze(analysis_
                 self.runtime_metrics.add("snapshot_recognition_rejections", diagnostics.get("recognition_rejections", 0))
 ```
 
-- [ ] **Step 7: Verify**
+- [x] **Step 7: Verify**
 
 Run:
 

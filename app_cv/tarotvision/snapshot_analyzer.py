@@ -11,6 +11,7 @@ from tarotvision.card_recognition import deskew_card_crop
 class SnapshotAnalysisResult:
     cards: list
     card_count: int
+    diagnostics: dict | None = None
 
 
 class SnapshotAnalyzer:
@@ -24,11 +25,20 @@ class SnapshotAnalyzer:
 
     def analyze(self, frame):
         cards = []
+        diagnostics = {
+            "quads_found": 0,
+            "recognition_attempts": 0,
+            "recognition_rejections": 0,
+        }
         frame_height, frame_width = frame.shape[:2]
-        for quad in self.find_quads(frame):
+        quads = self.find_quads(frame)
+        diagnostics["quads_found"] = len(quads)
+        for quad in quads:
             crop = self.crop_card(frame, quad)
+            diagnostics["recognition_attempts"] += 1
             recognition = self.recognize_crop(crop) if self.recognize_crop else None
             if not recognition:
+                diagnostics["recognition_rejections"] += 1
                 continue
             center_x, center_y = _quad_center(quad)
             scene_x, scene_y = _frame_to_scene(
@@ -51,7 +61,11 @@ class SnapshotAnalyzer:
                 "orientation": recognition.get("orientation", "unknown"),
                 "homography_angle_deg": recognition.get("homography_angle_deg", 0.0),
             })
-        return SnapshotAnalysisResult(cards=cards, card_count=len(cards))
+        return SnapshotAnalysisResult(
+            cards=cards,
+            card_count=len(cards),
+            diagnostics=diagnostics,
+        )
 
 
 def _quad_points(quad):
