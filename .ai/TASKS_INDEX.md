@@ -31,6 +31,7 @@ Ten plik stanowi centralny rejestr wszystkich zadań (Tasks) realizowanych w pro
 | **TASK-STUDIO-007** | `APPROVED` | `master` | Gemini | Uodpornienie launchera Studio pod zajęty port 5173 | 2026-05-31 | APPROVED BY CHATGPT SUPERVISOR (PR #6 + PR #9 fix) |
 | **TASK-CV-RECT-001** | `DONE` | `task/cv-rect-001-parameterize-card-detection` | Gemini | Parametryzacja detekcji prostokątów kart pod autotuning | 2026-05-31 | Oczekuje na review |
 | **TASK-CV-AUTOTUNE-001** | `DONE` | `task/cv-autotune-001-offline-single-frame` | Gemini | Prototyp offline autotunera detekcji prostokąta karty | 2026-05-31 | Oczekuje na review |
+| **TASK-CV-SNAPSHOT-001** | `DONE` | `codex/snapshot-first-recognition-hardening` | Codex | Usunięcie legacy state-first i utrwalenie snapshot-first jako jedynego pipeline CV | 2026-06-01 | Oczekuje na review |
 
 
 

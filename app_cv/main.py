@@ -7,31 +7,23 @@ import threading
 import json
 import copy
 import websockets
-import math
 import time
 import logging
 
 from tarotvision.metrics import RuntimeMetrics
-from tarotvision.matching_schedule import choose_cards_to_match, get_schedule_mode
 from tarotvision.motion import MotionDetector
-from tarotvision.audit_policy import should_reverify
-from tarotvision.table_state import TableState, PHASE_LOCKED, PHASE_NEEDS_REVERIFY
-from tarotvision.roi_map import filter_boxes_outside_occupied
-from tarotvision.contour_tracking import assign_boxes_to_cards
 from tarotvision.runtime_config import RuntimeConfigSession, ParameterValidationError
 from tarotvision.tuning_protocol import parse_control_message, ControlMessageError
 from tarotvision.profile_store import ProfileStore
 from tarotvision.camera_controls import read_camera_control
 from tarotvision.calibration_session import choose_best_candidate
 from tarotvision.table_calibration import TableCalibration
-from tarotvision.card_detection import find_card_quads
 from tarotvision.card_recognition import recognize_card_crop
 from tarotvision.snapshot_gate import SnapshotGate, SnapshotGateConfig
-from tarotvision.snapshot_quality import choose_best_snapshot
 from tarotvision.snapshot_analyzer import SnapshotAnalyzer
 from tarotvision.camera import CameraSession
 from tarotvision.preview import OpenCvPreview
-from tarotvision.pipelines import SnapshotFirstPipeline, StateFirstLegacyPipeline
+from tarotvision.pipelines import SnapshotFirstPipeline
 
 # Konfiguracja
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -41,33 +33,14 @@ CV_ASSETS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "b
 MIN_MATCH_COUNT = 18   # Obnizony do 18 — filtry geometryczne (homografia + validate_quad + aspect ratio + inlier ratio) skutecznie eliminuja szum
 RATIO_THRESH = 0.75    # Zaostrzone z 0.79 do 0.75 dla wyeliminowania dopasowan krzyzowych i poprawy homografii podobnych kart (np. Star i Moon)
 MIN_INLIER_RATIO = 0.3 # Minimalna proporcja inlierow w homografii RANSAC (odrzuca niestabilne dopasowania)
-CARD_ASPECT_RATIO = 1.72  # Standardowy stosunek wysokosc/szerokosc kart tarota RWS (~1.72)
-CARD_ASPECT_TOLERANCE = 0.65  # Tolerancja odchylenia aspect ratio (poluzowana — perspektywa kamery silnie znieksztalca proporcje)
-EMA_ALPHA = 0.4        # Wspolczynnik wygladzania Exponential Moving Average dla pozycji (0 = pelne wygladzanie, 1 = brak)
 CAMERA_WIDTH = 1280
 CAMERA_HEIGHT = 720
-DETECTION_IOU_THRESHOLD = 0.35  # Maksymalne dopuszczalne nalozenie dwoch kandydatow kart
 RUNTIME_PROFILE = "cpu_baseline"
 CAMERA_FOCUS_LOCKED = True      # Ustawienie operatorskie: AnkerWork C310 ma pracowac z blokada AF
 CAMERA_EXPOSURE_LOCKED = True   # Ustawienie operatorskie: blokada ekspozycji zmniejsza flicker i false positives
-LOCKED_REFRESH_INTERVAL = 10    # Karty LOCKED sprawdzamy okresowo, nie w kazdej klatce
-INACTIVE_PER_FRAME_EMPTY = 4     # Gdy nie ma aktywnych kart, szybciej skanujemy talie
-INACTIVE_PER_FRAME_ACTIVE = 2    # Gdy sa aktywne karty, skanujemy 2 nieaktywne/klatke (ArUco cache daje budzet)
-INACTIVE_PER_FRAME_BOOST = 3     # Po zmianie ukladu chwilowo skanujemy szybciej, ale bez powrotu do pelnego kosztu
-BOOST_AFTER_LAYOUT_CHANGE_FRAMES = 12
-REVERIFY_INTERVAL_FRAMES = 180
-TRACKING_IOU_THRESHOLD = 0.35
-TRACKING_REVERIFY_GAP_FRAMES = 24
-USE_TABLE_CARD_DETECTION = False  # Feature flag: True = uruchom detekcje prostokatow kart (Task 3 roadmapy CV)
-USE_SNAPSHOT_FIRST_CV = os.environ.get("TAROTVISION_SNAPSHOT_FIRST", "0") == "1"
 SNAPSHOT_SETTLE_SECONDS = 0.5
 SNAPSHOT_SAMPLE_COUNT = 1
 SNAPSHOT_SAMPLE_INTERVAL_MS = 250
-
-# System dwufazowy "Zlap i Zamroz" — eliminuje mikro-jitter statycznych kart
-LOCK_AFTER_FRAMES = 8      # Klatki stabilnej detekcji zanim pozycja zostanie zamrozona
-LOCK_DEAD_ZONE_POS = 3.0   # Minimalny ruch pozycji (w jednostkach sceny) zeby odblokowac karte (zwiekszony pod katem szumow centroidu)
-LOCK_DEAD_ZONE_ANGLE = 0.5 # Minimalny ruch kata (w radianach, ~28 stopni) zeby odblokowac karte
 
 from tarotvision.status import StatusStore, DiagnosticsWriter
 
@@ -537,15 +510,8 @@ def load_reference_cards(active_ids=None):
     reference_cards.update(new_reference_cards)
     log_event(f"[OK] Zaladowano lacznie {len(reference_cards)} wzorcow do pamieci (upright + reversed)!")
     
-    # Re-inicjalizacja kluczy w table_state, jeśli moduł już działa
-    if 'table_state' in globals() and table_state is not None:
-        table_state.all_card_ids = list(reference_cards.keys())
-        table_state.cards.clear()
-        log_event("[TABLE_STATE] Pomyslnie zresetowano i zaktualizowano dostepne ID kart w TableState.")
-
 # Pierwsze wczytanie przy starcie systemu
 load_reference_cards()
-table_state = TableState(reference_cards.keys())
 table_calibration = TableCalibration(table_width=CAMERA_WIDTH, table_height=CAMERA_HEIGHT)
 log_event("[ARUCO] Modul kalibracji stolu zainicjalizowany (markery ID 10-13, DICT_4X4_50)")
 
@@ -608,25 +574,6 @@ snapshot_pipeline = SnapshotFirstPipeline(
 )
 snapshot_pipeline.snapshot_sample_count = SNAPSHOT_SAMPLE_COUNT
 snapshot_pipeline.snapshot_sample_interval_ms = SNAPSHOT_SAMPLE_INTERVAL_MS
-
-legacy_pipeline = StateFirstLegacyPipeline(
-    camera_session=camera_session,
-    opencv_preview=opencv_preview,
-    status_store=status_store,
-    diagnostics_writer=diagnostics_writer,
-    table_calibration=table_calibration,
-    table_state=table_state,
-    runtime_metrics=runtime_metrics,
-    runtime_config=runtime_config,
-    build_operator_snapshot_fn=build_operator_snapshot,
-    operator_warnings=operator_warnings,
-    log_dir=LOG_DIR,
-    reference_cards=reference_cards,
-    orb=orb,
-    flann=flann,
-    clahe=clahe,
-    runtime_profile=RUNTIME_PROFILE
-)
 
 # 3. Inicjalizacja Kamery — jawnie ustawiamy 720p (1280x720) dla wiecej cech ORB z wiekszej odleglosci
 if os.environ.get("TAROTVISION_TEST_MODE") != "1":
@@ -700,7 +647,6 @@ while True:
     # Aktualizujemy rozdzielczosc dynamicznie (na wypadek zmiany kamery)
     frame_height, frame_width = frame.shape[:2]
     
-    display_frame = frame.copy()
     gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     
     # Zastosowanie CLAHE — obiekt tworzony RAZ na poczatku, nie w kazdej klatce
@@ -714,28 +660,6 @@ while True:
         table_calibration.update(gray_frame, workspace_inflate_percent=workspace_inflate_percent)
     runtime_metrics.add("aruco_ms", (time.perf_counter() - aruco_start) * 1000.0)
 
-    # Detekcja prostokatow kart (Task 3) — uruchamiana za feature flag
-    detected_card_quads = []
-    if USE_TABLE_CARD_DETECTION and gray_frame is not None:
-        card_detect_start = time.perf_counter()
-        # Preferujemy sprostowany obraz ArUco, fallback na surowa klatke
-        if table_calibration.calibrated:
-            detection_input = table_calibration.warp_frame(frame)
-        else:
-            detection_input = frame
-        if detection_input is not None:
-            detected_card_quads = find_card_quads(detection_input)
-        runtime_metrics.add("card_detect_ms", (time.perf_counter() - card_detect_start) * 1000.0)
-        runtime_metrics.add("card_quads_found", len(detected_card_quads))
-    
-    # 4. Wykrywamy punkty kluczowe w obecnej klatce
-    feature_start = time.perf_counter()
-    if gray_frame is not None:
-        kp_frame, des_frame = orb.detectAndCompute(gray_frame, None)
-    else:
-        des_frame = None
-    runtime_metrics.add("feature_detect_ms", (time.perf_counter() - feature_start) * 1000.0)
-
     if gray_frame is not None:
         motion_result = motion_detector.update(gray_frame)
     else:
@@ -743,31 +667,9 @@ while True:
     runtime_metrics.add("motion_changed_ratio", motion_result.changed_ratio)
 
 
-    if USE_SNAPSHOT_FIRST_CV:
-        pipeline_result = snapshot_pipeline.process_frame(
-            frame=frame,
-            motion_result=motion_result,
-            frame_width=frame_width,
-            frame_height=frame_height,
-            frame_loop_start=frame_loop_start
-        )
-        if pipeline_result["action"] == "quit":
-            break
-        elif pipeline_result["action"] == "switch":
-            frame_width = pipeline_result["frame_width"]
-            frame_height = pipeline_result["frame_height"]
-            log_event(f"[KAMERA] Nowa rozdzielczosc: {frame_width}x{frame_height}")
-        continue
-    
-    # ==========================================================================
-    # STATE-FIRST OPTIMIZATION (Task 10, Opus 2026-05-29) -> Hermetyzowane w legacy_pipeline
-    # ==========================================================================
-    pipeline_result = legacy_pipeline.process_frame(
+    pipeline_result = snapshot_pipeline.process_frame(
         frame=frame,
-        gray_frame=gray_frame,
         motion_result=motion_result,
-        des_frame=des_frame,
-        kp_frame=kp_frame,
         frame_width=frame_width,
         frame_height=frame_height,
         frame_loop_start=frame_loop_start

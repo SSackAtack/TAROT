@@ -29,6 +29,7 @@
 - `TASK-CV-RECT-001` sparametryzował `find_card_quads()` pod Canny / contour mode / max candidates.
 - `TASK-CV-AUTOTUNE-001` dodał offline autotuner geometrii prostokąta, zatwierdzony przez Codex review jako `LIGHT: GREEN`.
 - Operator console i profile runtime już istnieją, ale aktualny autotuning nie jest jeszcze częścią live snapshot-first flow.
+- `TASK-CV-SNAPSHOT-001` usunął runtime legacy state-first z `main.py`, eksportów i testów kontraktowych; snapshot-first jest teraz bezwarunkową ścieżką backendu CV.
 
 ### Kolejne kroki
 
@@ -39,6 +40,16 @@
 5. Dodać model pustej maty jako opcjonalne źródło kontrastu foreground.
 6. Rozszerzyć autotuning tak, żeby scoring uwzględniał rozpoznanie cropa, nie tylko geometrię.
 7. Dopiero po tych krokach zrobić osobny, bramkowany spike YOLO OBB.
+
+## Session Status (2026-06-01, Codex)
+
+Zrealizowano `TASK-CV-SNAPSHOT-001`: usunięto `StateFirstLegacyPipeline` z eksportów, runtime i testów; `main.py` wywołuje bezwarunkowo `SnapshotFirstPipeline`; README i `.ai/PROJECT_STATE.md` opisują snapshot-first jako jedyną produkcyjną ścieżkę CV.
+
+Weryfikacja:
+- `python -m unittest app_cv.tests.test_main_static_audit app_cv.tests.test_pipelines_contract -v` -> PASS, 5 testów.
+- `python -m py_compile app_cv\main.py app_cv\tarotvision\pipelines\__init__.py app_cv\tarotvision\pipelines\snapshot_first.py` -> PASS.
+
+Następny krok: `TASK-CV-SNAPSHOT-002`, czyli Unicode-safe image I/O i przeniesienie loadera wzorców poza `main.py`.
 
 ---
 
@@ -119,7 +130,7 @@
 - Modify: `.ai/PROJECT_STATE.md`
 - Modify: `.ai/TASKS_INDEX.md`
 
-- [ ] **Step 1: Create branch**
+- [x] **Step 1: Create branch**
 
 Run:
 
@@ -129,7 +140,7 @@ git -C E:\Antigravity\Projekty\TAROT switch -c codex/snapshot-first-recognition-
 
 Expected: branch created from the current accepted base. If execution starts after merge of `TASK-CV-AUTOTUNE-001`, create it from latest `master`.
 
-- [ ] **Step 2: Write static guard test**
+- [x] **Step 2: Write static guard test**
 
 Modify `app_cv/tests/test_main_static_audit.py` by adding this test method to `TestMainStaticAudit`:
 
@@ -154,7 +165,7 @@ Modify `app_cv/tests/test_main_static_audit.py` by adding this test method to `T
                 )
 ```
 
-- [ ] **Step 3: Run static guard and verify failure**
+- [x] **Step 3: Run static guard and verify failure**
 
 Run:
 
@@ -164,7 +175,7 @@ cmd /c "cd /d E:\Antigravity\Projekty\TAROT && set PYTHONPATH=C:\tmp\tarot_pydep
 
 Expected: FAIL because `main.py` still imports `StateFirstLegacyPipeline`, defines `USE_SNAPSHOT_FIRST_CV`, initializes `legacy_pipeline`, and branches into it.
 
-- [ ] **Step 4: Remove legacy export**
+- [x] **Step 4: Remove legacy export**
 
 Replace `app_cv/tarotvision/pipelines/__init__.py` with:
 
@@ -175,7 +186,7 @@ from .snapshot_first import SnapshotFirstPipeline
 __all__ = ["VisionPipeline", "SnapshotFirstPipeline"]
 ```
 
-- [ ] **Step 5: Update pipeline contract tests**
+- [x] **Step 5: Update pipeline contract tests**
 
 Replace the import in `app_cv/tests/test_pipelines_contract.py`:
 
@@ -194,7 +205,7 @@ Add this method:
         self.assertFalse(hasattr(pipelines, "StateFirstLegacyPipeline"))
 ```
 
-- [ ] **Step 6: Remove legacy runtime from `main.py`**
+- [x] **Step 6: Remove legacy runtime from `main.py`**
 
 In `app_cv/main.py`:
 
@@ -260,7 +271,7 @@ with unconditional snapshot-first processing:
 
 5. Delete the remaining continuous matching / state-first block below that branch.
 
-- [ ] **Step 7: Delete legacy file**
+- [x] **Step 7: Delete legacy file**
 
 Run:
 
@@ -270,7 +281,7 @@ Remove-Item -LiteralPath E:\Antigravity\Projekty\TAROT\app_cv\tarotvision\pipeli
 
 The path is inside the project workspace. Do not delete any other file in this step.
 
-- [ ] **Step 8: Update README architecture wording**
+- [x] **Step 8: Update README architecture wording**
 
 In `README.md`, replace the state-first direction paragraph with:
 
@@ -284,7 +295,7 @@ Replace package description:
 │   ├── tarotvision/     # Pakiet snapshot-first CV (modul zespolowy)
 ```
 
-- [ ] **Step 9: Update project state**
+- [x] **Step 9: Update project state**
 
 In `.ai/PROJECT_STATE.md`, update backend module bullet:
 
@@ -294,7 +305,7 @@ In `.ai/PROJECT_STATE.md`, update backend module bullet:
 
 Remove wording that says `Snapshot-First i Legacy State-First`.
 
-- [ ] **Step 10: Verify**
+- [x] **Step 10: Verify**
 
 Run:
 

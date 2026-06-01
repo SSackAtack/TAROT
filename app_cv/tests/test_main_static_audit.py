@@ -65,5 +65,26 @@ class TestMainStaticAudit(unittest.TestCase):
             error_msg = "\n".join(visitor.errors)
             self.fail(f"Statyczny audyt main.py wykrył problemy:\n{error_msg}")
 
+    def test_snapshot_first_is_the_only_runtime_pipeline(self):
+        """Weryfikuje, że main.py nie utrzymuje już runtime'owego fallbacku state-first."""
+        self.assertTrue(os.path.exists(self.main_py_path), f"Plik {self.main_py_path} nie istnieje")
+
+        with open(self.main_py_path, "r", encoding="utf-8") as f:
+            source = f.read()
+
+        forbidden_tokens = [
+            "StateFirstLegacyPipeline",
+            "legacy_pipeline",
+            "USE_SNAPSHOT_FIRST_CV",
+            "USE_TABLE_CARD_DETECTION",
+            "STATE-FIRST OPTIMIZATION",
+        ]
+        found = [token for token in forbidden_tokens if token in source]
+        if found:
+            self.fail(
+                "main.py powinien uruchamiać wyłącznie SnapshotFirstPipeline; wykryto legacy tokeny: "
+                + ", ".join(found)
+            )
+
 if __name__ == '__main__':
     unittest.main()

@@ -12,7 +12,7 @@ Kamera rozpoznaje fizycznie rozkladane karty tarota, a aplikacja generuje perfek
 
 Aktualny PoC rozpoznaje 22 karty Wielkich Arkanow Rider-Waite-Smith przez ORB/FLANN. Domyslna wizualizacja AR uzywa uporzadkowanego snap-to-layout, bo jest to lepsze dla czytelnego kadru YouTube. Dokladne odwzorowanie fizycznych pozycji kart pozostaje opcja na pozniejszy etap.
 
-Nastepny kierunek rozwoju CV: architektura state-first, czyli `identify once -> track cheaply -> reverify when needed`. System ma rozpoznawac nowa karte raz, usuwac ja z puli dostepnych kart, sledzic zablokowane karty tanio po konturze/ROI i uruchamiac pelna rewalidacje tylko przy podejrzeniu zmiany albo w interwale kontrolnym. Mata z markerami ArUco, korekcja perspektywy stolu, detekcja prostokatow kart, crop/deskew i rozpoznawanie cropow pozostaja docelowym pipeline. YOLO/ONNX/OpenVINO/CUDA traktujemy jako wariant benchmarkowy i mozliwy silnik produkcyjny, jesli testy na realnych nagraniach pokaza przewage nad klasycznym CV.
+Nastepny kierunek rozwoju CV: architektura snapshot-first. System czeka na ustanie ruchu, wybiera najlepszy snapshot, opcjonalnie prostuje mate przez ArUco, wykrywa prostokaty kart, normalizuje cropy i rozpoznaje je przez dopasowanie cech do aktywnych talii. Nie utrzymujemy juz rownoleglego pipeline state-first, zeby nie mieszac decyzji runtime i uproscic diagnostyke. YOLO/ONNX/OpenVINO/CUDA traktujemy jako wariant benchmarkowy i mozliwy silnik produkcyjny dopiero po osobnej decyzji licencyjnej i testach na realnych nagraniach.
 
 ## Kluczowe cechy (zaimplementowane)
 
@@ -92,17 +92,12 @@ Najwazniejsze pliki diagnostyczne:
 - `logs/launcher.log` -- start launchera.
 
 Przy starcie przez launcher `cv_metrics.jsonl`, `cv_runtime.log` i `ar_vite.log` opisuja biezacy przebieg testowy, zeby nowe pomiary nie mieszaly sie ze starymi.
-W `runtime` widac tez `schedule_mode` (`empty_scan`, `boost_scan`, `steady_scan`), `boost_frames_remaining`, `available_card_count`, `tracked_card_count`, `reverify_interval_frames` oraz `tracking_iou_threshold`.
-W metrykach pomocniczych dla state-first CV dochodza `motion_changed_ratio`, `reverify_due_count`, `tracked_assignments`, `unoccupied_observed_boxes` i `tracking_reverify_count`.
+W `runtime` widac profil pracy, indeks kamery, rozdzielczosc przechwytywania oraz status blokady focus/exposure.
+W metrykach snapshot-first CV dochodza `motion_changed_ratio`, `stable_for_ms`, `snapshot_quality_score`, `snapshot_analysis_ms`, `snapshot_rejected_count`, `layout_publish_count` oraz `time_from_motion_to_publish_ms`.
 
 ### Tryb snapshot-first CV
 
-Eksperymentalny tryb snapshot-first uruchamia lekki watcher ruchu, czeka na stabilny uklad kart i analizuje pojedyncza dobra klatke zamiast stale rozpoznawac tozsamosc kart w kazdej klatce.
-
-```powershell
-$env:TAROTVISION_SNAPSHOT_FIRST="1"
-python app_cv/main.py
-```
+Tryb snapshot-first jest jedyna produkcyjna sciezka CV. Uruchamia lekki watcher ruchu, czeka na stabilny uklad kart i analizuje pojedyncza dobra klatke zamiast stale rozpoznawac tozsamosc kart w kazdej klatce.
 
 Startowe parametry sa konserwatywne: okolo 3 sekund stabilnosci, 3 snapshoty kontrolne i publikacja tylko zatwierdzonego ukladu. Overlay w przegladarce trzyma ostatni dobry wynik podczas ruchu lub odrzucenia snapshotu.
 
@@ -116,7 +111,7 @@ Domyslny adres `http://localhost:5173/` pozostaje czystym overlayem do OBS. Pane
 http://localhost:5173/?operator=1
 ```
 
-Konsola pokazuje metryki runtime, aktualne parametry strojenia, ostrzezenia operatora i status profili. Bezpieczne parametry state-first CV, takie jak `LOCK_DEAD_ZONE_POS`, `LOCK_DEAD_ZONE_ANGLE`, `TRACKING_IOU_THRESHOLD`, `REVERIFY_INTERVAL_FRAMES` i `BOOST_AFTER_LAYOUT_CHANGE_FRAMES`, moga byc zmieniane przez WebSocket bez restartu. Zmiany bardziej ryzykowne sa oznaczane jako wymagajace kroku kalibracji/apply.
+Konsola pokazuje metryki runtime, aktualne parametry strojenia, ostrzezenia operatora i status profili. Bezpieczne parametry snapshot-first CV, takie jak `SNAPSHOT_SETTLE_SECONDS`, `MOTION_CHANGED_RATIO` i `WORKSPACE_INFLATE_PERCENT`, moga byc zmieniane przez WebSocket bez restartu. Zmiany bardziej ryzykowne, takie jak `MIN_MATCH_COUNT`, `RATIO_THRESH` i `MIN_INLIER_RATIO`, sa oznaczane jako wymagajace kroku kalibracji/apply.
 
 Profile strojenia zapisywane sa lokalnie w:
 
@@ -149,8 +144,8 @@ TAROT/
 │   ├── style.css        # Style CSS
 │   └── public/karty/    # 22 tekstur .webp
 ├── app_cv/              # Backend CV (Python + OpenCV)
-│   ├── main.py          # Detekcja ORB, FLANN, WebSocket server
-│   ├── tarotvision/     # Pakiet state-first CV (modul zespolowy)
+│   ├── main.py          # Orkiestracja snapshot-first CV i WebSocket server
+│   ├── tarotvision/     # Pakiet snapshot-first CV (modul zespolowy)
 │   │   ├── table_state.py       # FSM kart na stole
 │   │   ├── motion.py            # Detekcja ruchu sceny
 │   │   ├── roi_map.py           # Geometria ROI / IoU
@@ -192,7 +187,7 @@ Duże zmiany muszą być dzielone na małe taski obejmujące maksymalnie 1–3 p
 - [Zasady wspolpracy zespolu AI](AGENTS.md) ⬅ **PRZECZYTAJ NAJPIERW**
 - [Plan koncepcyjny (FINAL)](docs/plan_koncepcyjny_v4.md)
 - [Roadmapa wdrozenia CV](docs/superpowers/plans/2026-05-29-tarotvision-cv-roadmap.md)
-- [Plan fazy state-first CV](docs/superpowers/plans/2026-05-29-tarotvision-state-first-cv-plan.md)
+- [Plan snapshot-first multideck recognition hardening](docs/superpowers/plans/2026-06-01-snapshot-first-multideck-recognition-hardening-plan.md)
 - [Plan panelu kalibracji i auto-tuningu](docs/superpowers/plans/2026-05-29-tarotvision-auto-tuning-plan.md)
 - [Synteza analiz AI](analizy/synteza/synteza_glowna.md)
 - [Raporty poszczegolnych agentow](analizy/raporty/)
