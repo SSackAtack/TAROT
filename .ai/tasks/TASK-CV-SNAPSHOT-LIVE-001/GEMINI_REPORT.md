@@ -14,15 +14,15 @@
 
 ---
 
-## 2. REKOMENDACJA KOLEJNEGO ZADANIA: "Pancerna detekcja kart pod odblaski" (Fallback Cascade)
+## 2. REKOMENDACJA KOLEJNEGO ZADANIA: "Pancerna Kaskada Detekcji Krawędzi" (Fallback Cascade 4-3-2-1)
 
-Proponujemy zlecenie kolejnego zadania modelowi **Codex** w celu uodpornienia detekcji krawędzi kart na odblaski i taśmy klejące poprzez wdrożenie geometrycznego fallbacku (4 ➔ 3 ➔ 2 wierzchołki).
+Proponujemy zlecenie kolejnego zadania modelowi **Codex** w celu wdrożenia **pancernej kaskady detekcji geometrycznej (Fallback Cascade)** na sprostowanym stole (warped frame). Zamiast zero-jedynkowego podejścia, algorytm CV będzie próbował zrekonstruować pozycję karty sekwencyjnie w zależności od stopnia jej widoczności.
 
 ### Specyfikacja techniczna dla Codexa:
 
 Modyfikacja algorytmu detekcji w `app_cv/tarotvision/card_detection.py` oraz profilu `background_diff` w `card_detection_profiles.py`:
 
-#### Krok A: Dopasowanie obróconego prostokąta (`minAreaRect`)
+#### [Poziom 1] Detekcja 4 krawędzi (Klasyczna / Obrócone Pudełko `minAreaRect`)
 Zamiast rygorystycznego warunku `len(approx) == 4` na konturze:
 * Dla konturów, które mają `len(approx) >= 4` (np. 5, 6 lub 8 wierzchołków z powodu flary/taśmy), należy dopasować minimalne pudełko obrócone:
   ```python
@@ -30,23 +30,23 @@ Zamiast rygorystycznego warunku `len(approx) == 4` na konturze:
   box = cv2.boxPoints(rect)
   box = np.int0(box)
   ```
-* Jeżeli proporcje tak wyznaczonego prostokąta `box` odpowiadają proporcjom karty tarota (`is_card_aspect_ratio`), przyjmujemy ten `box` jako idealną detekcję o 4 wierzchołkach!
+* Jeżeli proporcje tak wyznaczonego prostokąta `box` odpowiadają proporcjom karty tarota (`is_card_aspect_ratio`), przyjmujemy ten `box` jako idealną detekcję o 4 wierzchołkach.
 
-#### Krok B: Fallback dla 3 wierzchołków (Rekonstrukcja geometryczna)
-Jeśli odblask całkowicie "ściął" jeden narożnik i `approxPolyDP` zwrócił dokładnie **3 wierzchołki** (A, B, C), z których AB i BC są prostopadłymi bokami karty:
-* Obliczamy brakujący czwarty wierzchołek D przy założeniu, że karta tworzy równoległobok w przestrzeni 2D (na sprostowanym stole warped):
+#### [Poziom 2] Fallback dla 3 krawędzi (Rekonstrukcja geometryczna)
+Jeśli odblask całkowicie "ściął" jeden narożnik i `approxPolyDP` zwrócił dokładnie **3 wierzchołki** (A, B, C) określające dwie przyległe krawędzie:
+* Obliczamy brakujący czwarty wierzchołek D przy założeniu, że karta tworzy równoległobok w przestrzeni 2D:
   ```python
   D = A + (C - B)  # Matematyczne wyznaczenie brakującego narożnika
   ```
 * Sprawdzamy czy kąty i proporcje tak odtworzonego czworokąta ABCD odpowiadają karcie tarota.
 
-#### Krok C: Fallback dla 2 wierzchołków (Wyznaczanie z jednego boku)
+#### [Poziom 3] Fallback dla 2 krawędzi (Wyznaczanie z jednego boku)
 Jeśli wykryto tylko **2 sąsiednie wierzchołki** (jedną wyraźną krawędź karty o długości $L$):
 * Wiemy, że na sprostowanym stole (warped frame) kierunek pionowy jest stały.
 * Wyznaczamy kierunek prostopadły do krawędzi w głąb karty (sprawdzamy na masce binarnej tła, po której stronie linii leży jasny obszar).
-* Przesuwamy wierzchołki wzdłuż prostopadłych wektorów o długość $H = L \times 1.72$, odtwarzając brakujące 2 wierzchołki!
+* Przesuwamy wierzchołki wzdłuż prostopadłych wektorów o długość $H = L \times 1.72$, odtwarzając brakujące 2 wierzchołki i zamykając prostokąt.
 
-#### Krok D (Rewelacyjny pomysł operatora): Fallback z 1 krawędzi (Single-Edge Scale Matching)
+#### [Poziom 4] Fallback z 1 krawędzi (Single-Edge Scale Matching)
 Jeśli z powodu potężnego odblasku zidentyfikujemy **tylko jedną pojedynczą krawędź (linię)** o długości $L$:
 * Ponieważ stół jest sprostowany (warped), skala (piksel/cm) jest stała i znana. Wiemy dokładnie, ile pikseli ma krótki bok ($W$) oraz długi bok ($H$) kart z danej talii (np. dla Gilded: $W \approx 130$ px, $H \approx 224$ px).
 * Porównujemy długość wykrytej krawędzi $L$ z tolerancją (np. 95%):
@@ -56,3 +56,4 @@ Jeśli z powodu potężnego odblasku zidentyfikujemy **tylko jedną pojedynczą 
   - Sprawdzamy na masce binarnej `background_diff`, po której stronie linii znajduje się biały obszar karty.
   - Wyznaczamy wektory prostopadłe skierowane w tę stronę o brakującej długości ($H$ lub $W$) i wyliczamy pozycje brakujących dwóch narożników!
 * Daje to 100% odporność na zasłonięcia karty przez inne obiekty, cienie i flary!
+
