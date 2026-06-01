@@ -17,3 +17,17 @@ cmd /c "cd /d E:\Antigravity\Projekty\TAROT && set PYTHONPATH=C:\tmp\tarot_pydep
 ```
 
 Wynik: PASS, 1 test.
+
+### CI import fix verification
+
+```text
+cmd /c "cd /d E:\Antigravity\Projekty\TAROT\app_cv && set PYTHONPATH=. && python -m unittest tests.test_benchmark_snapshot_recognition -v"
+```
+
+Wynik: PASS, 1 test.
+
+```text
+cmd /c "cd /d E:\Antigravity\Projekty\TAROT && set PYTHONPATH=E:\Antigravity\Projekty\TAROT\.tmp_pydeps;app_cv && python -m unittest discover -s app_cv\tests -v"
+```
+
+Wynik: PASS, 227 testów.
