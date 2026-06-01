@@ -36,6 +36,8 @@ ALLOWED_TYPES = {
     "camera_set",
     "calibration_start",
     "calibration_cancel",
+    "background_capture",
+    "background_clear",
     "studio_set_recording_dir",
     "studio_start_recording",
     "studio_stop_recording",

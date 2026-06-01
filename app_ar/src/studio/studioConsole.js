@@ -17,6 +17,87 @@ let loadedDecksList = []
 let activeDecksState = []
 let isDecksApplying = false
 
+const studioCameraLabels = {
+    CAP_PROP_FOCUS: 'Ostrość',
+    CAP_PROP_AUTOFOCUS: 'Autofokus',
+    CAP_PROP_EXPOSURE: 'Ekspozycja',
+    CAP_PROP_AUTO_EXPOSURE: 'Auto ekspozycja',
+    CAP_PROP_BRIGHTNESS: 'Jasność',
+    CAP_PROP_CONTRAST: 'Kontrast'
+}
+
+const studioCameraRanges = {
+    CAP_PROP_FOCUS: { min: 0, max: 1023, step: 5 },
+    CAP_PROP_AUTOFOCUS: { min: 0, max: 1, step: 1 },
+    CAP_PROP_EXPOSURE: { min: -13, max: 1000, step: 1 },
+    CAP_PROP_AUTO_EXPOSURE: { min: 0, max: 3, step: 1 },
+    CAP_PROP_BRIGHTNESS: { min: 0, max: 255, step: 1 },
+    CAP_PROP_CONTRAST: { min: 0, max: 255, step: 1 }
+}
+
+function clampCameraValue(value, range) {
+    const numericValue = Number(value)
+    if (!Number.isFinite(numericValue)) return Number(range.min)
+    return Math.min(Number(range.max), Math.max(Number(range.min), numericValue))
+}
+
+function formatCameraValue(value, step) {
+    const numericStep = Number(step)
+    if (!Number.isFinite(numericStep) || !String(step).includes('.')) {
+        return String(Number(value))
+    }
+    const decimals = String(step).split('.')[1].length
+    return Number(value).toFixed(decimals)
+}
+
+function applyStudioCameraControlValue(input, rawValue, shouldSend = false) {
+    const cameraParam = input.dataset.cameraParam
+    if (!cameraParam) return
+
+    const control = input.closest('.studio-camera-control')
+    if (!control) return
+
+    const range = studioCameraRanges[cameraParam] || { min: 0, max: 255, step: 1 }
+    const value = clampCameraValue(rawValue, range)
+    const formattedValue = formatCameraValue(value, range.step)
+
+    control.querySelectorAll(`input[data-camera-param="${cameraParam}"]`).forEach((field) => {
+        field.value = formattedValue
+    })
+
+    const output = control.querySelector('output')
+    if (output) output.textContent = formattedValue
+
+    if (shouldSend) {
+        sendControlMessage({
+            type: 'camera_set',
+            param: cameraParam,
+            value
+        })
+    }
+}
+
+function getStudioDeckDisplayName(deckId) {
+    const deck = loadedDecksList.find(item => item.id === deckId)
+    return deck?.display_name || deckId
+}
+
+function updateStudioActiveDecksStatus(selectedIds = activeDecksState) {
+    if (!sidebarEl) return
+    const statusEl = sidebarEl.querySelector('#studio-active-decks-status')
+    if (!statusEl) return
+
+    if (!Array.isArray(selectedIds) || selectedIds.length < 1) {
+        statusEl.textContent = 'Wybierz 1-3 talie przed kalibracją'
+        statusEl.classList.add('studio-active-decks-status--warning')
+        return
+    }
+
+    const names = selectedIds.map(getStudioDeckDisplayName).join(', ')
+    statusEl.textContent = `Aktywne teraz: ${names}`
+    statusEl.classList.remove('studio-active-decks-status--warning')
+}
+
 function initStudioDecksPanel() {
     if (isDecksInitialized || !sidebarEl) return
     isDecksInitialized = true
@@ -37,14 +118,17 @@ function initStudioDecksPanel() {
                 .then(res => res.json())
                 .then(activeData => {
                     activeDecksState = activeData.active_decks || []
+                    updateStudioActiveDecksStatus(activeDecksState)
                     renderDecksCheckboxes(listEl, applyBtn)
                 })
                 .catch(() => {
+                    updateStudioActiveDecksStatus([])
                     renderDecksCheckboxes(listEl, applyBtn)
                 })
         })
         .catch(err => {
             listEl.innerHTML = `<div style="font-size: 11px; color: #f87171; text-align: center; padding: 8px;">Błąd pobierania manifestu: ${err}</div>`
+            updateStudioActiveDecksStatus([])
         })
 }
 
@@ -101,6 +185,7 @@ function renderDecksCheckboxes(listEl, applyBtn) {
 
             // Sprawdzamy czy zaszła zmiana w stosunku do stanu activeDecksState
             const currentSelected = checkedBoxes.map(c => c.getAttribute('data-deck-id'))
+            updateStudioActiveDecksStatus(currentSelected)
             const hasChanged = currentSelected.length !== activeDecksState.length || 
                                !currentSelected.every(id => activeDecksState.includes(id))
 
@@ -174,6 +259,9 @@ export function createStudioConsole() {
             <div class="studio-logo__badge">Console v1</div>
         </div>
         <div class="studio-indicators">
+            <button type="button" class="studio-operator-link" id="btn-open-operator" title="Otwórz Panel Operatora w nowej karcie">
+                Operator
+            </button>
             <div class="studio-indicator studio-indicator--active" id="indicator-ws">
                 <div class="dot"></div> WS
             </div>
@@ -198,7 +286,10 @@ export function createStudioConsole() {
     const previewOverlay = document.createElement('div')
     previewOverlay.className = 'studio-preview-overlay'
     previewOverlay.innerHTML = `
-        <div class="studio-preview-label">LIVE FEED COMPOSITOR</div>
+        <div class="studio-preview-label">LIVE CAMERA PREVIEW</div>
+        <div class="studio-camera-preview">
+            <img id="studio-camera-preview-img" src="http://localhost:8766/video_feed.mjpg" alt="Podgląd kamery CV">
+        </div>
         <div class="studio-safe-guides">
             <div class="studio-safe-guides-inner"></div>
         </div>
@@ -233,6 +324,20 @@ export function createStudioConsole() {
                 </div>
                 <div class="studio-path-status" id="studio-path-status">Stan: Brak walidacji</div>
             </div>
+        </div>
+
+        <!-- Sekcja 1b: Kamera sprzętowa -->
+        <div class="studio-card">
+            <div class="studio-card__header">
+                <div class="studio-card__title">Kamera sprzętowo</div>
+                <div class="studio-card__subtitle">Focus / Exposure</div>
+            </div>
+            <div class="studio-camera-controls" id="studio-camera-controls">
+                Brak danych z kamery. Kliknij odczyt.
+            </div>
+            <button class="studio-btn-action" id="studio-camera-probe-btn" style="width: 100%; justify-content: center; height: 32px;">
+                Odczyt kamery
+            </button>
         </div>
 
         <!-- Sekcja 2: Reżyser / Sceny -->
@@ -303,6 +408,9 @@ export function createStudioConsole() {
             <div class="studio-card__header">
                 <div class="studio-card__title">Aktywne Talie (Active Decks)</div>
                 <div class="studio-card__subtitle" id="studio-decks-count">Wybierz 1-3 talie</div>
+            </div>
+            <div class="studio-active-decks-status studio-active-decks-status--warning" id="studio-active-decks-status">
+                Wybierz 1-3 talie przed kalibracją
             </div>
             <div class="studio-decks-list" id="studio-decks-list" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;">
                 <div style="font-size: 11px; color: rgba(255,255,255,0.4); text-align: center; padding: 8px;">Ładowanie listy talii...</div>
@@ -395,6 +503,52 @@ function initStudioConsoleEvents() {
 
     // Automatyczna inicjalizacja mikrofonu i miksera audio w tle
     startStudioMicrophone().catch(err => console.warn('Deferred microphone authorization:', err))
+
+    const operatorBtn = topbarEl ? topbarEl.querySelector('#btn-open-operator') : null
+    if (operatorBtn) {
+        operatorBtn.addEventListener('click', () => {
+            window.open(`${window.location.origin}${window.location.pathname}?operator=1`, '_blank', 'noopener')
+        })
+    }
+
+    const cameraProbeBtn = sidebarEl.querySelector('#studio-camera-probe-btn')
+    if (cameraProbeBtn) {
+        cameraProbeBtn.addEventListener('click', () => {
+            sendControlMessage({ type: 'camera_probe' })
+        })
+    }
+
+    const cameraControls = sidebarEl.querySelector('#studio-camera-controls')
+    if (cameraControls) {
+        cameraControls.addEventListener('input', (event) => {
+            const input = event.target
+            if (!(input instanceof HTMLInputElement)) return
+            if (!input.dataset.cameraParam) return
+            if (input.dataset.cameraRole === 'number' && input.value === '') return
+            applyStudioCameraControlValue(input, input.value)
+        })
+        cameraControls.addEventListener('change', (event) => {
+            const input = event.target
+            if (!(input instanceof HTMLInputElement)) return
+            const cameraParam = input.dataset.cameraParam
+            if (!cameraParam) return
+            applyStudioCameraControlValue(input, input.value, true)
+        })
+        cameraControls.addEventListener('click', (event) => {
+            const button = event.target
+            if (!(button instanceof HTMLButtonElement)) return
+            const direction = Number(button.dataset.cameraStepDirection)
+            if (!Number.isFinite(direction)) return
+
+            const control = button.closest('.studio-camera-control')
+            const input = control?.querySelector('input[data-camera-role="range"]')
+            if (!(input instanceof HTMLInputElement)) return
+
+            const step = Number(input.step || '1')
+            const nextValue = Number(input.value) + direction * (Number.isFinite(step) ? step : 1)
+            applyStudioCameraControlValue(input, nextValue, true)
+        })
+    }
 
     // 1. Zmiana katalogu zapisu (Wysyła komendę konfiguracji zapisu)
     const pathBtn = sidebarEl.querySelector('#studio-path-btn')
@@ -580,6 +734,66 @@ function formatTime(ms) {
         .join(":")
 }
 
+function updateStudioCameraControls(supportedControls) {
+    if (!sidebarEl) return
+    const container = sidebarEl.querySelector('#studio-camera-controls')
+    if (!container) return
+
+    if (!supportedControls || Object.keys(supportedControls).length === 0) {
+        container.textContent = 'Brak danych z kamery. Kliknij odczyt.'
+        return
+    }
+
+    const existingInputs = container.querySelectorAll('input[data-camera-param]')
+    if (existingInputs.length > 0) {
+        Object.entries(supportedControls).forEach(([name, data]) => {
+            if (data.readback_value === -1.0) return
+            const control = container.querySelector(`.studio-camera-control[data-camera-control="${name}"]`)
+            if (control && !control.contains(document.activeElement)) {
+                const input = control.querySelector('input[data-camera-role="range"]')
+                if (input) applyStudioCameraControlValue(input, data.readback_value)
+            }
+        })
+        return
+    }
+
+    const html = Object.entries(supportedControls).map(([name, data]) => {
+        if (data.readback_value === -1.0) return ''
+        const range = studioCameraRanges[name] || { min: 0, max: 255, step: 1 }
+        const label = studioCameraLabels[name] || name
+        const value = formatCameraValue(clampCameraValue(data.readback_value, range), range.step)
+        return `
+            <label class="studio-camera-control" data-camera-control="${name}">
+                <span title="${name}">${label}</span>
+                <button type="button" class="studio-camera-step" data-camera-step-direction="-1" title="Zmniejsz o ${range.step}">-</button>
+                <input
+                    type="range"
+                    min="${range.min}"
+                    max="${range.max}"
+                    step="${range.step}"
+                    value="${value}"
+                    data-camera-param="${name}"
+                    data-camera-role="range"
+                />
+                <button type="button" class="studio-camera-step" data-camera-step-direction="1" title="Zwiększ o ${range.step}">+</button>
+                <input
+                    type="number"
+                    min="${range.min}"
+                    max="${range.max}"
+                    step="${range.step}"
+                    value="${value}"
+                    data-camera-param="${name}"
+                    data-camera-role="number"
+                    aria-label="${label}: dokładna wartość"
+                />
+                <output>${value}</output>
+            </label>
+        `
+    }).join('')
+
+    container.innerHTML = html || 'Brak aktywnych sprzętowych funkcji kamery w tym systemie.'
+}
+
 // Funkcja aktualizująca UI Konsoli Studio nowym payloadem WebSocket
 export function updateStudioConsole(data) {
     if (!appState.studioMode || !sidebarEl) return
@@ -671,6 +885,7 @@ export function updateStudioConsole(data) {
     })
     saveStudioVolumeSettings()
     updateAudioMixerValues()
+    updateStudioCameraControls(data.operator?.supported_camera_controls)
 
     // 2. Górny Topbar statusu systemowego
     const wsInd = topbarEl.querySelector('#indicator-ws')
@@ -850,6 +1065,7 @@ export function updateStudioConsole(data) {
         
         if (!equals) {
             activeDecksState = [...remoteDecks]
+            updateStudioActiveDecksStatus(activeDecksState)
             
             // Asynchroniczne doładowanie tekstur w locie do cache w silniku 3D Three.js
             import('../renderer/textureCache').then(module => {

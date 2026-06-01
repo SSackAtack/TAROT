@@ -22,6 +22,8 @@ PARAMETERS = {
     "RATIO_THRESH": TunableParameter("RATIO_THRESH", 0.79, 0.50, 0.95, False),
     "MIN_INLIER_RATIO": TunableParameter("MIN_INLIER_RATIO", 0.25, 0.10, 0.80, False),
     "WORKSPACE_INFLATE_PERCENT": TunableParameter("WORKSPACE_INFLATE_PERCENT", 0.0, -10.0, 30.0, True),
+    "CARD_DETECT_MAX_CANDIDATES": TunableParameter("CARD_DETECT_MAX_CANDIDATES", 10.0, 1.0, 30.0, True),
+    "CARD_DETECT_MIN_AREA_RATIO": TunableParameter("CARD_DETECT_MIN_AREA_RATIO", 0.001, 0.0001, 0.02, True),
 }
 
 

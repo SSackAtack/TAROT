@@ -65,6 +65,26 @@ def has_required_markers(ids):
     return REQUIRED_MARKER_IDS.issubset(present)
 
 
+def filter_table_markers(corners, ids):
+    """Keep only ArUco markers that define the table workspace."""
+    if ids is None:
+        return (), None
+
+    kept_corners = []
+    kept_ids = []
+    flat_ids = np.asarray(ids).reshape(-1)
+    for index, marker_id in enumerate(flat_ids):
+        mid = int(marker_id)
+        if mid not in REQUIRED_MARKER_IDS:
+            continue
+        kept_corners.append(corners[index])
+        kept_ids.append([mid])
+
+    if not kept_ids:
+        return (), None
+    return tuple(kept_corners), np.asarray(kept_ids, dtype=np.int32)
+
+
 def extract_workspace_corners(corners, ids):
     """Extract the four inner corners that define the play area.
 
@@ -229,20 +249,21 @@ class TableCalibration:
 
         self._frames_since_detect = 0
         corners, ids, _ = detect_aruco_markers(gray_frame, self._detector)
+        table_corners, table_ids = filter_table_markers(corners, ids)
 
-        if ids is not None:
-            self.detected_marker_ids = sorted(int(v) for v in ids.reshape(-1))
+        if table_ids is not None:
+            self.detected_marker_ids = sorted(int(v) for v in table_ids.reshape(-1))
         else:
             self.detected_marker_ids = []
 
-        if not has_required_markers(ids):
+        if not has_required_markers(table_ids):
             # Keep the last valid homography if we had one — markers may be
             # temporarily occluded by a hand.  Clear only after prolonged loss.
             return self.calibrated
 
-        self._last_corners = corners
-        self._last_ids = ids
-        workspace = extract_workspace_corners(corners, ids)
+        self._last_corners = table_corners
+        self._last_ids = table_ids
+        workspace = extract_workspace_corners(table_corners, table_ids)
         self.homography = compute_table_homography(
             workspace, self.table_width, self.table_height, self.workspace_inflate_percent
         )

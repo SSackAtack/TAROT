@@ -5,6 +5,7 @@ Moduł rurociągu Snapshot-First (SnapshotFirstPipeline) TarotVision.
 import time
 import numpy as np
 from tarotvision.pipelines.base import VisionPipeline
+from tarotvision.detection_diagnostics import summarize_detection_diagnostics
 from tarotvision.snapshot_quality import choose_best_snapshot
 
 class SnapshotFirstPipeline(VisionPipeline):
@@ -44,6 +45,8 @@ class SnapshotFirstPipeline(VisionPipeline):
         self.last_motion_started_ms = None
         self.last_diagnostics_time = 0.0
         self.prev_time = time.time()
+        self.empty_snapshot_streak = 0
+        self.empty_snapshot_clear_threshold = 2
 
         # Stałe konfiguracyjne snapshotów (pobierane z parametrów)
         self.snapshot_sample_count = 1
@@ -136,13 +139,32 @@ class SnapshotFirstPipeline(VisionPipeline):
                 self.opencv_preview.show(display_analysis)
                 self.opencv_preview.handle_keyboard(self.camera_session)
                 
+                analysis_frame = selected.frame
+                if self.table_calibration.calibrated:
+                    warped_frame = self.table_calibration.warp_frame(selected.frame)
+                    if warped_frame is not None:
+                        analysis_frame = warped_frame
+                        self.runtime_metrics.add("snapshot_analysis_warped", 1)
+                    else:
+                        self.runtime_metrics.add("snapshot_analysis_warped", 0)
+                else:
+                    self.runtime_metrics.add("snapshot_analysis_warped", 0)
+
                 analysis_start = time.perf_counter()
-                result = self.snapshot_analyzer.analyze(selected.frame)
+                result = self.snapshot_analyzer.analyze(analysis_frame)
+                diagnostics = result.diagnostics if isinstance(result.diagnostics, dict) else {}
+                self.runtime_metrics.add("snapshot_quads_found", diagnostics.get("quads_found", 0))
+                self.runtime_metrics.add("snapshot_recognition_attempts", diagnostics.get("recognition_attempts", 0))
+                self.runtime_metrics.add("snapshot_recognition_rejections", diagnostics.get("recognition_rejections", 0))
+                for metric_name, metric_value in summarize_detection_diagnostics(
+                        diagnostics.get("detection")).items():
+                    self.runtime_metrics.add(metric_name, metric_value)
                 analysis_ms = (time.perf_counter() - analysis_start) * 1000.0
                 self.runtime_metrics.add("snapshot_analysis_ms", analysis_ms)
                 self.runtime_metrics.add("snapshot_quality_score", selected.quality.quality_score)
 
                 if result.card_count > 0:
+                    self.empty_snapshot_streak = 0
                     self.snapshot_layout_id += 1
                     self.last_snapshot_cards = result.cards
                     self.snapshot_gate.mark_published(
@@ -157,16 +179,25 @@ class SnapshotFirstPipeline(VisionPipeline):
                             int(time.time() * 1000) - self.last_motion_started_ms,
                         )
                 else:
+                    self.empty_snapshot_streak += 1
                     self.snapshot_gate.mark_rejected()
                     layout_snapshot["snapshot_reject_reason"] = "no_cards"
                     self.runtime_metrics.add("snapshot_rejected_count", 1)
+                    self.runtime_metrics.add("snapshot_empty_streak", self.empty_snapshot_streak)
+                    if (self.last_snapshot_cards
+                            and self.empty_snapshot_streak >= self.empty_snapshot_clear_threshold):
+                        self.snapshot_layout_id += 1
+                        self.last_snapshot_cards = []
+                        layout_snapshot["snapshot_reject_reason"] = "cards_removed_confirmed"
+                        self.runtime_metrics.add("cards_removed_count", 1)
+                        self.runtime_metrics.add("layout_changed", 1)
 
                 layout_snapshot.update({
                     "layout_id": self.snapshot_layout_id,
                     "state": self.snapshot_gate.state,
                     "analysis_ms": analysis_ms,
                     "quality_score": selected.quality.quality_score,
-                    "card_count": result.card_count,
+                    "card_count": len(self.last_snapshot_cards),
                 })
 
         metrics_snapshot = self.runtime_metrics.snapshot()

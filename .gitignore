@@ -5,6 +5,7 @@ biblioteka_talii/*/mastery/
 *.tif
 scans_input/
 scans_output/
+testdata/snapshots/
 
 # Duże pliki graficzne
 *.psd

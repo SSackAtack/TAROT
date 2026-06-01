@@ -4,6 +4,7 @@ import numpy as np
 
 from tarotvision.table_calibration import (
     has_required_markers,
+    filter_table_markers,
     extract_workspace_corners,
     compute_table_homography,
     TableCalibration,
@@ -30,6 +31,21 @@ class HasRequiredMarkersTest(unittest.TestCase):
     def test_extra_markers_still_valid(self):
         ids = np.array([[10], [11], [12], [13], [20]], dtype=np.int32)
         self.assertTrue(has_required_markers(ids))
+
+    def test_filter_table_markers_ignores_card_markers(self):
+        ids = np.array([[10], [37], [11], [12], [13]], dtype=np.int32)
+        corners = (
+            _make_marker_corners(0, 0),
+            _make_marker_corners(200, 200),
+            _make_marker_corners(100, 0),
+            _make_marker_corners(100, 100),
+            _make_marker_corners(0, 100),
+        )
+
+        filtered_corners, filtered_ids = filter_table_markers(corners, ids)
+
+        self.assertEqual(filtered_ids.reshape(-1).tolist(), [10, 11, 12, 13])
+        self.assertEqual(len(filtered_corners), 4)
 
 
 def _make_marker_corners(tl_x, tl_y, size=50):

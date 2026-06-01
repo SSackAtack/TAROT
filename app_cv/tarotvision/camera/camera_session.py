@@ -139,7 +139,13 @@ class CameraSession:
         if not self.is_opened():
             return
         try:
-            settings = {}
+            # Some webcams report stale or normalized values after a manual set
+            # (focus often reads back as 0.0). Persist the operator-requested
+            # values first, then fill missing controls from hardware readback.
+            settings = {
+                name: float(value)
+                for name, value in self.camera_set_cache.items()
+            }
             probes = {
                 "CAP_PROP_FOCUS": cv2.CAP_PROP_FOCUS,
                 "CAP_PROP_AUTOFOCUS": cv2.CAP_PROP_AUTOFOCUS,
@@ -149,6 +155,8 @@ class CameraSession:
                 "CAP_PROP_CONTRAST": cv2.CAP_PROP_CONTRAST,
             }
             for name, prop_id in probes.items():
+                if name in settings:
+                    continue
                 val = self.capture.get(prop_id)
                 if val is not None and val != -1.0:
                     settings[name] = float(val)

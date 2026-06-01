@@ -10,53 +10,17 @@ if not exist "%LOG_DIR%" mkdir "%LOG_DIR%"
 set "TAROTVISION_LOG_DIR=%LOG_DIR%"
 set "TAROTVISION_RESET_LOGS=1"
 set "TAROTVISION_SNAPSHOT_FIRST=1"
+set "TAROTVISION_DECK=rider-waite-smith"
 set "LAUNCH_LOG=%LOG_DIR%\launcher_studio.log"
 
-echo ========================================
-echo    TAROTVISION STUDIO - WYBÓR TALII
-echo ========================================
-echo.
-echo Wybierz domyślną talię tarot, od której zaczniesz sesję:
-echo 1) Rider-Waite-Smith (domyślna)
-echo 2) Zodiak
-echo 3) Magic (Tarot of Mystical Moments)
-echo 4) Gilded (The Gilded Tarot)
-echo 5) Marchetti (Tarot Marchetti)
-echo 6) Boski (Boski Tarot)
-echo 7) Światło i Cień (Swiatlo_i_Cien)
-echo.
-set /p DECK_CHOICE="Twój wybór [1-7] (domyślnie 1): "
-
-set "TAROTVISION_DECK=rider-waite-smith"
-if "%DECK_CHOICE%"=="2" (
-    set "TAROTVISION_DECK=zodiak"
-)
-if "%DECK_CHOICE%"=="3" (
-    set "TAROTVISION_DECK=magic"
-)
-if "%DECK_CHOICE%"=="4" (
-    set "TAROTVISION_DECK=gilded"
-)
-if "%DECK_CHOICE%"=="5" (
-    set "TAROTVISION_DECK=marchetti"
-)
-if "%DECK_CHOICE%"=="6" (
-    set "TAROTVISION_DECK=boski"
-)
-if "%DECK_CHOICE%"=="7" (
-    set "TAROTVISION_DECK=światło_i_cień"
-)
-
-echo.
-echo Wybrano talię startową: %TAROTVISION_DECK%
-echo [%date% %time%] Wybrana talia studio: %TAROTVISION_DECK% >> "%LAUNCH_LOG%"
-echo.
 echo ========================================
 echo    TAROTVISION STUDIO - Uruchamianie
 echo ========================================
 echo.
 echo [LOG] Logi będą zapisane w: %LOG_DIR%
 echo [CV] Tryb snapshot-first: WŁĄCZONY
+echo [DECK] Aktywne talie wybierasz w Studio. Fallback backendu: %TAROTVISION_DECK%
+echo [%date% %time%] Studio launcher start; deck fallback: %TAROTVISION_DECK% >> "%LAUNCH_LOG%"
 echo.
 
 echo ============================================================
@@ -125,7 +89,7 @@ echo [3/4] Otwieram przeglądarkę w trybie Studio...
 start "" "http://localhost:5173/?studio=1"
 
 echo [4/4] Uruchamiam serwer CV (Python)...
-start "TarotVision CV" /D "%~dp0app_cv" cmd /k "set TAROTVISION_LOG_DIR=%LOG_DIR%&& set TAROTVISION_RESET_LOGS=1&& set TAROTVISION_SNAPSHOT_FIRST=1&& set TAROTVISION_DECK=%TAROTVISION_DECK%&& python main.py"
+start "TarotVision CV" /D "%~dp0app_cv" cmd /k "set TAROTVISION_LOG_DIR=%LOG_DIR%&& set TAROTVISION_RESET_LOGS=1&& set TAROTVISION_SNAPSHOT_FIRST=1&& set TAROTVISION_DECK=%TAROTVISION_DECK%&& set TAROTVISION_DISABLE_OPENCV_PREVIEW=1&& python main.py"
 
 echo.
 echo ========================================
@@ -133,7 +97,7 @@ echo    TarotVision Studio Uruchomione!
 echo    AR:     http://localhost:5173/
 echo    STUDIO: http://localhost:5173/?studio=1
 echo    WS:     ws://localhost:8765/
-echo    CV:     Okno kamery OpenCV
+echo    PREVIEW: http://localhost:8766/video_feed.mjpg
 echo    MODE:   snapshot-first
 echo    LOG:    %LOG_DIR%
 echo ========================================

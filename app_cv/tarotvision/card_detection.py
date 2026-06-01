@@ -50,7 +50,8 @@ def is_card_aspect_ratio(width, height):
 def find_card_quads(bgr_frame, min_area_ratio=MIN_AREA_RATIO,
                     max_area_ratio=MAX_AREA_RATIO, canny_low=CANNY_LOW,
                     canny_high=CANNY_HIGH, contour_mode="external",
-                    max_candidates=None, return_debug=False):
+                    max_candidates=None, return_debug=False,
+                    use_min_area_rect_fallback=False):
     """Find four-sided convex contours with card-like aspect ratio.
 
     Pipeline: grayscale -> blur -> Canny edges -> findContours ->
@@ -66,6 +67,8 @@ def find_card_quads(bgr_frame, min_area_ratio=MIN_AREA_RATIO,
         contour_mode:    contour retrieval mode ("external", "list", "tree").
         max_candidates:  maximum number of candidate quads to return (sorted by area descending).
         return_debug:    if True, returns tuple (quads, debug_info).
+        use_min_area_rect_fallback: when True, wrap ragged contours in the
+                         best rotated rectangle if strict 4-point detection fails.
 
     Returns:
         List of numpy arrays, each with shape (4, 1, 2) — the four
@@ -102,11 +105,21 @@ def find_card_quads(bgr_frame, min_area_ratio=MIN_AREA_RATIO,
     contours_total = len(contours)
     candidates_after_area = 0
     candidates_after_quad = 0
+    min_area_rect_candidates = 0
+    min_area_rect_accepted = 0
+    reject_reasons = {
+        "area": 0,
+        "non_quad": 0,
+        "non_convex": 0,
+        "aspect": 0,
+        "min_area_rect_aspect": 0,
+    }
 
     quads = []
     for contour in contours:
         area = cv2.contourArea(contour)
         if area < min_area or area > max_area:
+            reject_reasons["area"] += 1
             continue
 
         candidates_after_area += 1
@@ -114,16 +127,33 @@ def find_card_quads(bgr_frame, min_area_ratio=MIN_AREA_RATIO,
         perimeter = cv2.arcLength(contour, True)
         approx = cv2.approxPolyDP(contour, 0.03 * perimeter, True)
 
-        if len(approx) != 4:
-            continue
-        if not cv2.isContourConvex(approx):
+        if len(approx) == 4 and cv2.isContourConvex(approx):
+            candidates_after_quad += 1
+
+            x, y, w, h = cv2.boundingRect(approx)
+            if is_card_aspect_ratio(w, h):
+                quads.append(approx)
+            else:
+                reject_reasons["aspect"] += 1
             continue
 
-        candidates_after_quad += 1
+        if len(approx) == 4:
+            reject_reasons["non_convex"] += 1
+        else:
+            reject_reasons["non_quad"] += 1
 
-        x, y, w, h = cv2.boundingRect(approx)
-        if is_card_aspect_ratio(w, h):
-            quads.append(approx)
+        if not use_min_area_rect_fallback:
+            continue
+
+        min_area_rect_candidates += 1
+        rect = cv2.minAreaRect(contour)
+        rect_w, rect_h = rect[1]
+        if not is_card_aspect_ratio(rect_w, rect_h):
+            reject_reasons["min_area_rect_aspect"] += 1
+            continue
+        min_area_rect_accepted += 1
+        rect_quad = _box_to_quad(cv2.boxPoints(rect))
+        quads.append(rect_quad)
 
     # Sort quads by area size descending
     quads.sort(key=lambda q: cv2.contourArea(q), reverse=True)
@@ -140,6 +170,9 @@ def find_card_quads(bgr_frame, min_area_ratio=MIN_AREA_RATIO,
             "contours_total": int(contours_total),
             "candidates_after_area": int(candidates_after_area),
             "candidates_after_quad": int(candidates_after_quad),
+            "min_area_rect_candidates": int(min_area_rect_candidates),
+            "min_area_rect_accepted": int(min_area_rect_accepted),
+            "reject_reasons": reject_reasons,
             "quads_final": len(quads),
         }
         return quads, debug_info
@@ -150,7 +183,8 @@ def find_card_quads(bgr_frame, min_area_ratio=MIN_AREA_RATIO,
 def find_card_quads_with_debug(bgr_frame, min_area_ratio=MIN_AREA_RATIO,
                                max_area_ratio=MAX_AREA_RATIO, canny_low=CANNY_LOW,
                                canny_high=CANNY_HIGH, contour_mode="external",
-                               max_candidates=None):
+                               max_candidates=None,
+                               use_min_area_rect_fallback=False):
     """Find card quads and return debug diagnostics.
 
     Args:
@@ -161,6 +195,7 @@ def find_card_quads_with_debug(bgr_frame, min_area_ratio=MIN_AREA_RATIO,
         canny_high:      high threshold for Canny.
         contour_mode:    contour retrieval mode.
         max_candidates:  maximum candidates to return.
+        use_min_area_rect_fallback: enable rotated-box reconstruction.
 
     Returns:
         Tuple of (quads, debug_info).
@@ -173,5 +208,16 @@ def find_card_quads_with_debug(bgr_frame, min_area_ratio=MIN_AREA_RATIO,
         canny_high=canny_high,
         contour_mode=contour_mode,
         max_candidates=max_candidates,
-        return_debug=True
+        return_debug=True,
+        use_min_area_rect_fallback=use_min_area_rect_fallback,
     )
+
+
+def contour_to_min_area_quad(contour):
+    """Return a 4-point OpenCV quad for the contour's rotated bounding box."""
+    rect = cv2.minAreaRect(contour)
+    return _box_to_quad(cv2.boxPoints(rect))
+
+
+def _box_to_quad(box):
+    return np.asarray(box, dtype=np.float32).reshape(4, 1, 2)

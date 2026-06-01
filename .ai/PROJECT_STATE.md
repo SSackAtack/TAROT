@@ -23,7 +23,7 @@ Ten plik przedstawia aktualny status techniczny oraz architekturę projektu Taro
 * `tarotvision/status/status_store.py` — wątkobezpieczny magazyn stanu systemu (diagnostyka, tryb reżyserski, audio, status nagrywania).
 * `tarotvision/tuning_protocol.py` — orkiestracja i rygorystyczna walidacja poleceń WebSocket napływających z konsoli Studio.
 * `tarotvision/camera/camera_session.py` — abstrakcja i obsługa sesji fizycznej kamery USB.
-* `tarotvision/pipelines/` — system przetwarzania klatek wideo (Snapshot-First i Legacy State-First).
+* `tarotvision/pipelines/snapshot_first.py` — jedyny produkcyjny rurociąg CV oparty o motion gate, wybór snapshotu, analizę układu kart i publikację layoutu.
 * `main.py` — główny entrypoint backendu orkiestrujący pętlę CV i serwer WebSocket.
 
 ### Frontend (`app_ar/`)

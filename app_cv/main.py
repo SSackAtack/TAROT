@@ -1,37 +1,32 @@
 import cv2
 import numpy as np
-import glob
 import os
 import asyncio
 import threading
 import json
 import copy
 import websockets
-import math
 import time
 import logging
 
 from tarotvision.metrics import RuntimeMetrics
-from tarotvision.matching_schedule import choose_cards_to_match, get_schedule_mode
 from tarotvision.motion import MotionDetector
-from tarotvision.audit_policy import should_reverify
-from tarotvision.table_state import TableState, PHASE_LOCKED, PHASE_NEEDS_REVERIFY
-from tarotvision.roi_map import filter_boxes_outside_occupied
-from tarotvision.contour_tracking import assign_boxes_to_cards
 from tarotvision.runtime_config import RuntimeConfigSession, ParameterValidationError
 from tarotvision.tuning_protocol import parse_control_message, ControlMessageError
 from tarotvision.profile_store import ProfileStore
 from tarotvision.camera_controls import read_camera_control
 from tarotvision.calibration_session import choose_best_candidate
 from tarotvision.table_calibration import TableCalibration
-from tarotvision.card_detection import find_card_quads
 from tarotvision.card_recognition import recognize_card_crop
+from tarotvision.background_model import BackgroundModel
+from tarotvision.reference_loader import load_active_reference_cards
+from tarotvision.card_detection_profiles import find_card_quads_multi_profile
 from tarotvision.snapshot_gate import SnapshotGate, SnapshotGateConfig
-from tarotvision.snapshot_quality import choose_best_snapshot
 from tarotvision.snapshot_analyzer import SnapshotAnalyzer
 from tarotvision.camera import CameraSession
 from tarotvision.preview import OpenCvPreview
-from tarotvision.pipelines import SnapshotFirstPipeline, StateFirstLegacyPipeline
+from tarotvision.pipelines import SnapshotFirstPipeline
+from tarotvision.frame_stream import LatestFrameStore, start_preview_server
 
 # Konfiguracja
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -41,33 +36,14 @@ CV_ASSETS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "b
 MIN_MATCH_COUNT = 18   # Obnizony do 18 — filtry geometryczne (homografia + validate_quad + aspect ratio + inlier ratio) skutecznie eliminuja szum
 RATIO_THRESH = 0.75    # Zaostrzone z 0.79 do 0.75 dla wyeliminowania dopasowan krzyzowych i poprawy homografii podobnych kart (np. Star i Moon)
 MIN_INLIER_RATIO = 0.3 # Minimalna proporcja inlierow w homografii RANSAC (odrzuca niestabilne dopasowania)
-CARD_ASPECT_RATIO = 1.72  # Standardowy stosunek wysokosc/szerokosc kart tarota RWS (~1.72)
-CARD_ASPECT_TOLERANCE = 0.65  # Tolerancja odchylenia aspect ratio (poluzowana — perspektywa kamery silnie znieksztalca proporcje)
-EMA_ALPHA = 0.4        # Wspolczynnik wygladzania Exponential Moving Average dla pozycji (0 = pelne wygladzanie, 1 = brak)
 CAMERA_WIDTH = 1280
 CAMERA_HEIGHT = 720
-DETECTION_IOU_THRESHOLD = 0.35  # Maksymalne dopuszczalne nalozenie dwoch kandydatow kart
 RUNTIME_PROFILE = "cpu_baseline"
 CAMERA_FOCUS_LOCKED = True      # Ustawienie operatorskie: AnkerWork C310 ma pracowac z blokada AF
 CAMERA_EXPOSURE_LOCKED = True   # Ustawienie operatorskie: blokada ekspozycji zmniejsza flicker i false positives
-LOCKED_REFRESH_INTERVAL = 10    # Karty LOCKED sprawdzamy okresowo, nie w kazdej klatce
-INACTIVE_PER_FRAME_EMPTY = 4     # Gdy nie ma aktywnych kart, szybciej skanujemy talie
-INACTIVE_PER_FRAME_ACTIVE = 2    # Gdy sa aktywne karty, skanujemy 2 nieaktywne/klatke (ArUco cache daje budzet)
-INACTIVE_PER_FRAME_BOOST = 3     # Po zmianie ukladu chwilowo skanujemy szybciej, ale bez powrotu do pelnego kosztu
-BOOST_AFTER_LAYOUT_CHANGE_FRAMES = 12
-REVERIFY_INTERVAL_FRAMES = 180
-TRACKING_IOU_THRESHOLD = 0.35
-TRACKING_REVERIFY_GAP_FRAMES = 24
-USE_TABLE_CARD_DETECTION = False  # Feature flag: True = uruchom detekcje prostokatow kart (Task 3 roadmapy CV)
-USE_SNAPSHOT_FIRST_CV = os.environ.get("TAROTVISION_SNAPSHOT_FIRST", "0") == "1"
 SNAPSHOT_SETTLE_SECONDS = 0.5
 SNAPSHOT_SAMPLE_COUNT = 1
 SNAPSHOT_SAMPLE_INTERVAL_MS = 250
-
-# System dwufazowy "Zlap i Zamroz" — eliminuje mikro-jitter statycznych kart
-LOCK_AFTER_FRAMES = 8      # Klatki stabilnej detekcji zanim pozycja zostanie zamrozona
-LOCK_DEAD_ZONE_POS = 3.0   # Minimalny ruch pozycji (w jednostkach sceny) zeby odblokowac karte (zwiekszony pod katem szumow centroidu)
-LOCK_DEAD_ZONE_ANGLE = 0.5 # Minimalny ruch kata (w radianach, ~28 stopni) zeby odblokowac karte
 
 from tarotvision.status import StatusStore, DiagnosticsWriter
 
@@ -84,12 +60,15 @@ operator_warnings = []
 calibration_state = {"state": "idle", "last_score": None}
 profile_store = ProfileStore(os.path.join(LOG_DIR, "calibration_profiles"))
 active_tuning_profile = "default"
+background_model = BackgroundModel()
+pending_background_capture = False
 
 # Inicjalizacja DiagnosticsWriter, CameraSession i OpenCvPreview
 reset_logs = os.environ.get("TAROTVISION_RESET_LOGS") == "1"
 diagnostics_writer = DiagnosticsWriter(LOG_DIR, filename="cv_metrics.jsonl", reset_on_start=reset_logs)
 camera_session = CameraSession(LOG_DIR, camera_width=1280, camera_height=720)
 opencv_preview = OpenCvPreview("TarotVision - AI Detection (Wcisnij Q by wyjsc)")
+frame_stream = LatestFrameStore()
 
 
 logging.basicConfig(
@@ -125,6 +104,7 @@ def add_operator_warning(message):
 def handle_control_message(message, camera_session):
     global calibration_state
     global active_tuning_profile
+    global pending_background_capture
 
     if message.type == "tuning_update":
         try:
@@ -190,6 +170,16 @@ def handle_control_message(message, camera_session):
     if message.type == "calibration_cancel":
         calibration_state = {"state": "idle", "last_score": None}
         add_operator_warning("Anulowano kalibracje")
+        return
+
+    if message.type == "background_capture":
+        pending_background_capture = True
+        add_operator_warning("Zlecono przechwycenie pustej maty z nastepnej klatki")
+        return
+
+    if message.type == "background_clear":
+        background_model.clear()
+        add_operator_warning("Wyczyszczono model pustej maty")
         return
 
     if message.type == "studio_set_recording_dir":
@@ -266,24 +256,24 @@ def handle_control_message(message, camera_session):
         import os
         current_status = status_store.get_status()
         dir_status = current_status.get("studio", {}).get("recording_dir_status", {})
-        
+
         base_dir = "./recordings"
         if dir_status and dir_status.get("valid"):
             base_dir = dir_status.get("path", "./recordings")
-            
+
         rec_id = message.recording_id
         safe_rec_id = "".join(c for c in rec_id if c.isalnum() or c in "-_")
         if not safe_rec_id:
             safe_rec_id = "unknown_rec"
-            
+
         filename = f"{safe_rec_id}_timeline.json"
         target_dir = os.path.abspath(base_dir)
         target_path = os.path.abspath(os.path.join(target_dir, filename))
-        
+
         if os.path.commonpath([target_dir, target_path]) != target_dir:
             add_operator_warning("Studio: Zablokowano probe zapisu timeline poza dozwolonym katalogiem")
             return
-            
+
         try:
             os.makedirs(target_dir, exist_ok=True)
             with open(target_path, "w", encoding="utf-8") as f:
@@ -302,19 +292,19 @@ def handle_control_message(message, camera_session):
                 manifest_data = json.load(f)
             manifest_decks = manifest_data.get("decks", [])
             valid_ids = {d.get("id") for d in manifest_decks}
-            
+
             for deck_id in message.active_decks:
                 if deck_id not in valid_ids:
                     add_operator_warning(f"Studio: Blad zmiany talii. Talia {deck_id} nie istnieje w manifeście!")
                     return
-            
+
             active_data = {
                 "version": 1,
                 "active_decks": message.active_decks
             }
             with open(active_decks_path, "w", encoding="utf-8") as f:
                 json.dump(active_data, f, indent=2, ensure_ascii=False)
-                
+
             load_reference_cards(message.active_decks)
             status_store.update_active_decks(message.active_decks)
             add_operator_warning(f"Studio: Pomyslnie wdrożono aktywne talie: {message.active_decks} (Hot-Reload OK)")
@@ -344,7 +334,7 @@ async def handler(websocket):
         # Wyslij natychmiast obecny stan (bezpieczna gleboka kopia)
         state = status_store.get_status()
         await websocket.send(json.dumps(state))
-        
+
         async for message in websocket:
             try:
                 control_message = parse_control_message(message)
@@ -365,7 +355,7 @@ async def broadcast_status():
         if connected_clients:
             # Bezpieczna gleboka kopia pod lockiem — eliminuje race condition z shallow copy
             state_to_send = status_store.get_status()
-            
+
             # Serializujemy do JSON raz i porownujemy stringi (unika problemow z float comparison)
             current_json = json.dumps(state_to_send)
             if current_json != last_sent_json:
@@ -384,9 +374,17 @@ def start_websocket_server():
     asyncio.run(main_ws())
 
 # Uruchomienie serwera WebSocket w tle
-ws_thread = threading.Thread(target=start_websocket_server, daemon=True)
-ws_thread.start()
+if os.environ.get("TAROTVISION_TEST_MODE") != "1":
+    ws_thread = threading.Thread(target=start_websocket_server, daemon=True)
+    ws_thread.start()
 
+if os.environ.get("TAROTVISION_TEST_MODE") != "1":
+    preview_port = int(os.environ.get("TAROTVISION_PREVIEW_PORT", "8766"))
+    try:
+        start_preview_server(frame_stream, port=preview_port)
+        log_event(f"[PREVIEW] Browser preview MJPEG: http://localhost:{preview_port}/video_feed.mjpg")
+    except OSError as exc:
+        log_event(f"[PREVIEW] Nie uruchomiono browser preview na porcie {preview_port}: {exc}")
 
 
 log_event("========================================")
@@ -414,138 +412,34 @@ active_decks_path = os.path.join(PROJECT_ROOT, "app_ar", "public", "active_decks
 decks_manifest_path = os.path.join(PROJECT_ROOT, "app_ar", "public", "decks_manifest.json")
 
 def load_reference_cards(active_ids=None):
-    """Wczytuje cyfrowe wzorce kart dla aktywnych talii sesji (od 1 do 3) w locie pod lockiem."""
+    """Wczytuje cyfrowe wzorce kart dla aktywnych talii sesji pod lockiem."""
     global reference_cards
-    new_reference_cards = {}
-    loaded_from_active = False
-    
-    target_ids = active_ids
-    if target_ids is None:
-        if os.path.exists(active_decks_path) and os.path.exists(decks_manifest_path):
-            try:
-                with open(active_decks_path, "r", encoding="utf-8") as f:
-                    active_data = json.load(f)
-                target_ids = active_data.get("active_decks", [])
-            except Exception as e:
-                log_event(f"[OSTRZEZENIE] Blad odczytu active_decks.json przy start: {e}")
-                target_ids = []
-
-    if target_ids and os.path.exists(decks_manifest_path):
-        try:
-            with open(decks_manifest_path, "r", encoding="utf-8") as f:
-                manifest_data = json.load(f)
-            manifest_decks = manifest_data.get("decks", [])
-            active_decks = [d for d in manifest_decks if d.get("id") in target_ids]
-            
-            if active_decks:
-                log_event(f"[INFO] Wykryto {len(active_decks)} aktywne talie do zaladowania w locie: {[d.get('id') for d in active_decks]}")
-                for deck in active_decks:
-                    cv_path_rel = deck.get("cv_path")
-                    cv_path_full = os.path.abspath(os.path.join(PROJECT_ROOT, cv_path_rel))
-                    
-                    log_event(f"[INFO] Ladowanie cyfrowych wzorcow dla talii '{deck.get('display_name')}' z {cv_path_full}")
-                    file_paths = glob.glob(os.path.join(cv_path_full, "*.jpg"))
-                    
-                    if not file_paths:
-                        log_event(f"[OSTRZEZENIE] Brak plikow wzorcow .jpg w katalogu: {cv_path_full}")
-                        continue
-                        
-                    deck_loaded_count = 0
-                    for file_path in file_paths:
-                        card_name = os.path.basename(file_path).replace(".jpg", "")
-                        img = cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)
-                        if img is None:
-                            continue
-                        
-                        img = clahe.apply(img)
-                        kp, des = orb.detectAndCompute(img, None)
-                        if des is not None:
-                            kp = kp[:500]
-                            des = des[:500]
-                            
-                        img_reversed = cv2.rotate(img, cv2.ROTATE_180)
-                        kp_rev, des_rev = orb.detectAndCompute(img_reversed, None)
-                        
-                        card_matcher = None
-                        if des is not None and len(des) > 0:
-                            try:
-                                card_matcher = cv2.BFMatcher(cv2.NORM_HAMMING)
-                                card_matcher.add([des])
-                                card_matcher.train()
-                            except cv2.error:
-                                card_matcher = None
-                                
-                        new_reference_cards[card_name] = {
-                            "image": img,
-                            "keypoints": kp,
-                            "descriptors": des,
-                            "reversed_image": img_reversed,
-                            "reversed_keypoints": kp_rev,
-                            "reversed_descriptors": des_rev,
-                            "matcher": card_matcher,
-                        }
-                        deck_loaded_count += 1
-                    log_event(f"[OK] Zaladowano {deck_loaded_count} wzorcow dla talii '{deck.get('display_name')}'!")
-                loaded_from_active = True
-        except Exception as e:
-            log_event(f"[OSTRZEZENIE] Blad wczytywania dynamicznej konfiguracji sesji: {e}. Uruchamianie trybu awaryjnego.")
-
-    # Fallback to single deck
-    if not loaded_from_active or not new_reference_cards:
-        log_event(f"[TRYB AWARYJNY] Ladowanie wzorcow dla pojedynczej talii '{DECK_NAME}' z {CV_ASSETS_DIR}")
-        file_paths = glob.glob(os.path.join(CV_ASSETS_DIR, "*.jpg"))
-        
-        if not file_paths:
-            log_event("[BLAD] Nie znaleziono zadnych plikow wzorcow .jpg w katalogu!")
-            exit(1)
-            
-        for file_path in file_paths:
-            card_name = os.path.basename(file_path).replace(".jpg", "")
-            img = cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)
-            if img is None:
-                continue
-                
-            img = clahe.apply(img)
-            kp, des = orb.detectAndCompute(img, None)
-            if des is not None:
-                kp = kp[:500]
-                des = des[:500]
-                
-            img_reversed = cv2.rotate(img, cv2.ROTATE_180)
-            kp_rev, des_rev = orb.detectAndCompute(img_reversed, None)
-            
-            card_matcher = None
-            if des is not None and len(des) > 0:
-                try:
-                    card_matcher = cv2.BFMatcher(cv2.NORM_HAMMING)
-                    card_matcher.add([des])
-                    card_matcher.train()
-                except cv2.error:
-                    card_matcher = None
-                    
-            new_reference_cards[card_name] = {
-                "image": img,
-                "keypoints": kp,
-                "descriptors": des,
-                "reversed_image": img_reversed,
-                "reversed_keypoints": kp_rev,
-                "reversed_descriptors": des_rev,
-                "matcher": card_matcher,
-            }
-            
+    result = load_active_reference_cards(
+        project_root=PROJECT_ROOT,
+        manifest_path=decks_manifest_path,
+        active_decks_path=active_decks_path,
+        fallback_deck_id=DECK_NAME,
+        orb=orb,
+        clahe=clahe,
+        active_ids=active_ids,
+        fallback_cv_path=CV_ASSETS_DIR,
+    )
     reference_cards.clear()
-    reference_cards.update(new_reference_cards)
-    log_event(f"[OK] Zaladowano lacznie {len(reference_cards)} wzorcow do pamieci (upright + reversed)!")
-    
-    # Re-inicjalizacja kluczy w table_state, jeśli moduł już działa
-    if 'table_state' in globals() and table_state is not None:
-        table_state.all_card_ids = list(reference_cards.keys())
-        table_state.cards.clear()
-        log_event("[TABLE_STATE] Pomyslnie zresetowano i zaktualizowano dostepne ID kart w TableState.")
+    reference_cards.update(result.cards)
+
+    if not reference_cards:
+        log_event("[BLAD] Nie zaladowano zadnych wzorcow CV dla aktywnych talii.")
+        exit(1)
+
+    log_event(
+        f"[OK] Zaladowano talie aktywne: {result.loaded_deck_ids}; "
+        f"wzorce={len(reference_cards)}, pominiete={len(result.skipped_files)}"
+    )
+    for skipped in result.skipped_files[:10]:
+        log_event(f"[OSTRZEZENIE] Pominieto nieczytelny wzorzec CV: {skipped}")
 
 # Pierwsze wczytanie przy starcie systemu
 load_reference_cards()
-table_state = TableState(reference_cards.keys())
 table_calibration = TableCalibration(table_width=CAMERA_WIDTH, table_height=CAMERA_HEIGHT)
 log_event("[ARUCO] Modul kalibracji stolu zainicjalizowany (markery ID 10-13, DICT_4X4_50)")
 
@@ -556,7 +450,7 @@ def recognize_snapshot_crop(gray_crop):
     min_match_count = int(config_values.get("MIN_MATCH_COUNT", 12.0))
     ratio_thresh = config_values.get("RATIO_THRESH", 0.79)
     min_inlier_ratio = config_values.get("MIN_INLIER_RATIO", 0.25)
-    
+
     result = recognize_card_crop(
         crop_for_matching, reference_cards, orb, flann,
         min_good_matches=min_match_count,
@@ -565,7 +459,7 @@ def recognize_snapshot_crop(gray_crop):
     )
     if result is None:
         return None
-    
+
     angle_deg = result.get("homography_angle_deg", 0.0)
     log_event(
         f"[DIAGNOSTYKA ORIENTACJI] Karta: {result['name']} | "
@@ -573,7 +467,7 @@ def recognize_snapshot_crop(gray_crop):
         f"Ustalona orientacja: {result['orientation']} | "
         f"Pewność (inliers): {result.get('inlier_ratio', 0.0)}"
     )
-    
+
     return {
         "name": result["name"],
         "confidence": result.get("confidence", 0.0),
@@ -582,7 +476,14 @@ def recognize_snapshot_crop(gray_crop):
     }
 
 
-snapshot_analyzer = SnapshotAnalyzer(recognize_crop=recognize_snapshot_crop)
+snapshot_analyzer = SnapshotAnalyzer(
+    recognize_crop=recognize_snapshot_crop,
+    background_model=background_model,
+    find_quads_with_debug=lambda frame: find_card_quads_multi_profile(
+        frame,
+        background_model=background_model,
+    ),
+)
 
 runtime_metrics = RuntimeMetrics(maxlen=60)
 
@@ -609,25 +510,6 @@ snapshot_pipeline = SnapshotFirstPipeline(
 snapshot_pipeline.snapshot_sample_count = SNAPSHOT_SAMPLE_COUNT
 snapshot_pipeline.snapshot_sample_interval_ms = SNAPSHOT_SAMPLE_INTERVAL_MS
 
-legacy_pipeline = StateFirstLegacyPipeline(
-    camera_session=camera_session,
-    opencv_preview=opencv_preview,
-    status_store=status_store,
-    diagnostics_writer=diagnostics_writer,
-    table_calibration=table_calibration,
-    table_state=table_state,
-    runtime_metrics=runtime_metrics,
-    runtime_config=runtime_config,
-    build_operator_snapshot_fn=build_operator_snapshot,
-    operator_warnings=operator_warnings,
-    log_dir=LOG_DIR,
-    reference_cards=reference_cards,
-    orb=orb,
-    flann=flann,
-    clahe=clahe,
-    runtime_profile=RUNTIME_PROFILE
-)
-
 # 3. Inicjalizacja Kamery — jawnie ustawiamy 720p (1280x720) dla wiecej cech ORB z wiekszej odleglosci
 if os.environ.get("TAROTVISION_TEST_MODE") != "1":
     log_event("[KAMERA] Uruchamianie kamery... (Wcisnij 'q' by zamknac, cyfry '0'-'9' by przelaczac kamery w locie!)")
@@ -646,10 +528,10 @@ while True:
     frame_loop_start = time.perf_counter()
     drain_control_messages(camera_session)
     config_values = runtime_config.values
-    
+
     # Dynamiczna aktualizacja parametrów detektora ruchu i bramki snapshotu
     motion_detector.min_changed_ratio = config_values.get("MOTION_CHANGED_RATIO", 0.02)
-    
+
     settle_seconds = config_values.get("SNAPSHOT_SETTLE_SECONDS", 0.5)
     if snapshot_gate.config.settle_seconds != settle_seconds:
         snapshot_gate.config = SnapshotGateConfig(
@@ -667,9 +549,9 @@ while True:
         display_frame = np.zeros((480, 640, 3), dtype=np.uint8)
         cv2.putText(display_frame, f"Brak wideo pod portem: {camera_session.camera_index}", (50, 200), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
         cv2.putText(display_frame, f"Wcisnij inna cyfre (0-5) by szukac.", (50, 250), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
-        
+
         opencv_preview.show(display_frame)
-        
+
         # Aktualizujemy status o braku kamery
         metrics_snapshot = runtime_metrics.snapshot()
         runtime_snapshot = {
@@ -688,7 +570,7 @@ while True:
             operator=build_operator_snapshot(),
             warnings=list(operator_warnings[-8:]) + ["Brak sygnalu wideo z kamery!"]
         )
-        
+
         key_action = opencv_preview.handle_keyboard(camera_session)
         if key_action == "quit":
             break
@@ -699,10 +581,17 @@ while True:
 
     # Aktualizujemy rozdzielczosc dynamicznie (na wypadek zmiany kamery)
     frame_height, frame_width = frame.shape[:2]
-    
-    display_frame = frame.copy()
+    frame_stream.update(frame)
+
+    if pending_background_capture:
+        capture_frame = table_calibration.warp_frame(frame) if table_calibration.calibrated else frame
+        if capture_frame is not None:
+            background_model.capture(capture_frame)
+            add_operator_warning("Przechwycono model pustej maty")
+        pending_background_capture = False
+
     gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    
+
     # Zastosowanie CLAHE — obiekt tworzony RAZ na poczatku, nie w kazdej klatce
     gray_frame = clahe.apply(gray_frame)
     runtime_metrics.add("preprocess_ms", (time.perf_counter() - preprocess_start) * 1000.0)
@@ -714,28 +603,6 @@ while True:
         table_calibration.update(gray_frame, workspace_inflate_percent=workspace_inflate_percent)
     runtime_metrics.add("aruco_ms", (time.perf_counter() - aruco_start) * 1000.0)
 
-    # Detekcja prostokatow kart (Task 3) — uruchamiana za feature flag
-    detected_card_quads = []
-    if USE_TABLE_CARD_DETECTION and gray_frame is not None:
-        card_detect_start = time.perf_counter()
-        # Preferujemy sprostowany obraz ArUco, fallback na surowa klatke
-        if table_calibration.calibrated:
-            detection_input = table_calibration.warp_frame(frame)
-        else:
-            detection_input = frame
-        if detection_input is not None:
-            detected_card_quads = find_card_quads(detection_input)
-        runtime_metrics.add("card_detect_ms", (time.perf_counter() - card_detect_start) * 1000.0)
-        runtime_metrics.add("card_quads_found", len(detected_card_quads))
-    
-    # 4. Wykrywamy punkty kluczowe w obecnej klatce
-    feature_start = time.perf_counter()
-    if gray_frame is not None:
-        kp_frame, des_frame = orb.detectAndCompute(gray_frame, None)
-    else:
-        des_frame = None
-    runtime_metrics.add("feature_detect_ms", (time.perf_counter() - feature_start) * 1000.0)
-
     if gray_frame is not None:
         motion_result = motion_detector.update(gray_frame)
     else:
@@ -743,31 +610,9 @@ while True:
     runtime_metrics.add("motion_changed_ratio", motion_result.changed_ratio)
 
 
-    if USE_SNAPSHOT_FIRST_CV:
-        pipeline_result = snapshot_pipeline.process_frame(
-            frame=frame,
-            motion_result=motion_result,
-            frame_width=frame_width,
-            frame_height=frame_height,
-            frame_loop_start=frame_loop_start
-        )
-        if pipeline_result["action"] == "quit":
-            break
-        elif pipeline_result["action"] == "switch":
-            frame_width = pipeline_result["frame_width"]
-            frame_height = pipeline_result["frame_height"]
-            log_event(f"[KAMERA] Nowa rozdzielczosc: {frame_width}x{frame_height}")
-        continue
-    
-    # ==========================================================================
-    # STATE-FIRST OPTIMIZATION (Task 10, Opus 2026-05-29) -> Hermetyzowane w legacy_pipeline
-    # ==========================================================================
-    pipeline_result = legacy_pipeline.process_frame(
+    pipeline_result = snapshot_pipeline.process_frame(
         frame=frame,
-        gray_frame=gray_frame,
         motion_result=motion_result,
-        des_frame=des_frame,
-        kp_frame=kp_frame,
         frame_width=frame_width,
         frame_height=frame_height,
         frame_loop_start=frame_loop_start

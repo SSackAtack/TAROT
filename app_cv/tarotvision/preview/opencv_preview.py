@@ -4,10 +4,12 @@ Moduł obsługi okna podglądu OpenCV (OpenCvPreview) TarotVision.
 """
 import cv2
 import logging
+import os
 
 class OpenCvPreview:
     def __init__(self, window_title="TarotVision - AI Detection (Wcisnij Q by wyjsc)"):
         self.window_title = window_title
+        self.enabled = os.environ.get("TAROTVISION_DISABLE_OPENCV_PREVIEW", "0") != "1"
 
     def draw_hud(self, frame, fps, status_line=None):
         """
@@ -29,6 +31,8 @@ class OpenCvPreview:
 
     def show(self, frame):
         """Wyświetla klatkę w oknie OpenCV."""
+        if not self.enabled:
+            return
         cv2.imshow(self.window_title, frame)
 
     def handle_keyboard(self, camera_session):
@@ -41,6 +45,8 @@ class OpenCvPreview:
         Returns:
             str: "quit" jeśli naciśnięto 'q', "switch" jeśli zmieniono kamerę, None w przeciwnym wypadku.
         """
+        if not self.enabled:
+            return None
         key = cv2.waitKey(1) & 0xFF
         if key == ord('q'):
             return "quit"
@@ -53,4 +59,5 @@ class OpenCvPreview:
 
     def close(self):
         """Zamyka wszystkie okna OpenCV."""
-        cv2.destroyAllWindows()
+        if self.enabled:
+            cv2.destroyAllWindows()
