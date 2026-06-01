@@ -31,16 +31,16 @@ Ten plik stanowi centralny rejestr wszystkich zadań (Tasks) realizowanych w pro
 | **TASK-STUDIO-007** | `APPROVED` | `master` | Gemini | Uodpornienie launchera Studio pod zajęty port 5173 | 2026-05-31 | APPROVED BY CHATGPT SUPERVISOR (PR #6 + PR #9 fix) |
 | **TASK-CV-RECT-001** | `DONE` | `task/cv-rect-001-parameterize-card-detection` | Gemini | Parametryzacja detekcji prostokątów kart pod autotuning | 2026-05-31 | Oczekuje na review |
 | **TASK-CV-AUTOTUNE-001** | `DONE` | `task/cv-autotune-001-offline-single-frame` | Gemini | Prototyp offline autotunera detekcji prostokąta karty | 2026-05-31 | Oczekuje na review |
-| **TASK-CV-SNAPSHOT-001** | `DONE` | `codex/snapshot-first-recognition-hardening` | Codex | Usunięcie legacy state-first i utrwalenie snapshot-first jako jedynego pipeline CV | 2026-06-01 | Oczekuje na review |
-| **TASK-CV-SNAPSHOT-002** | `DONE` | `codex/snapshot-first-recognition-hardening` | Codex | Unicode-safe image I/O i reference loader poza main.py | 2026-06-01 | Oczekuje na review |
-| **TASK-CV-SNAPSHOT-003** | `DONE` | `codex/snapshot-first-recognition-hardening` | Codex | Analiza snapshotu na klatce sprostowanej przez ArUco | 2026-06-01 | Oczekuje na review |
-| **TASK-CV-SNAPSHOT-004** | `DONE` | `codex/snapshot-first-recognition-hardening` | Codex | Diagnostyka porażek detekcji i rozpoznania snapshot-first | 2026-06-01 | Oczekuje na review |
-| **TASK-CV-SNAPSHOT-005** | `DONE` | `codex/snapshot-first-recognition-hardening` | Codex | Wieloprofilowa detekcja kart dla ciemnych talii i mat | 2026-06-01 | Oczekuje na review |
-| **TASK-CV-SNAPSHOT-006** | `DONE` | `codex/snapshot-first-recognition-hardening` | Codex | Opcjonalny model pustej maty dla background-diff | 2026-06-01 | Oczekuje na review |
-| **TASK-CV-SNAPSHOT-007** | `DONE` | `codex/snapshot-first-recognition-hardening` | Codex | Recognition-aware snapshot autotuning offline | 2026-06-01 | Oczekuje na review |
-| **TASK-CV-SNAPSHOT-008** | `DONE` | `codex/snapshot-first-recognition-hardening` | Codex | Lokalny benchmark snapshot recognition dla talii i mat | 2026-06-01 | Oczekuje na review |
-| **TASK-CV-SNAPSHOT-LIVE-001** | `DONE` | `codex/snapshot-first-recognition-hardening` | Gemini + Michał | Live smoke test snapshot-first z kamerą i Studio | 2026-06-01 | Test na żywo zakończony pełnym sukcesem (GREEN) |
-| **TASK-CV-GEOMETRY-FALLBACK-001** | `DONE` | `codex/snapshot-first-recognition-hardening` | Codex | MinAreaRect fallback, diagnostyka detekcji i filtr ArUco dla snapshot-first live | 2026-06-01 | Oczekuje na review |
+| **TASK-CV-SNAPSHOT-001** | `APPROVED` | `master` | Codex | Usunięcie legacy state-first i utrwalenie snapshot-first jako jedynego pipeline CV | 2026-06-01 | APPROVED BY CHATGPT SUPERVISOR (PR #14 + master smoke) |
+| **TASK-CV-SNAPSHOT-002** | `APPROVED` | `master` | Codex | Unicode-safe image I/O i reference loader poza main.py | 2026-06-01 | APPROVED BY CHATGPT SUPERVISOR (PR #14 + master smoke) |
+| **TASK-CV-SNAPSHOT-003** | `APPROVED` | `master` | Codex | Analiza snapshotu na klatce sprostowanej przez ArUco | 2026-06-01 | APPROVED BY CHATGPT SUPERVISOR (PR #14 + master smoke) |
+| **TASK-CV-SNAPSHOT-004** | `APPROVED` | `master` | Codex | Diagnostyka porażek detekcji i rozpoznania snapshot-first | 2026-06-01 | APPROVED BY CHATGPT SUPERVISOR (PR #14 + master smoke) |
+| **TASK-CV-SNAPSHOT-005** | `APPROVED` | `master` | Codex | Wieloprofilowa detekcja kart dla ciemnych talii i mat | 2026-06-01 | APPROVED BY CHATGPT SUPERVISOR (PR #14 + master smoke) |
+| **TASK-CV-SNAPSHOT-006** | `APPROVED` | `master` | Codex | Opcjonalny model pustej maty dla background-diff | 2026-06-01 | APPROVED BY CHATGPT SUPERVISOR (PR #14 + master smoke) |
+| **TASK-CV-SNAPSHOT-007** | `APPROVED` | `master` | Codex | Recognition-aware snapshot autotuning offline | 2026-06-01 | APPROVED BY CHATGPT SUPERVISOR (PR #14 + master smoke) |
+| **TASK-CV-SNAPSHOT-008** | `APPROVED` | `master` | Codex | Lokalny benchmark snapshot recognition dla talii i mat | 2026-06-01 | APPROVED BY CHATGPT SUPERVISOR (PR #14 + master smoke) |
+| **TASK-CV-SNAPSHOT-LIVE-001** | `APPROVED` | `master` | Gemini + Michał | Live smoke test snapshot-first z kamerą i Studio | 2026-06-01 | Test na żywo zakończony pełnym sukcesem (GREEN), potwierdzony po merge |
+| **TASK-CV-GEOMETRY-FALLBACK-001** | `APPROVED` | `master` | Codex | MinAreaRect fallback, diagnostyka detekcji i filtr ArUco dla snapshot-first live | 2026-06-01 | APPROVED BY CHATGPT SUPERVISOR (PR #14 + master smoke) |
 
 
 
