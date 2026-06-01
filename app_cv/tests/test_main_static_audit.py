@@ -86,5 +86,19 @@ class TestMainStaticAudit(unittest.TestCase):
                 + ", ".join(found)
             )
 
+    def test_websocket_thread_is_disabled_in_test_mode(self):
+        """Import main.py w testach nie powinien startować serwera WebSocket."""
+        self.assertTrue(os.path.exists(self.main_py_path), f"Plik {self.main_py_path} nie istnieje")
+
+        with open(self.main_py_path, "r", encoding="utf-8") as f:
+            source = f.read()
+
+        expected = (
+            'if os.environ.get("TAROTVISION_TEST_MODE") != "1":\n'
+            '    ws_thread = threading.Thread(target=start_websocket_server, daemon=True)\n'
+            '    ws_thread.start()'
+        )
+        self.assertIn(expected, source)
+
 if __name__ == '__main__':
     unittest.main()

@@ -374,8 +374,9 @@ def start_websocket_server():
     asyncio.run(main_ws())
 
 # Uruchomienie serwera WebSocket w tle
-ws_thread = threading.Thread(target=start_websocket_server, daemon=True)
-ws_thread.start()
+if os.environ.get("TAROTVISION_TEST_MODE") != "1":
+    ws_thread = threading.Thread(target=start_websocket_server, daemon=True)
+    ws_thread.start()
 
 if os.environ.get("TAROTVISION_TEST_MODE") != "1":
     preview_port = int(os.environ.get("TAROTVISION_PREVIEW_PORT", "8766"))
