@@ -136,8 +136,19 @@ class SnapshotFirstPipeline(VisionPipeline):
                 self.opencv_preview.show(display_analysis)
                 self.opencv_preview.handle_keyboard(self.camera_session)
                 
+                analysis_frame = selected.frame
+                if self.table_calibration.calibrated:
+                    warped_frame = self.table_calibration.warp_frame(selected.frame)
+                    if warped_frame is not None:
+                        analysis_frame = warped_frame
+                        self.runtime_metrics.add("snapshot_analysis_warped", 1)
+                    else:
+                        self.runtime_metrics.add("snapshot_analysis_warped", 0)
+                else:
+                    self.runtime_metrics.add("snapshot_analysis_warped", 0)
+
                 analysis_start = time.perf_counter()
-                result = self.snapshot_analyzer.analyze(selected.frame)
+                result = self.snapshot_analyzer.analyze(analysis_frame)
                 analysis_ms = (time.perf_counter() - analysis_start) * 1000.0
                 self.runtime_metrics.add("snapshot_analysis_ms", analysis_ms)
                 self.runtime_metrics.add("snapshot_quality_score", selected.quality.quality_score)

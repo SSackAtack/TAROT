@@ -31,6 +31,7 @@
 - Operator console i profile runtime już istnieją, ale aktualny autotuning nie jest jeszcze częścią live snapshot-first flow.
 - `TASK-CV-SNAPSHOT-001` usunął runtime legacy state-first z `main.py`, eksportów i testów kontraktowych; snapshot-first jest teraz bezwarunkową ścieżką backendu CV.
 - `TASK-CV-SNAPSHOT-002` dodał Unicode-safe image I/O i przeniósł ładowanie aktywnych talii do `reference_loader.py`.
+- `TASK-CV-SNAPSHOT-003` podłączył analizę snapshotu do klatki sprostowanej przez ArUco, gdy kalibracja jest dostępna.
 
 ### Kolejne kroki
 
@@ -61,6 +62,16 @@ Weryfikacja:
 - `python -m py_compile app_cv\main.py app_cv\tarotvision\image_io.py app_cv\tarotvision\reference_loader.py app_cv\tarotvision\card_recognition.py` -> PASS.
 
 Następny krok: `TASK-CV-SNAPSHOT-003`, czyli analiza snapshotu na klatce po warp ArUco.
+
+## Session Status (2026-06-01, Codex, Task 3)
+
+Zrealizowano `TASK-CV-SNAPSHOT-003`: `SnapshotFirstPipeline` wybiera `analysis_frame`; przy skalibrowanym stole i poprawnym `warp_frame()` analyzer dostaje obraz po korekcji perspektywy, a metryka `snapshot_analysis_warped` raportuje użycie warpu.
+
+Weryfikacja:
+- `python -m unittest app_cv.tests.test_pipelines_contract -v` -> PASS, 4 testy.
+- `python -m py_compile app_cv\tarotvision\pipelines\snapshot_first.py` -> PASS.
+
+Następny krok: `TASK-CV-SNAPSHOT-004`, czyli diagnostyka porażek detekcji i rozpoznania.
 
 ---
 
@@ -741,7 +752,7 @@ git -C E:\Antigravity\Projekty\TAROT commit -m "fix: laduj wzorce CV przez unico
 - Modify: `app_cv/tarotvision/pipelines/snapshot_first.py`
 - Modify: `app_cv/tests/test_pipelines_contract.py`
 
-- [ ] **Step 1: Add unit test for warped analysis frame**
+- [x] **Step 1: Add unit test for warped analysis frame**
 
 In `app_cv/tests/test_pipelines_contract.py`, add:
 
@@ -812,7 +823,7 @@ In `app_cv/tests/test_pipelines_contract.py`, add:
         self.assertTrue(np.array_equal(analyzed_frame, warped))
 ```
 
-- [ ] **Step 2: Run test and verify failure**
+- [x] **Step 2: Run test and verify failure**
 
 Run:
 
@@ -822,7 +833,7 @@ cmd /c "cd /d E:\Antigravity\Projekty\TAROT && set PYTHONPATH=C:\tmp\tarot_pydep
 
 Expected: FAIL because current pipeline analyzes `selected.frame`.
 
-- [ ] **Step 3: Implement warped analysis frame**
+- [x] **Step 3: Implement warped analysis frame**
 
 In `app_cv/tarotvision/pipelines/snapshot_first.py`, before:
 
@@ -857,7 +868,7 @@ with:
                 result = self.snapshot_analyzer.analyze(analysis_frame)
 ```
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
 
 Run:
 

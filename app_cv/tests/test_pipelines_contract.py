@@ -16,6 +16,12 @@ class MockVisionPipeline(VisionPipeline):
 
 
 class TestPipelinesContract(unittest.TestCase):
+    def _readable_frame(self, value=255):
+        frame = np.zeros((720, 1280, 3), dtype=np.uint8)
+        frame[::8, :] = value
+        frame[:, ::8] = value
+        return frame
+
     def test_mock_pipeline_satisfies_contract(self):
         pipeline = MockVisionPipeline()
         frame = np.zeros((480, 640, 3), dtype=np.uint8)
@@ -94,6 +100,71 @@ class TestPipelinesContract(unittest.TestCase):
     def test_legacy_pipeline_is_not_exported(self):
         self.assertFalse(hasattr(pipelines, "StateFirstLegacyPipeline"))
         self.assertNotIn("StateFirstLegacyPipeline", pipelines.__all__)
+
+    def test_snapshot_pipeline_analyzes_warped_frame_when_table_is_calibrated(self):
+        camera_session = MagicMock()
+        camera_session.frame_width = 1280
+        camera_session.frame_height = 720
+        camera_session.camera_index = 0
+
+        opencv_preview = MagicMock()
+        opencv_preview.handle_keyboard.return_value = None
+        status_store = MagicMock()
+        diagnostics_writer = MagicMock()
+        snapshot_gate = MagicMock()
+        snapshot_analyzer = MagicMock()
+        snapshot_analyzer.analyze.return_value.card_count = 0
+        snapshot_analyzer.analyze.return_value.cards = []
+
+        table_calibration = MagicMock()
+        table_calibration.calibrated = True
+        warped = np.full((720, 1280, 3), 77, dtype=np.uint8)
+        table_calibration.warp_frame.return_value = warped
+        table_calibration.status.return_value = {"calibrated": True, "marker_ids": [10, 11, 12, 13]}
+
+        runtime_metrics = MagicMock()
+        runtime_metrics.snapshot.return_value = {}
+        runtime_config = MagicMock()
+        runtime_config.values = {}
+
+        gate_decision = MagicMock()
+        gate_decision.state = "sampling_snapshots"
+        gate_decision.stable_for_ms = 700
+        gate_decision.should_sample = True
+        snapshot_gate.update.return_value = gate_decision
+
+        pipeline = SnapshotFirstPipeline(
+            camera_session=camera_session,
+            opencv_preview=opencv_preview,
+            status_store=status_store,
+            diagnostics_writer=diagnostics_writer,
+            snapshot_gate=snapshot_gate,
+            snapshot_analyzer=snapshot_analyzer,
+            table_calibration=table_calibration,
+            runtime_metrics=runtime_metrics,
+            runtime_config=runtime_config,
+            build_operator_snapshot_fn=MagicMock(return_value={}),
+            operator_warnings=[],
+            log_dir="dummy",
+            runtime_profile="default",
+        )
+
+        motion_result = MagicMock()
+        motion_result.motion_detected = False
+        motion_result.changed_ratio = 0.0
+
+        pipeline.process_frame(
+            frame=self._readable_frame(),
+            motion_result=motion_result,
+            frame_width=1280,
+            frame_height=720,
+            frame_loop_start=12345.67,
+        )
+
+        snapshot_analyzer.analyze.assert_called_once()
+        analyzed_frame = snapshot_analyzer.analyze.call_args.args[0]
+        self.assertTrue(np.array_equal(analyzed_frame, warped))
+        runtime_metrics.add.assert_any_call("snapshot_analysis_warped", 1)
 
 if __name__ == '__main__':
     unittest.main()
