@@ -171,6 +171,10 @@ html, body {
   gap: 8px;
 }
 
+.operator-control--camera {
+  grid-template-columns: minmax(0, 1fr) minmax(150px, 220px) 74px 44px;
+}
+
 .operator-control span {
   overflow: hidden;
   color: #cbd5e1;
@@ -180,6 +184,39 @@ html, body {
 
 .operator-control input {
   width: 120px;
+}
+
+.operator-control--camera input[type="number"] {
+  width: 74px;
+  min-width: 0;
+}
+
+.operator-camera-adjust {
+  display: grid;
+  grid-template-columns: 24px minmax(90px, 1fr) 24px;
+  align-items: center;
+  gap: 6px;
+}
+
+.operator-camera-adjust input[type="range"] {
+  width: 100%;
+}
+
+.operator-camera-adjust button {
+  width: 24px;
+  height: 24px;
+  border: 1px solid rgba(214, 125, 62, 0.45);
+  border-radius: 4px;
+  background: rgba(214, 125, 62, 0.08);
+  color: #f8fafc;
+  cursor: pointer;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.operator-camera-adjust button:hover {
+  border-color: rgba(214, 125, 62, 0.8);
+  background: rgba(214, 125, 62, 0.16);
 }
 
 .operator-control output {

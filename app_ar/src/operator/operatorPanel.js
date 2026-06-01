@@ -40,6 +40,66 @@ const parameterHints = {
     WORKSPACE_INFLATE_PERCENT: 'Poszerzenie wirtualnego obszaru stołu na zewnątrz od ArUco.'
 }
 
+const cameraControlLabels = {
+    CAP_PROP_FOCUS: 'Ostrość (Focus)',
+    CAP_PROP_AUTOFOCUS: 'Autofokus (0=Wył, 1=Wł)',
+    CAP_PROP_EXPOSURE: 'Ekspozycja (Exposure)',
+    CAP_PROP_AUTO_EXPOSURE: 'Auto Ekspozycja',
+    CAP_PROP_BRIGHTNESS: 'Jasność (Brightness)',
+    CAP_PROP_CONTRAST: 'Kontrast (Contrast)'
+}
+
+const cameraControlRanges = {
+    CAP_PROP_FOCUS: { min: 0, max: 1023, step: 5 },
+    CAP_PROP_AUTOFOCUS: { min: 0, max: 1, step: 1 },
+    CAP_PROP_EXPOSURE: { min: -13, max: 1000, step: 1 },
+    CAP_PROP_AUTO_EXPOSURE: { min: 0, max: 3, step: 1 },
+    CAP_PROP_BRIGHTNESS: { min: 0, max: 255, step: 1 },
+    CAP_PROP_CONTRAST: { min: 0, max: 255, step: 1 }
+}
+
+function clampCameraValue(value, range) {
+    const numericValue = Number(value)
+    if (!Number.isFinite(numericValue)) return Number(range.min)
+    return Math.min(Number(range.max), Math.max(Number(range.min), numericValue))
+}
+
+function formatCameraValue(value, step) {
+    const numericStep = Number(step)
+    if (!Number.isFinite(numericStep) || !String(step).includes('.')) {
+        return String(Number(value))
+    }
+    const decimals = String(step).split('.')[1].length
+    return Number(value).toFixed(decimals)
+}
+
+function applyOperatorCameraControlValue(input, rawValue, shouldSend = false) {
+    const cameraParam = input.dataset.cameraParam
+    if (!cameraParam) return
+
+    const control = input.closest('.operator-control')
+    if (!control) return
+
+    const range = cameraControlRanges[cameraParam] || { min: 0, max: 255, step: 1 }
+    const value = clampCameraValue(rawValue, range)
+    const formattedValue = formatCameraValue(value, range.step)
+
+    control.querySelectorAll(`input[data-camera-param="${cameraParam}"]`).forEach((field) => {
+        field.value = formattedValue
+    })
+
+    const output = control.querySelector('output')
+    if (output) output.textContent = formattedValue
+
+    if (shouldSend) {
+        sendControlMessage({
+            type: 'camera_set',
+            param: cameraParam,
+            value
+        })
+    }
+}
+
 export let operatorPanel = null
 
 export function formatMetricValue(value) {
@@ -243,35 +303,14 @@ function updateCameraControlsUI(supportedControls) {
         return
     }
 
-    const labels = {
-        CAP_PROP_FOCUS: 'Ostrość (Focus)',
-        CAP_PROP_AUTOFOCUS: 'Autofokus (0=Wył, 1=Wł)',
-        CAP_PROP_EXPOSURE: 'Ekspozycja (Exposure)',
-        CAP_PROP_AUTO_EXPOSURE: 'Auto Ekspozycja',
-        CAP_PROP_BRIGHTNESS: 'Jasność (Brightness)',
-        CAP_PROP_CONTRAST: 'Kontrast (Contrast)'
-    }
-
-    const ranges = {
-        CAP_PROP_FOCUS: { min: 0, max: 1023, step: 5 },
-        CAP_PROP_AUTOFOCUS: { min: 0, max: 1, step: 1 },
-        CAP_PROP_EXPOSURE: { min: -13, max: 1000, step: 1 },
-        CAP_PROP_AUTO_EXPOSURE: { min: 0, max: 3, step: 1 },
-        CAP_PROP_BRIGHTNESS: { min: 0, max: 255, step: 1 },
-        CAP_PROP_CONTRAST: { min: 0, max: 255, step: 1 }
-    }
-
     const existingInputs = container.querySelectorAll('input[data-camera-param]')
     if (existingInputs.length > 0) {
         Object.entries(supportedControls).forEach(([name, data]) => {
             if (data.readback_value === -1.0) return
-            const input = container.querySelector(`input[data-camera-param="${name}"]`)
-            if (input) {
-                const output = input.parentElement?.querySelector('output')
-                if (document.activeElement !== input) {
-                    input.value = data.readback_value
-                    if (output) output.textContent = data.readback_value
-                }
+            const control = container.querySelector(`.operator-control[data-camera-control="${name}"]`)
+            if (control && !control.contains(document.activeElement)) {
+                const input = control.querySelector('input[data-camera-role="range"]')
+                if (input) applyOperatorCameraControlValue(input, data.readback_value)
             }
         })
         return
@@ -280,20 +319,36 @@ function updateCameraControlsUI(supportedControls) {
     const html = Object.entries(supportedControls)
         .map(([name, data]) => {
             if (data.readback_value === -1.0) return ''
-            const range = ranges[name] || { min: 0, max: 255, step: 1 }
-            const label = labels[name] || name
+            const range = cameraControlRanges[name] || { min: 0, max: 255, step: 1 }
+            const label = cameraControlLabels[name] || name
+            const value = formatCameraValue(clampCameraValue(data.readback_value, range), range.step)
             return `
-                <label class="operator-control">
+                <label class="operator-control operator-control--camera" data-camera-control="${name}">
                     <span title="${name}">${label}</span>
+                    <div class="operator-camera-adjust">
+                        <button type="button" data-camera-step-direction="-1" title="Zmniejsz o ${range.step}">-</button>
+                        <input
+                            type="range"
+                            min="${range.min}"
+                            max="${range.max}"
+                            step="${range.step}"
+                            value="${value}"
+                            data-camera-param="${name}"
+                            data-camera-role="range"
+                        />
+                        <button type="button" data-camera-step-direction="1" title="Zwiększ o ${range.step}">+</button>
+                    </div>
                     <input
-                        type="range"
+                        type="number"
                         min="${range.min}"
                         max="${range.max}"
                         step="${range.step}"
-                        value="${data.readback_value}"
+                        value="${value}"
                         data-camera-param="${name}"
+                        data-camera-role="number"
+                        aria-label="${label}: dokładna wartość"
                     />
-                    <output>${data.readback_value}</output>
+                    <output>${value}</output>
                 </label>
             `
         })
@@ -358,10 +413,8 @@ export function initOperatorListeners() {
 
         const cameraParam = input.dataset.cameraParam
         if (cameraParam) {
-            const output = input.parentElement?.querySelector('output')
-            if (output) {
-                output.textContent = input.value
-            }
+            if (input.dataset.cameraRole === 'number' && input.value === '') return
+            applyOperatorCameraControlValue(input, input.value)
             return
         }
 
@@ -377,11 +430,7 @@ export function initOperatorListeners() {
         
         const cameraParam = input.dataset.cameraParam
         if (cameraParam) {
-            sendControlMessage({
-                type: 'camera_set',
-                param: cameraParam,
-                value: Number(input.value)
-            })
+            applyOperatorCameraControlValue(input, input.value, true)
             return
         }
 
@@ -397,6 +446,18 @@ export function initOperatorListeners() {
     operatorPanel.addEventListener('click', (event) => {
         const button = event.target
         if (!(button instanceof HTMLButtonElement)) return
+        const direction = Number(button.dataset.cameraStepDirection)
+        if (Number.isFinite(direction)) {
+            const control = button.closest('.operator-control')
+            const input = control?.querySelector('input[data-camera-role="range"]')
+            if (input instanceof HTMLInputElement) {
+                const step = Number(input.step || '1')
+                const nextValue = Number(input.value) + direction * (Number.isFinite(step) ? step : 1)
+                applyOperatorCameraControlValue(input, nextValue, true)
+            }
+            return
+        }
+
         const action = button.dataset.action
         if (!action) return
         const profileName = operatorPanel.querySelector('[data-role="profile-name"]')?.value || 'studio_day'

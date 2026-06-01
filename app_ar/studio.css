@@ -267,7 +267,7 @@ body.studio-mode-active {
 
 .studio-camera-control {
     display: grid;
-    grid-template-columns: 82px 1fr 46px;
+    grid-template-columns: 82px 24px minmax(80px, 1fr) 24px 58px 42px;
     gap: 8px;
     align-items: center;
 }
@@ -278,9 +278,38 @@ body.studio-mode-active {
     font-weight: 600;
 }
 
-.studio-camera-control input {
+.studio-camera-control input[type="range"] {
     width: 100%;
     accent-color: #d67d3e;
+}
+
+.studio-camera-control input[type="number"] {
+    width: 58px;
+    min-width: 0;
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 4px;
+    background: rgba(15, 23, 42, 0.74);
+    color: #f8fafc;
+    font-family: 'Consolas', 'Courier New', Courier, monospace;
+    font-size: 11px;
+    padding: 3px 5px;
+}
+
+.studio-camera-step {
+    width: 24px;
+    height: 24px;
+    border: 1px solid rgba(214, 125, 62, 0.45);
+    border-radius: 4px;
+    background: rgba(214, 125, 62, 0.08);
+    color: #f8fafc;
+    cursor: pointer;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.studio-camera-step:hover {
+    border-color: rgba(214, 125, 62, 0.8);
+    background: rgba(214, 125, 62, 0.16);
 }
 
 .studio-camera-control output {
@@ -684,6 +713,24 @@ body.studio-mode-active {
     flex-direction: column;
     gap: 6px;
     margin-bottom: 12px;
+}
+
+.studio-active-decks-status {
+    margin-bottom: 10px;
+    border: 1px solid rgba(52, 211, 153, 0.24);
+    border-radius: 6px;
+    background: rgba(52, 211, 153, 0.07);
+    color: #bbf7d0;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.35;
+    padding: 7px 9px;
+}
+
+.studio-active-decks-status--warning {
+    border-color: rgba(248, 113, 113, 0.4);
+    background: rgba(127, 29, 29, 0.16);
+    color: #fecaca;
 }
 
 .studio-deck-row {
