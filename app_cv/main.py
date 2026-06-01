@@ -27,6 +27,7 @@ from tarotvision.camera import CameraSession
 from tarotvision.preview import OpenCvPreview
 from tarotvision.pipelines import SnapshotFirstPipeline
 from tarotvision.frame_stream import LatestFrameStore, start_preview_server
+from tarotvision.operator_explainability import build_cv_explainability
 
 # Konfiguracja
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -83,7 +84,7 @@ def log_event(message):
     print(message)
 
 
-def build_operator_snapshot():
+def build_operator_snapshot(cards=None, metrics=None, runtime=None, layout=None, warnings=None):
     return {
         "enabled": True,
         "active_profile": active_tuning_profile,
@@ -93,6 +94,14 @@ def build_operator_snapshot():
         "supported_camera_controls": copy.deepcopy(camera_session.supported_camera_controls),
         "calibration": copy.deepcopy(calibration_state),
         "warnings": list(operator_warnings[-8:]),
+        "explainability": build_cv_explainability(
+            cards=cards or [],
+            metrics=metrics or {},
+            runtime=runtime or {},
+            layout=layout or {},
+            operator={"active_decks": status_store.get_status().get("operator", {}).get("active_decks", [])},
+            warnings=warnings if warnings is not None else list(operator_warnings[-8:]),
+        ),
     }
 
 

@@ -98,6 +98,102 @@ function updateStudioActiveDecksStatus(selectedIds = activeDecksState) {
     statusEl.classList.remove('studio-active-decks-status--warning')
 }
 
+function getCvExplainabilityFallback(data) {
+    const activeDecks = data.operator?.active_decks || activeDecksState || []
+    const layoutState = data.layout?.state || 'unknown'
+    const cardCount = Array.isArray(data.cards) ? data.cards.length : 0
+    const lastWarning = Array.isArray(data.warnings) && data.warnings.length > 0
+        ? data.warnings[data.warnings.length - 1]
+        : ''
+
+    let severity = cardCount > 0 ? 'ok' : 'warn'
+    let nextAction = cardCount > 0 ? 'Mozna prowadzic sesje.' : 'Zostaw mate nieruchomo przez kilka sekund.'
+
+    if (activeDecks.length < 1) {
+        severity = 'error'
+        nextAction = 'Wybierz 1-3 talie w Studio.'
+    } else if (layoutState === 'no_camera') {
+        severity = 'error'
+        nextAction = 'Sprawdz kamere i launcher CV.'
+    } else if (lastWarning) {
+        nextAction = lastWarning
+    }
+
+    return {
+        severity,
+        next_action: nextAction,
+        steps: [
+            {
+                id: 'decks',
+                label: 'Aktywne talie',
+                state: activeDecks.length > 0 ? 'ok' : 'error',
+                value: String(activeDecks.length),
+                message: activeDecks.length > 0 ? activeDecks.join(', ') : 'Brak aktywnej talii'
+            },
+            {
+                id: 'snapshot',
+                label: 'Snapshot',
+                state: ['settling', 'sampling_snapshots', 'analyzing_snapshot'].includes(layoutState) ? 'wait' : 'ok',
+                value: layoutState,
+                message: layoutState
+            },
+            {
+                id: 'recognition',
+                label: 'Rozpoznanie',
+                state: cardCount > 0 ? 'ok' : 'wait',
+                value: String(cardCount),
+                message: cardCount > 0 ? 'Karty zaakceptowane' : 'Czeka na rozpoznanie'
+            }
+        ]
+    }
+}
+
+function getCvExplainabilityBadge(severity) {
+    if (severity === 'ok') return 'OK'
+    if (severity === 'error') return 'BLAD'
+    if (severity === 'wait') return 'WAIT'
+    return 'UWAGA'
+}
+
+function getCvExplainabilityIcon(state) {
+    if (state === 'ok') return '✓'
+    if (state === 'error') return '×'
+    if (state === 'warn') return '!'
+    return '•'
+}
+
+function renderCvExplainability(data) {
+    if (!sidebarEl) return
+    const explain = data.operator?.explainability || getCvExplainabilityFallback(data)
+    const panel = sidebarEl.querySelector('#studio-cv-explain-panel')
+    const badge = sidebarEl.querySelector('#studio-cv-explain-badge')
+    const stepsEl = sidebarEl.querySelector('#studio-cv-explain-steps')
+    const nextEl = sidebarEl.querySelector('#studio-cv-explain-next')
+    if (!panel || !badge || !stepsEl || !nextEl) return
+
+    const severity = explain.severity || 'warn'
+    panel.dataset.severity = severity
+    badge.textContent = getCvExplainabilityBadge(severity)
+    badge.className = `studio-cv-explain-badge studio-cv-explain-badge--${severity}`
+
+    stepsEl.innerHTML = ''
+    const steps = Array.isArray(explain.steps) ? explain.steps : []
+    steps.forEach((step) => {
+        const row = document.createElement('div')
+        const state = step.state || 'wait'
+        row.className = `studio-cv-explain-step studio-cv-explain-step--${state}`
+        row.innerHTML = `
+            <span class="studio-cv-explain-step__icon">${getCvExplainabilityIcon(state)}</span>
+            <span class="studio-cv-explain-step__label">${step.label || step.id || 'Status'}</span>
+            <span class="studio-cv-explain-step__value">${step.value || ''}</span>
+            <span class="studio-cv-explain-step__message">${step.message || ''}</span>
+        `
+        stepsEl.appendChild(row)
+    })
+
+    nextEl.textContent = explain.next_action || 'Sprawdz diagnostyke CV.'
+}
+
 function initStudioDecksPanel() {
     if (isDecksInitialized || !sidebarEl) return
     isDecksInitialized = true
@@ -447,6 +543,17 @@ export function createStudioConsole() {
             <div class="studio-cv-warning-box" id="cv-warning-box" style="display: none; margin-top: 10px;">
                 <span class="studio-cv-warning-title">⚠️ Ostrzeżenie CV</span>
                 <span class="studio-cv-warning-text" id="cv-warning-text"></span>
+            </div>
+            <div class="studio-cv-explain-panel" id="studio-cv-explain-panel" data-severity="wait">
+                <div class="studio-cv-explain-header">
+                    <span class="studio-cv-explain-title">CV Explain</span>
+                    <span class="studio-cv-explain-badge studio-cv-explain-badge--wait" id="studio-cv-explain-badge">WAIT</span>
+                </div>
+                <div class="studio-cv-explain-steps" id="studio-cv-explain-steps"></div>
+                <div class="studio-cv-explain-next-box">
+                    <span class="studio-cv-explain-next-label">Następny krok</span>
+                    <span class="studio-cv-explain-next" id="studio-cv-explain-next">Czekam na dane CV.</span>
+                </div>
             </div>
         </div>
     `
@@ -1042,6 +1149,8 @@ export function updateStudioConsole(data) {
     if (cvSnap && data.layout && data.layout.state !== undefined) {
         cvSnap.textContent = data.layout.state
     }
+
+    renderCvExplainability(data)
 
     // 4b. Ostrzeżenia operatora w Studio HUD
     const cvWarningBox = sidebarEl.querySelector('#cv-warning-box')

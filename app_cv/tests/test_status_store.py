@@ -238,6 +238,31 @@ class TestStatusStore(unittest.TestCase):
         status_after = self.store.get_status()
         self.assertEqual(status_after["operator"]["active_decks"], initial_decks)
 
+    def test_update_cv_state_preserves_operator_explainability(self):
+        explainability = {
+            "severity": "warn",
+            "next_action": "Zostaw mate nieruchomo przez kilka sekund.",
+            "steps": [
+                {
+                    "id": "snapshot",
+                    "label": "Snapshot",
+                    "state": "wait",
+                    "value": "settling",
+                    "message": "Czeka na stabilny snapshot",
+                }
+            ],
+        }
+        operator = {
+            "enabled": True,
+            "active_profile": "default",
+            "explainability": explainability,
+        }
+
+        self.store.update_cv_state([], {}, {}, operator)
+
+        status = self.store.get_status()
+        self.assertEqual(status["operator"]["explainability"], explainability)
+
 if __name__ == '__main__':
     unittest.main()
 

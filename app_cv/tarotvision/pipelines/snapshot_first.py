@@ -217,7 +217,13 @@ class SnapshotFirstPipeline(VisionPipeline):
             cards=self.last_snapshot_cards,
             metrics=metrics_snapshot,
             runtime=runtime_snapshot,
-            operator=self.build_operator_snapshot_fn(),
+            operator=self.build_operator_snapshot_fn(
+                cards=self.last_snapshot_cards,
+                metrics=metrics_snapshot,
+                runtime=runtime_snapshot,
+                layout=layout_snapshot,
+                warnings=list(self.operator_warnings[-8:]),
+            ),
             layout=layout_snapshot,
             warnings=list(self.operator_warnings[-8:])
         )

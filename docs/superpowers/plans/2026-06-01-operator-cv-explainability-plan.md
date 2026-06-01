@@ -10,6 +10,10 @@
 
 ---
 
+## Status ogolny
+
+DONE. Implementacja zostala wykonana inline przez Codex na branchu `codex/operator-cv-explainability`.
+
 ## File Structure
 
 - Create: `app_cv/tarotvision/operator_explainability.py` — czysty builder diagnostyki bez zaleznosci od kamery.
@@ -154,8 +158,10 @@ Push branch `codex/operator-cv-explainability`.
 
 ## Session Status (2026-06-01)
 
-Plan utworzony po akceptacji wariantu B przez Michala w visual companion.
+Plan utworzony po akceptacji wariantu B przez Michala w visual companion. Implementacja zakonczona: backend publikuje `operator.explainability`, Studio renderuje panel `CV Explain`, testy backendowe i build frontendu przechodza.
 
 ## Kolejne kroki
 
-Wykonac plan inline w tej sesji, z testami RED przed kodem produkcyjnym.
+1. Review zmian na branchu `codex/operator-cv-explainability`.
+2. Lokalny smoke test Studio z uruchomionym backendiem CV.
+3. Po akceptacji merge do `master`.
