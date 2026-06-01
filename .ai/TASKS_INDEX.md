@@ -36,6 +36,7 @@ Ten plik stanowi centralny rejestr wszystkich zadań (Tasks) realizowanych w pro
 | **TASK-CV-SNAPSHOT-003** | `DONE` | `codex/snapshot-first-recognition-hardening` | Codex | Analiza snapshotu na klatce sprostowanej przez ArUco | 2026-06-01 | Oczekuje na review |
 | **TASK-CV-SNAPSHOT-004** | `DONE` | `codex/snapshot-first-recognition-hardening` | Codex | Diagnostyka porażek detekcji i rozpoznania snapshot-first | 2026-06-01 | Oczekuje na review |
 | **TASK-CV-SNAPSHOT-005** | `DONE` | `codex/snapshot-first-recognition-hardening` | Codex | Wieloprofilowa detekcja kart dla ciemnych talii i mat | 2026-06-01 | Oczekuje na review |
+| **TASK-CV-SNAPSHOT-006** | `DONE` | `codex/snapshot-first-recognition-hardening` | Codex | Opcjonalny model pustej maty dla background-diff | 2026-06-01 | Oczekuje na review |
 
 
 

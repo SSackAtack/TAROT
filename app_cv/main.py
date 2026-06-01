@@ -18,6 +18,7 @@ from tarotvision.camera_controls import read_camera_control
 from tarotvision.calibration_session import choose_best_candidate
 from tarotvision.table_calibration import TableCalibration
 from tarotvision.card_recognition import recognize_card_crop
+from tarotvision.background_model import BackgroundModel
 from tarotvision.reference_loader import load_active_reference_cards
 from tarotvision.snapshot_gate import SnapshotGate, SnapshotGateConfig
 from tarotvision.snapshot_analyzer import SnapshotAnalyzer
@@ -57,6 +58,8 @@ operator_warnings = []
 calibration_state = {"state": "idle", "last_score": None}
 profile_store = ProfileStore(os.path.join(LOG_DIR, "calibration_profiles"))
 active_tuning_profile = "default"
+background_model = BackgroundModel()
+pending_background_capture = False
 
 # Inicjalizacja DiagnosticsWriter, CameraSession i OpenCvPreview
 reset_logs = os.environ.get("TAROTVISION_RESET_LOGS") == "1"
@@ -98,6 +101,7 @@ def add_operator_warning(message):
 def handle_control_message(message, camera_session):
     global calibration_state
     global active_tuning_profile
+    global pending_background_capture
 
     if message.type == "tuning_update":
         try:
@@ -163,6 +167,16 @@ def handle_control_message(message, camera_session):
     if message.type == "calibration_cancel":
         calibration_state = {"state": "idle", "last_score": None}
         add_operator_warning("Anulowano kalibracje")
+        return
+
+    if message.type == "background_capture":
+        pending_background_capture = True
+        add_operator_warning("Zlecono przechwycenie pustej maty z nastepnej klatki")
+        return
+
+    if message.type == "background_clear":
+        background_model.clear()
+        add_operator_warning("Wyczyszczono model pustej maty")
         return
 
     if message.type == "studio_set_recording_dir":
@@ -451,7 +465,10 @@ def recognize_snapshot_crop(gray_crop):
     }
 
 
-snapshot_analyzer = SnapshotAnalyzer(recognize_crop=recognize_snapshot_crop)
+snapshot_analyzer = SnapshotAnalyzer(
+    recognize_crop=recognize_snapshot_crop,
+    background_model=background_model,
+)
 
 runtime_metrics = RuntimeMetrics(maxlen=60)
 
@@ -549,6 +566,13 @@ while True:
 
     # Aktualizujemy rozdzielczosc dynamicznie (na wypadek zmiany kamery)
     frame_height, frame_width = frame.shape[:2]
+
+    if pending_background_capture:
+        capture_frame = table_calibration.warp_frame(frame) if table_calibration.calibrated else frame
+        if capture_frame is not None:
+            background_model.capture(capture_frame)
+            add_operator_warning("Przechwycono model pustej maty")
+        pending_background_capture = False
     
     gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     

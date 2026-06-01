@@ -34,6 +34,7 @@
 - `TASK-CV-SNAPSHOT-003` podłączył analizę snapshotu do klatki sprostowanej przez ArUco, gdy kalibracja jest dostępna.
 - `TASK-CV-SNAPSHOT-004` dodał podstawową diagnostykę porażek detekcji i rozpoznania snapshot-first.
 - `TASK-CV-SNAPSHOT-005` dodał wieloprofilową detekcję kart dla ciemnych talii i mat.
+- `TASK-CV-SNAPSHOT-006` dodał opcjonalny model pustej maty i profil `background_diff`.
 
 ### Kolejne kroki
 
@@ -94,6 +95,16 @@ Weryfikacja:
 - `python -m py_compile app_cv\tarotvision\card_detection_profiles.py app_cv\tarotvision\snapshot_analyzer.py` -> PASS.
 
 Następny krok: `TASK-CV-SNAPSHOT-006`, czyli opcjonalny model pustej maty.
+
+## Session Status (2026-06-01, Codex, Task 6)
+
+Zrealizowano `TASK-CV-SNAPSHOT-006`: dodano `BackgroundModel`, komendy `background_capture` i `background_clear`, flagę `pending_background_capture` w `main.py` oraz opcjonalny profil `background_diff` w detektorze wieloprofilowym.
+
+Weryfikacja:
+- `python -m unittest app_cv.tests.test_background_model app_cv.tests.test_tuning_protocol app_cv.tests.test_card_detection_profiles -v` -> PASS, 41 testów.
+- `python -m py_compile app_cv\main.py app_cv\tarotvision\background_model.py app_cv\tarotvision\card_detection_profiles.py app_cv\tarotvision\tuning_protocol.py app_cv\tarotvision\snapshot_analyzer.py` -> PASS.
+
+Następny krok: `TASK-CV-SNAPSHOT-007`, czyli recognition-aware snapshot autotuning.
 
 ---
 
@@ -1430,7 +1441,7 @@ git -C E:\Antigravity\Projekty\TAROT commit -m "feat: dodaj wieloprofilowa detek
 - Modify: `app_cv/tarotvision/tuning_protocol.py`
 - Modify: `app_cv/main.py`
 
-- [ ] **Step 1: Write background model tests**
+- [x] **Step 1: Write background model tests**
 
 Create `app_cv/tests/test_background_model.py`:
 
@@ -1468,7 +1479,7 @@ if __name__ == "__main__":
     unittest.main()
 ```
 
-- [ ] **Step 2: Implement background model**
+- [x] **Step 2: Implement background model**
 
 Create `app_cv/tarotvision/background_model.py`:
 
@@ -1514,7 +1525,7 @@ class BackgroundModel:
         return mask
 ```
 
-- [ ] **Step 3: Extend tuning protocol**
+- [x] **Step 3: Extend tuning protocol**
 
 In `app_cv/tarotvision/tuning_protocol.py`, add allowed types:
 
@@ -1539,7 +1550,7 @@ Add tests to `app_cv/tests/test_tuning_protocol.py`:
         self.assertEqual(message.type, "background_clear")
 ```
 
-- [ ] **Step 4: Wire model in `main.py`**
+- [x] **Step 4: Wire model in `main.py`**
 
 Import:
 
@@ -1589,7 +1600,7 @@ In the main loop after successful `ret, frame = camera_session.read()`:
         pending_background_capture = False
 ```
 
-- [ ] **Step 5: Pass background model to detector**
+- [x] **Step 5: Pass background model to detector**
 
 This step is integration-only. Add an optional `background_model` argument to `find_card_quads_multi_profile(frame, profiles=None, max_candidates=10, background_model=None)`.
 
@@ -1618,7 +1629,7 @@ If active:
             })
 ```
 
-- [ ] **Step 6: Verify**
+- [x] **Step 6: Verify**
 
 Run:
 

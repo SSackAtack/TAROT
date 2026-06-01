@@ -26,6 +26,16 @@ class TuningProtocolTest(unittest.TestCase):
         with self.assertRaises(ControlMessageError):
             parse_control_message('{"type": "unknown"}')
 
+    def test_parses_background_capture(self):
+        message = parse_control_message('{"type": "background_capture"}')
+
+        self.assertEqual(message.type, "background_capture")
+
+    def test_parses_background_clear(self):
+        message = parse_control_message('{"type": "background_clear"}')
+
+        self.assertEqual(message.type, "background_clear")
+
     def test_parses_profile_apply(self):
         message = parse_control_message('{"type": "profile_apply", "name": "studio_day"}')
 

@@ -7,6 +7,7 @@ from tarotvision.card_detection_profiles import (
     DetectionProfile,
     find_card_quads_multi_profile,
 )
+from tarotvision.background_model import BackgroundModel
 
 
 class CardDetectionProfilesTest(unittest.TestCase):
@@ -44,6 +45,19 @@ class CardDetectionProfilesTest(unittest.TestCase):
         result = find_card_quads_multi_profile(frame, profiles=profiles)
 
         self.assertEqual(result.debug["profiles"][0]["name"], "custom")
+
+    def test_adds_background_diff_profile_when_model_is_active(self):
+        empty = np.zeros((600, 800, 3), dtype=np.uint8)
+        empty[:, :] = (20, 55, 35)
+        frame = empty.copy()
+        cv2.rectangle(frame, (325, 171), (475, 429), (90, 95, 90), -1)
+        model = BackgroundModel()
+        model.capture(empty)
+
+        result = find_card_quads_multi_profile(frame, background_model=model)
+
+        profile_names = [profile["name"] for profile in result.debug["profiles"]]
+        self.assertIn("background_diff", profile_names)
 
 
 if __name__ == "__main__":

@@ -85,12 +85,36 @@ def _dedupe_quads(quads, iou_threshold=0.75):
     return accepted
 
 
-def find_card_quads_multi_profile(frame, profiles=None, max_candidates=10):
+def find_card_quads_multi_profile(frame, profiles=None, max_candidates=10, background_model=None):
     profiles = profiles or DEFAULT_PROFILES
     all_quads = []
     debug_profiles = []
     best_profile = None
     best_count = 0
+
+    if background_model is not None and background_model.active:
+        mask = background_model.foreground_mask(frame)
+        if mask is not None:
+            bg_quads, bg_debug = find_card_quads(
+                mask,
+                min_area_ratio=0.001,
+                canny_low=20,
+                canny_high=80,
+                contour_mode="list",
+                max_candidates=max_candidates,
+                return_debug=True,
+            )
+            all_quads.extend(bg_quads)
+            if len(bg_quads) > best_count:
+                best_count = len(bg_quads)
+                best_profile = "background_diff"
+            debug_profiles.append({
+                "name": "background_diff",
+                "mode": "background_diff",
+                "quads": len(bg_quads),
+                "contours_total": bg_debug.get("contours_total", 0),
+                "candidates_after_quad": bg_debug.get("candidates_after_quad", 0),
+            })
 
     for profile in profiles:
         profile_input = _profile_frame(frame, profile)
