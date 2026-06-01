@@ -35,6 +35,7 @@
 - `TASK-CV-SNAPSHOT-004` dodał podstawową diagnostykę porażek detekcji i rozpoznania snapshot-first.
 - `TASK-CV-SNAPSHOT-005` dodał wieloprofilową detekcję kart dla ciemnych talii i mat.
 - `TASK-CV-SNAPSHOT-006` dodał opcjonalny model pustej maty i profil `background_diff`.
+- `TASK-CV-SNAPSHOT-007` dodał recognition-aware scoring dla offline autotuningu snapshotów.
 
 ### Kolejne kroki
 
@@ -105,6 +106,18 @@ Weryfikacja:
 - `python -m py_compile app_cv\main.py app_cv\tarotvision\background_model.py app_cv\tarotvision\card_detection_profiles.py app_cv\tarotvision\tuning_protocol.py app_cv\tarotvision\snapshot_analyzer.py` -> PASS.
 
 Następny krok: `TASK-CV-SNAPSHOT-007`, czyli recognition-aware snapshot autotuning.
+
+## Session Status (2026-06-01, Codex, Task 7)
+
+Zrealizowano `TASK-CV-SNAPSHOT-007`: dodano `snapshot_autotune.py`, scoring `score_snapshot_candidate()`, funkcję `tune_snapshot_detection_params()` oraz metadane runtime dla parametrów detektora kart.
+
+Weryfikacja:
+- `python -m unittest app_cv.tests.test_snapshot_autotune app_cv.tests.test_auto_tuner app_cv.tests.test_runtime_config -v` -> PASS, 15 testów.
+- `python -m py_compile app_cv\tarotvision\snapshot_autotune.py app_cv\tarotvision\auto_tuner.py app_cv\tarotvision\runtime_config.py` -> PASS.
+- `python -m unittest discover -s app_cv\tests -v` -> PASS, 211 testów.
+- `npm --prefix E:\Antigravity\Projekty\TAROT\app_ar run build` -> PASS z istniejącymi ostrzeżeniami Vite.
+
+Następny krok: `TASK-CV-SNAPSHOT-008`, czyli lokalny benchmark snapshot recognition dla talii i mat.
 
 ---
 
@@ -1419,7 +1432,7 @@ cmd /c "cd /d E:\Antigravity\Projekty\TAROT && set PYTHONPATH=C:\tmp\tarot_pydep
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 Run:
 
@@ -1660,7 +1673,7 @@ git -C E:\Antigravity\Projekty\TAROT commit -m "feat: dodaj model pustej maty dl
 - Modify: `app_cv/tarotvision/auto_tuner.py`
 - Modify: `app_cv/tarotvision/runtime_config.py`
 
-- [ ] **Step 1: Write snapshot autotune tests**
+- [x] **Step 1: Write snapshot autotune tests**
 
 Create `app_cv/tests/test_snapshot_autotune.py`:
 
@@ -1692,7 +1705,7 @@ if __name__ == "__main__":
     unittest.main()
 ```
 
-- [ ] **Step 2: Implement `snapshot_autotune.py`**
+- [x] **Step 2: Implement `snapshot_autotune.py`**
 
 Create `app_cv/tarotvision/snapshot_autotune.py`:
 
@@ -1707,7 +1720,7 @@ def score_snapshot_candidate(quad_score, recognition):
     return geometry * 0.45 + recognition_score * 1.10
 ```
 
-- [ ] **Step 3: Add runtime config parameters for detector profiles**
+- [x] **Step 3: Add runtime config parameters for detector profiles**
 
 In `runtime_config.py`, add:
 
@@ -1727,7 +1740,7 @@ Add tests in `app_cv/tests/test_runtime_config.py`:
         self.assertIn("CARD_DETECT_MIN_AREA_RATIO", metadata)
 ```
 
-- [ ] **Step 4: Extend offline autotuner scoring**
+- [x] **Step 4: Extend offline autotuner scoring**
 
 In `auto_tuner.py`, do not remove `tune_card_detection_params`. Add a new function:
 
@@ -1753,7 +1766,7 @@ def tune_snapshot_detection_params(frame, recognize_crop, crop_card, search_spac
     return base_result
 ```
 
-- [ ] **Step 5: Verify**
+- [x] **Step 5: Verify**
 
 Run:
 

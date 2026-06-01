@@ -34,6 +34,15 @@ class RuntimeConfigTest(unittest.TestCase):
         self.assertTrue(metadata["SNAPSHOT_SETTLE_SECONDS"]["live_safe"])
         self.assertEqual(metadata["MOTION_CHANGED_RATIO"]["minimum"], 0.005)
 
+    def test_card_detector_parameters_are_exported(self):
+        config = RuntimeConfig()
+
+        metadata = config.metadata()
+
+        self.assertIn("CARD_DETECT_MAX_CANDIDATES", metadata)
+        self.assertIn("CARD_DETECT_MIN_AREA_RATIO", metadata)
+        self.assertTrue(metadata["CARD_DETECT_MAX_CANDIDATES"]["live_safe"])
+
     def test_live_update_does_not_move_rollback_target(self):
         session = RuntimeConfigSession()
 

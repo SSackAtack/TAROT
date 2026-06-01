@@ -237,6 +237,33 @@ def tune_card_detection_params(frame, search_space=None, max_iterations=250):
     }
 
 
+def tune_snapshot_detection_params(frame, recognize_crop, crop_card,
+                                   search_space=None, max_iterations=250):
+    base_result = tune_card_detection_params(
+        frame,
+        search_space=search_space,
+        max_iterations=max_iterations,
+    )
+    recognition = None
+    if base_result["best_candidate_bbox"] is not None:
+        x, y, w, h = base_result["best_candidate_bbox"]
+        quad = np.array(
+            [[[x, y]], [[x + w, y]], [[x + w, y + h]], [[x, y + h]]],
+            dtype=np.int32,
+        )
+        crop = crop_card(frame, quad)
+        recognition = recognize_crop(crop)
+
+    from tarotvision.snapshot_autotune import score_snapshot_candidate
+
+    base_result["recognition"] = recognition
+    base_result["recognition_aware_score"] = score_snapshot_candidate(
+        base_result["best_score"],
+        recognition,
+    )
+    return base_result
+
+
 class AutoTuner:
     """Class wrapper for offline card detection parameter tuning."""
 

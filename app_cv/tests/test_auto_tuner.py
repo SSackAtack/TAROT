@@ -2,7 +2,12 @@ import unittest
 import numpy as np
 import cv2
 
-from tarotvision.auto_tuner import AutoTuner, tune_card_detection_params, score_candidate_quad
+from tarotvision.auto_tuner import (
+    AutoTuner,
+    tune_card_detection_params,
+    tune_snapshot_detection_params,
+    score_candidate_quad,
+)
 
 
 class AutoTunerTest(unittest.TestCase):
@@ -101,6 +106,31 @@ class AutoTunerTest(unittest.TestCase):
         result = tuner.tune(img)
 
         self.assertLessEqual(result["iterations"], 15)
+
+    def test_snapshot_autotuner_adds_recognition_aware_score(self):
+        img = np.zeros((600, 800, 3), dtype=np.uint8)
+        cv2.rectangle(img, (325, 171), (475, 429), (255, 255, 255), -1)
+
+        def crop_card(frame, quad):
+            return frame[171:429, 325:475]
+
+        def recognize_crop(crop):
+            return {"match_count": 30, "inlier_ratio": 0.8}
+
+        result = tune_snapshot_detection_params(
+            img,
+            recognize_crop=recognize_crop,
+            crop_card=crop_card,
+            search_space={
+                "canny_low": [30],
+                "canny_high": [100],
+                "min_area_ratio": [0.001],
+                "contour_mode": ["list"],
+            },
+        )
+
+        self.assertEqual(result["recognition"]["match_count"], 30)
+        self.assertGreater(result["recognition_aware_score"], result["best_score"])
 
 
 if __name__ == "__main__":
