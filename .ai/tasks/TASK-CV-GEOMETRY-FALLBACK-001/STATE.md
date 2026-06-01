@@ -21,6 +21,6 @@ Wdrożono kontrolowany fallback `minAreaRect` dla poszarpanych konturów kart or
 
 ## Kolejne kroki
 
-1. Gemini/Michał wykonują live retest: pusta mata, Gilded na ciemnej macie, karta z odblaskiem.
+1. Gemini/Michał wykonują live retest według `.ai/tasks/TASK-CV-GEOMETRY-FALLBACK-001/GEMINI_LIVE_TEST_HANDOFF.md`.
 2. Analizować nowe metryki `snapshot_detection_*` w `logs/cv_metrics.jsonl`.
 3. Jeżeli `minAreaRect` nie wystarczy, uruchomić osobny Hough diagnostics spike przed wdrożeniem rekonstrukcji 3/2/1-edge.
