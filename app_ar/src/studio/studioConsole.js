@@ -17,6 +17,24 @@ let loadedDecksList = []
 let activeDecksState = []
 let isDecksApplying = false
 
+const studioCameraLabels = {
+    CAP_PROP_FOCUS: 'Ostrość',
+    CAP_PROP_AUTOFOCUS: 'Autofokus',
+    CAP_PROP_EXPOSURE: 'Ekspozycja',
+    CAP_PROP_AUTO_EXPOSURE: 'Auto ekspozycja',
+    CAP_PROP_BRIGHTNESS: 'Jasność',
+    CAP_PROP_CONTRAST: 'Kontrast'
+}
+
+const studioCameraRanges = {
+    CAP_PROP_FOCUS: { min: 0, max: 1023, step: 5 },
+    CAP_PROP_AUTOFOCUS: { min: 0, max: 1, step: 1 },
+    CAP_PROP_EXPOSURE: { min: -13, max: 1000, step: 1 },
+    CAP_PROP_AUTO_EXPOSURE: { min: 0, max: 3, step: 1 },
+    CAP_PROP_BRIGHTNESS: { min: 0, max: 255, step: 1 },
+    CAP_PROP_CONTRAST: { min: 0, max: 255, step: 1 }
+}
+
 function initStudioDecksPanel() {
     if (isDecksInitialized || !sidebarEl) return
     isDecksInitialized = true
@@ -201,7 +219,10 @@ export function createStudioConsole() {
     const previewOverlay = document.createElement('div')
     previewOverlay.className = 'studio-preview-overlay'
     previewOverlay.innerHTML = `
-        <div class="studio-preview-label">LIVE FEED COMPOSITOR</div>
+        <div class="studio-preview-label">LIVE CAMERA PREVIEW</div>
+        <div class="studio-camera-preview">
+            <img id="studio-camera-preview-img" src="http://localhost:8766/video_feed.mjpg" alt="Podgląd kamery CV">
+        </div>
         <div class="studio-safe-guides">
             <div class="studio-safe-guides-inner"></div>
         </div>
@@ -236,6 +257,20 @@ export function createStudioConsole() {
                 </div>
                 <div class="studio-path-status" id="studio-path-status">Stan: Brak walidacji</div>
             </div>
+        </div>
+
+        <!-- Sekcja 1b: Kamera sprzętowa -->
+        <div class="studio-card">
+            <div class="studio-card__header">
+                <div class="studio-card__title">Kamera sprzętowo</div>
+                <div class="studio-card__subtitle">Focus / Exposure</div>
+            </div>
+            <div class="studio-camera-controls" id="studio-camera-controls">
+                Brak danych z kamery. Kliknij odczyt.
+            </div>
+            <button class="studio-btn-action" id="studio-camera-probe-btn" style="width: 100%; justify-content: center; height: 32px;">
+                Odczyt kamery
+            </button>
         </div>
 
         <!-- Sekcja 2: Reżyser / Sceny -->
@@ -403,6 +438,34 @@ function initStudioConsoleEvents() {
     if (operatorBtn) {
         operatorBtn.addEventListener('click', () => {
             window.open(`${window.location.origin}${window.location.pathname}?operator=1`, '_blank', 'noopener')
+        })
+    }
+
+    const cameraProbeBtn = sidebarEl.querySelector('#studio-camera-probe-btn')
+    if (cameraProbeBtn) {
+        cameraProbeBtn.addEventListener('click', () => {
+            sendControlMessage({ type: 'camera_probe' })
+        })
+    }
+
+    const cameraControls = sidebarEl.querySelector('#studio-camera-controls')
+    if (cameraControls) {
+        cameraControls.addEventListener('input', (event) => {
+            const input = event.target
+            if (!(input instanceof HTMLInputElement)) return
+            const output = input.parentElement?.querySelector('output')
+            if (output) output.textContent = input.value
+        })
+        cameraControls.addEventListener('change', (event) => {
+            const input = event.target
+            if (!(input instanceof HTMLInputElement)) return
+            const cameraParam = input.dataset.cameraParam
+            if (!cameraParam) return
+            sendControlMessage({
+                type: 'camera_set',
+                param: cameraParam,
+                value: Number(input.value)
+            })
         })
     }
 
@@ -590,6 +653,53 @@ function formatTime(ms) {
         .join(":")
 }
 
+function updateStudioCameraControls(supportedControls) {
+    if (!sidebarEl) return
+    const container = sidebarEl.querySelector('#studio-camera-controls')
+    if (!container) return
+
+    if (!supportedControls || Object.keys(supportedControls).length === 0) {
+        container.textContent = 'Brak danych z kamery. Kliknij odczyt.'
+        return
+    }
+
+    const existingInputs = container.querySelectorAll('input[data-camera-param]')
+    if (existingInputs.length > 0) {
+        Object.entries(supportedControls).forEach(([name, data]) => {
+            if (data.readback_value === -1.0) return
+            const input = container.querySelector(`input[data-camera-param="${name}"]`)
+            if (input && document.activeElement !== input) {
+                input.value = data.readback_value
+                const output = input.parentElement?.querySelector('output')
+                if (output) output.textContent = data.readback_value
+            }
+        })
+        return
+    }
+
+    const html = Object.entries(supportedControls).map(([name, data]) => {
+        if (data.readback_value === -1.0) return ''
+        const range = studioCameraRanges[name] || { min: 0, max: 255, step: 1 }
+        const label = studioCameraLabels[name] || name
+        return `
+            <label class="studio-camera-control">
+                <span title="${name}">${label}</span>
+                <input
+                    type="range"
+                    min="${range.min}"
+                    max="${range.max}"
+                    step="${range.step}"
+                    value="${data.readback_value}"
+                    data-camera-param="${name}"
+                />
+                <output>${data.readback_value}</output>
+            </label>
+        `
+    }).join('')
+
+    container.innerHTML = html || 'Brak aktywnych sprzętowych funkcji kamery w tym systemie.'
+}
+
 // Funkcja aktualizująca UI Konsoli Studio nowym payloadem WebSocket
 export function updateStudioConsole(data) {
     if (!appState.studioMode || !sidebarEl) return
@@ -681,6 +791,7 @@ export function updateStudioConsole(data) {
     })
     saveStudioVolumeSettings()
     updateAudioMixerValues()
+    updateStudioCameraControls(data.operator?.supported_camera_controls)
 
     // 2. Górny Topbar statusu systemowego
     const wsInd = topbarEl.querySelector('#indicator-ws')

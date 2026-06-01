@@ -125,7 +125,7 @@ echo [3/4] Otwieram przeglądarkę w trybie Studio...
 start "" "http://localhost:5173/?studio=1"
 
 echo [4/4] Uruchamiam serwer CV (Python)...
-start "TarotVision CV" /D "%~dp0app_cv" cmd /k "set TAROTVISION_LOG_DIR=%LOG_DIR%&& set TAROTVISION_RESET_LOGS=1&& set TAROTVISION_SNAPSHOT_FIRST=1&& set TAROTVISION_DECK=%TAROTVISION_DECK%&& python main.py"
+start "TarotVision CV" /D "%~dp0app_cv" cmd /k "set TAROTVISION_LOG_DIR=%LOG_DIR%&& set TAROTVISION_RESET_LOGS=1&& set TAROTVISION_SNAPSHOT_FIRST=1&& set TAROTVISION_DECK=%TAROTVISION_DECK%&& set TAROTVISION_DISABLE_OPENCV_PREVIEW=1&& python main.py"
 
 echo.
 echo ========================================
@@ -133,7 +133,7 @@ echo    TarotVision Studio Uruchomione!
 echo    AR:     http://localhost:5173/
 echo    STUDIO: http://localhost:5173/?studio=1
 echo    WS:     ws://localhost:8765/
-echo    CV:     Okno kamery OpenCV
+echo    PREVIEW: http://localhost:8766/video_feed.mjpg
 echo    MODE:   snapshot-first
 echo    LOG:    %LOG_DIR%
 echo ========================================

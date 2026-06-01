@@ -26,6 +26,7 @@ from tarotvision.snapshot_analyzer import SnapshotAnalyzer
 from tarotvision.camera import CameraSession
 from tarotvision.preview import OpenCvPreview
 from tarotvision.pipelines import SnapshotFirstPipeline
+from tarotvision.frame_stream import LatestFrameStore, start_preview_server
 
 # Konfiguracja
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -67,6 +68,7 @@ reset_logs = os.environ.get("TAROTVISION_RESET_LOGS") == "1"
 diagnostics_writer = DiagnosticsWriter(LOG_DIR, filename="cv_metrics.jsonl", reset_on_start=reset_logs)
 camera_session = CameraSession(LOG_DIR, camera_width=1280, camera_height=720)
 opencv_preview = OpenCvPreview("TarotVision - AI Detection (Wcisnij Q by wyjsc)")
+frame_stream = LatestFrameStore()
 
 
 logging.basicConfig(
@@ -375,6 +377,13 @@ def start_websocket_server():
 ws_thread = threading.Thread(target=start_websocket_server, daemon=True)
 ws_thread.start()
 
+if os.environ.get("TAROTVISION_TEST_MODE") != "1":
+    preview_port = int(os.environ.get("TAROTVISION_PREVIEW_PORT", "8766"))
+    try:
+        start_preview_server(frame_stream, port=preview_port)
+        log_event(f"[PREVIEW] Browser preview MJPEG: http://localhost:{preview_port}/video_feed.mjpg")
+    except OSError as exc:
+        log_event(f"[PREVIEW] Nie uruchomiono browser preview na porcie {preview_port}: {exc}")
 
 
 log_event("========================================")
@@ -571,6 +580,7 @@ while True:
 
     # Aktualizujemy rozdzielczosc dynamicznie (na wypadek zmiany kamery)
     frame_height, frame_width = frame.shape[:2]
+    frame_stream.update(frame)
 
     if pending_background_capture:
         capture_frame = table_calibration.warp_frame(frame) if table_calibration.calibrated else frame
