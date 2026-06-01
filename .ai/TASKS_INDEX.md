@@ -35,6 +35,7 @@ Ten plik stanowi centralny rejestr wszystkich zadań (Tasks) realizowanych w pro
 | **TASK-CV-SNAPSHOT-002** | `DONE` | `codex/snapshot-first-recognition-hardening` | Codex | Unicode-safe image I/O i reference loader poza main.py | 2026-06-01 | Oczekuje na review |
 | **TASK-CV-SNAPSHOT-003** | `DONE` | `codex/snapshot-first-recognition-hardening` | Codex | Analiza snapshotu na klatce sprostowanej przez ArUco | 2026-06-01 | Oczekuje na review |
 | **TASK-CV-SNAPSHOT-004** | `DONE` | `codex/snapshot-first-recognition-hardening` | Codex | Diagnostyka porażek detekcji i rozpoznania snapshot-first | 2026-06-01 | Oczekuje na review |
+| **TASK-CV-SNAPSHOT-005** | `DONE` | `codex/snapshot-first-recognition-hardening` | Codex | Wieloprofilowa detekcja kart dla ciemnych talii i mat | 2026-06-01 | Oczekuje na review |
 
 
 

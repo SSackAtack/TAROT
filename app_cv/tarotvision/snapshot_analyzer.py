@@ -3,7 +3,7 @@ import math
 
 import numpy as np
 
-from tarotvision.card_detection import find_card_quads
+from tarotvision.card_detection_profiles import find_card_quads_multi_profile
 from tarotvision.card_recognition import deskew_card_crop
 
 
@@ -17,11 +17,14 @@ class SnapshotAnalysisResult:
 class SnapshotAnalyzer:
     def __init__(self, find_quads=None, crop_card=None, recognize_crop=None,
                  scene_width=26.0, scene_height=15.6):
-        self.find_quads = find_quads or find_card_quads
+        self.find_quads = find_quads or self._find_quads_default
         self.crop_card = crop_card or deskew_card_crop
         self.recognize_crop = recognize_crop
         self.scene_width = scene_width
         self.scene_height = scene_height
+
+    def _find_quads_default(self, frame):
+        return find_card_quads_multi_profile(frame).quads
 
     def analyze(self, frame):
         cards = []

@@ -33,6 +33,7 @@
 - `TASK-CV-SNAPSHOT-002` dodał Unicode-safe image I/O i przeniósł ładowanie aktywnych talii do `reference_loader.py`.
 - `TASK-CV-SNAPSHOT-003` podłączył analizę snapshotu do klatki sprostowanej przez ArUco, gdy kalibracja jest dostępna.
 - `TASK-CV-SNAPSHOT-004` dodał podstawową diagnostykę porażek detekcji i rozpoznania snapshot-first.
+- `TASK-CV-SNAPSHOT-005` dodał wieloprofilową detekcję kart dla ciemnych talii i mat.
 
 ### Kolejne kroki
 
@@ -83,6 +84,16 @@ Weryfikacja:
 - `python -m py_compile app_cv\tarotvision\card_detection_debug.py app_cv\tarotvision\recognition_debug.py app_cv\tarotvision\card_recognition.py app_cv\tarotvision\snapshot_analyzer.py app_cv\tarotvision\pipelines\snapshot_first.py` -> PASS.
 
 Następny krok: `TASK-CV-SNAPSHOT-005`, czyli multi-profile detector dla ciemnych talii i mat.
+
+## Session Status (2026-06-01, Codex, Task 5)
+
+Zrealizowano `TASK-CV-SNAPSHOT-005`: dodano `card_detection_profiles.py` z profilami Canny/adaptive threshold, deduplikacją kandydatów i debugiem per profil. `SnapshotAnalyzer` używa teraz wieloprofilowego detektora domyślnie.
+
+Weryfikacja:
+- `python -m unittest app_cv.tests.test_card_detection_profiles app_cv.tests.test_snapshot_analyzer -v` -> PASS, 10 testów.
+- `python -m py_compile app_cv\tarotvision\card_detection_profiles.py app_cv\tarotvision\snapshot_analyzer.py` -> PASS.
+
+Następny krok: `TASK-CV-SNAPSHOT-006`, czyli opcjonalny model pustej maty.
 
 ---
 
@@ -1173,7 +1184,7 @@ git -C E:\Antigravity\Projekty\TAROT commit -m "feat: dodaj diagnostyke porazek 
 - Modify: `app_cv/tarotvision/card_detection.py`
 - Modify: `app_cv/tarotvision/snapshot_analyzer.py`
 
-- [ ] **Step 1: Write detector profile tests**
+- [x] **Step 1: Write detector profile tests**
 
 Create `app_cv/tests/test_card_detection_profiles.py`:
 
@@ -1222,7 +1233,7 @@ if __name__ == "__main__":
     unittest.main()
 ```
 
-- [ ] **Step 2: Run tests and verify failure**
+- [x] **Step 2: Run tests and verify failure**
 
 Run:
 
@@ -1232,7 +1243,7 @@ cmd /c "cd /d E:\Antigravity\Projekty\TAROT && set PYTHONPATH=C:\tmp\tarot_pydep
 
 Expected: FAIL because `card_detection_profiles.py` does not exist.
 
-- [ ] **Step 3: Implement profile detector**
+- [x] **Step 3: Implement profile detector**
 
 Create `app_cv/tarotvision/card_detection_profiles.py`:
 
@@ -1364,7 +1375,7 @@ def find_card_quads_multi_profile(frame, profiles=None, max_candidates=10):
     )
 ```
 
-- [ ] **Step 4: Integrate with SnapshotAnalyzer**
+- [x] **Step 4: Integrate with SnapshotAnalyzer**
 
 In `snapshot_analyzer.py`, import:
 
@@ -1387,7 +1398,7 @@ Add method inside `SnapshotAnalyzer`:
 
 Keep the existing `find_quads` dependency injection behavior for tests.
 
-- [ ] **Step 5: Verify**
+- [x] **Step 5: Verify**
 
 Run:
 
