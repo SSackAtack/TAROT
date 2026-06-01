@@ -253,24 +253,24 @@ def handle_control_message(message, camera_session):
         import os
         current_status = status_store.get_status()
         dir_status = current_status.get("studio", {}).get("recording_dir_status", {})
-        
+
         base_dir = "./recordings"
         if dir_status and dir_status.get("valid"):
             base_dir = dir_status.get("path", "./recordings")
-            
+
         rec_id = message.recording_id
         safe_rec_id = "".join(c for c in rec_id if c.isalnum() or c in "-_")
         if not safe_rec_id:
             safe_rec_id = "unknown_rec"
-            
+
         filename = f"{safe_rec_id}_timeline.json"
         target_dir = os.path.abspath(base_dir)
         target_path = os.path.abspath(os.path.join(target_dir, filename))
-        
+
         if os.path.commonpath([target_dir, target_path]) != target_dir:
             add_operator_warning("Studio: Zablokowano probe zapisu timeline poza dozwolonym katalogiem")
             return
-            
+
         try:
             os.makedirs(target_dir, exist_ok=True)
             with open(target_path, "w", encoding="utf-8") as f:
@@ -289,19 +289,19 @@ def handle_control_message(message, camera_session):
                 manifest_data = json.load(f)
             manifest_decks = manifest_data.get("decks", [])
             valid_ids = {d.get("id") for d in manifest_decks}
-            
+
             for deck_id in message.active_decks:
                 if deck_id not in valid_ids:
                     add_operator_warning(f"Studio: Blad zmiany talii. Talia {deck_id} nie istnieje w manifeście!")
                     return
-            
+
             active_data = {
                 "version": 1,
                 "active_decks": message.active_decks
             }
             with open(active_decks_path, "w", encoding="utf-8") as f:
                 json.dump(active_data, f, indent=2, ensure_ascii=False)
-                
+
             load_reference_cards(message.active_decks)
             status_store.update_active_decks(message.active_decks)
             add_operator_warning(f"Studio: Pomyslnie wdrożono aktywne talie: {message.active_decks} (Hot-Reload OK)")
@@ -331,7 +331,7 @@ async def handler(websocket):
         # Wyslij natychmiast obecny stan (bezpieczna gleboka kopia)
         state = status_store.get_status()
         await websocket.send(json.dumps(state))
-        
+
         async for message in websocket:
             try:
                 control_message = parse_control_message(message)
@@ -352,7 +352,7 @@ async def broadcast_status():
         if connected_clients:
             # Bezpieczna gleboka kopia pod lockiem — eliminuje race condition z shallow copy
             state_to_send = status_store.get_status()
-            
+
             # Serializujemy do JSON raz i porownujemy stringi (unika problemow z float comparison)
             current_json = json.dumps(state_to_send)
             if current_json != last_sent_json:
@@ -426,7 +426,7 @@ def load_reference_cards(active_ids=None):
     )
     for skipped in result.skipped_files[:10]:
         log_event(f"[OSTRZEZENIE] Pominieto nieczytelny wzorzec CV: {skipped}")
-    
+
 # Pierwsze wczytanie przy starcie systemu
 load_reference_cards()
 table_calibration = TableCalibration(table_width=CAMERA_WIDTH, table_height=CAMERA_HEIGHT)
@@ -439,7 +439,7 @@ def recognize_snapshot_crop(gray_crop):
     min_match_count = int(config_values.get("MIN_MATCH_COUNT", 12.0))
     ratio_thresh = config_values.get("RATIO_THRESH", 0.79)
     min_inlier_ratio = config_values.get("MIN_INLIER_RATIO", 0.25)
-    
+
     result = recognize_card_crop(
         crop_for_matching, reference_cards, orb, flann,
         min_good_matches=min_match_count,
@@ -448,7 +448,7 @@ def recognize_snapshot_crop(gray_crop):
     )
     if result is None:
         return None
-    
+
     angle_deg = result.get("homography_angle_deg", 0.0)
     log_event(
         f"[DIAGNOSTYKA ORIENTACJI] Karta: {result['name']} | "
@@ -456,7 +456,7 @@ def recognize_snapshot_crop(gray_crop):
         f"Ustalona orientacja: {result['orientation']} | "
         f"Pewność (inliers): {result.get('inlier_ratio', 0.0)}"
     )
-    
+
     return {
         "name": result["name"],
         "confidence": result.get("confidence", 0.0),
@@ -513,10 +513,10 @@ while True:
     frame_loop_start = time.perf_counter()
     drain_control_messages(camera_session)
     config_values = runtime_config.values
-    
+
     # Dynamiczna aktualizacja parametrów detektora ruchu i bramki snapshotu
     motion_detector.min_changed_ratio = config_values.get("MOTION_CHANGED_RATIO", 0.02)
-    
+
     settle_seconds = config_values.get("SNAPSHOT_SETTLE_SECONDS", 0.5)
     if snapshot_gate.config.settle_seconds != settle_seconds:
         snapshot_gate.config = SnapshotGateConfig(
@@ -534,9 +534,9 @@ while True:
         display_frame = np.zeros((480, 640, 3), dtype=np.uint8)
         cv2.putText(display_frame, f"Brak wideo pod portem: {camera_session.camera_index}", (50, 200), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
         cv2.putText(display_frame, f"Wcisnij inna cyfre (0-5) by szukac.", (50, 250), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
-        
+
         opencv_preview.show(display_frame)
-        
+
         # Aktualizujemy status o braku kamery
         metrics_snapshot = runtime_metrics.snapshot()
         runtime_snapshot = {
@@ -555,7 +555,7 @@ while True:
             operator=build_operator_snapshot(),
             warnings=list(operator_warnings[-8:]) + ["Brak sygnalu wideo z kamery!"]
         )
-        
+
         key_action = opencv_preview.handle_keyboard(camera_session)
         if key_action == "quit":
             break
@@ -573,9 +573,9 @@ while True:
             background_model.capture(capture_frame)
             add_operator_warning("Przechwycono model pustej maty")
         pending_background_capture = False
-    
+
     gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    
+
     # Zastosowanie CLAHE — obiekt tworzony RAZ na poczatku, nie w kazdej klatce
     gray_frame = clahe.apply(gray_frame)
     runtime_metrics.add("preprocess_ms", (time.perf_counter() - preprocess_start) * 1000.0)
