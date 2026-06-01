@@ -103,6 +103,22 @@ Startowe parametry sa konserwatywne: okolo 3 sekund stabilnosci, 3 snapshoty kon
 
 Metryki tego trybu obejmuja m.in. `stable_for_ms`, `snapshot_quality_score`, `snapshot_analysis_ms`, `snapshot_rejected_count`, `layout_publish_count` oraz `time_from_motion_to_publish_ms`.
 
+### Benchmark snapshot recognition
+
+Lokalne probki operatorskie trzymaj poza commitem w konwencji:
+
+```text
+testdata/snapshots/{deck_id}/{mat_id}/*.jpg
+```
+
+Kontrakt CSV benchmarku uruchamia:
+
+```powershell
+python scripts/benchmark_snapshot_recognition.py --input testdata/snapshots --output logs/snapshot_benchmark.csv
+```
+
+Pierwsza wersja skryptu stabilizuje format wejscia i wyjscia. Integracja z realnym `SnapshotAnalyzer` bedzie osobnym krokiem po zebraniu probek z fizycznej kamery.
+
 ### Konsola operatorska
 
 Domyslny adres `http://localhost:5173/` pozostaje czystym overlayem do OBS. Panel diagnostyczno-strojeniowy jest dostepny tylko pod:

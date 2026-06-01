@@ -36,6 +36,7 @@
 - `TASK-CV-SNAPSHOT-005` dodał wieloprofilową detekcję kart dla ciemnych talii i mat.
 - `TASK-CV-SNAPSHOT-006` dodał opcjonalny model pustej maty i profil `background_diff`.
 - `TASK-CV-SNAPSHOT-007` dodał recognition-aware scoring dla offline autotuningu snapshotów.
+- `TASK-CV-SNAPSHOT-008` dodał pierwszy kontrakt lokalnego benchmarku snapshot recognition.
 
 ### Kolejne kroki
 
@@ -118,6 +119,15 @@ Weryfikacja:
 - `npm --prefix E:\Antigravity\Projekty\TAROT\app_ar run build` -> PASS z istniejącymi ostrzeżeniami Vite.
 
 Następny krok: `TASK-CV-SNAPSHOT-008`, czyli lokalny benchmark snapshot recognition dla talii i mat.
+
+## Session Status (2026-06-01, Codex, Task 8)
+
+Zrealizowano `TASK-CV-SNAPSHOT-008`: dodano `scripts/benchmark_snapshot_recognition.py`, test kontraktu `test_benchmark_snapshot_recognition.py` oraz opis konwencji lokalnych próbek w README.
+
+Weryfikacja:
+- `python -m unittest app_cv.tests.test_benchmark_snapshot_recognition -v` -> PASS, 1 test.
+
+Następny krok: review `TASK-CV-SNAPSHOT-008`, a później decyzja, czy benchmark podpinamy od razu do realnego `SnapshotAnalyzer`, czy najpierw robimy smoke test kamery.
 
 ---
 
@@ -1796,7 +1806,7 @@ git -C E:\Antigravity\Projekty\TAROT commit -m "feat: dodaj recognition-aware au
 - Create: `app_cv/tests/test_benchmark_snapshot_recognition.py`
 - Modify: `README.md`
 
-- [ ] **Step 1: Define fixture convention**
+- [x] **Step 1: Define fixture convention**
 
 Use this directory convention for local, non-committed operator samples:
 
@@ -1814,7 +1824,7 @@ testdata/snapshots/rider-waite-smith/dark_green/001.jpg
 
 Do not commit physical camera samples unless Michał explicitly approves.
 
-- [ ] **Step 2: Write script smoke test**
+- [x] **Step 2: Write script smoke test**
 
 Create `app_cv/tests/test_benchmark_snapshot_recognition.py`:
 
@@ -1843,7 +1853,7 @@ if __name__ == "__main__":
     unittest.main()
 ```
 
-- [ ] **Step 3: Implement script**
+- [x] **Step 3: Implement script**
 
 Create `scripts/benchmark_snapshot_recognition.py`:
 
@@ -1901,7 +1911,7 @@ if __name__ == "__main__":
 
 This first commit creates a stable CLI and output contract. A later patch wires it to real `SnapshotAnalyzer` after detector hardening is in place.
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
 
 Run:
 
