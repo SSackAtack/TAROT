@@ -45,6 +45,8 @@ class SnapshotFirstPipeline(VisionPipeline):
         self.last_motion_started_ms = None
         self.last_diagnostics_time = 0.0
         self.prev_time = time.time()
+        self.empty_snapshot_streak = 0
+        self.empty_snapshot_clear_threshold = 2
 
         # Stałe konfiguracyjne snapshotów (pobierane z parametrów)
         self.snapshot_sample_count = 1
@@ -162,6 +164,7 @@ class SnapshotFirstPipeline(VisionPipeline):
                 self.runtime_metrics.add("snapshot_quality_score", selected.quality.quality_score)
 
                 if result.card_count > 0:
+                    self.empty_snapshot_streak = 0
                     self.snapshot_layout_id += 1
                     self.last_snapshot_cards = result.cards
                     self.snapshot_gate.mark_published(
@@ -176,16 +179,25 @@ class SnapshotFirstPipeline(VisionPipeline):
                             int(time.time() * 1000) - self.last_motion_started_ms,
                         )
                 else:
+                    self.empty_snapshot_streak += 1
                     self.snapshot_gate.mark_rejected()
                     layout_snapshot["snapshot_reject_reason"] = "no_cards"
                     self.runtime_metrics.add("snapshot_rejected_count", 1)
+                    self.runtime_metrics.add("snapshot_empty_streak", self.empty_snapshot_streak)
+                    if (self.last_snapshot_cards
+                            and self.empty_snapshot_streak >= self.empty_snapshot_clear_threshold):
+                        self.snapshot_layout_id += 1
+                        self.last_snapshot_cards = []
+                        layout_snapshot["snapshot_reject_reason"] = "cards_removed_confirmed"
+                        self.runtime_metrics.add("cards_removed_count", 1)
+                        self.runtime_metrics.add("layout_changed", 1)
 
                 layout_snapshot.update({
                     "layout_id": self.snapshot_layout_id,
                     "state": self.snapshot_gate.state,
                     "analysis_ms": analysis_ms,
                     "quality_score": selected.quality.quality_score,
-                    "card_count": result.card_count,
+                    "card_count": len(self.last_snapshot_cards),
                 })
 
         metrics_snapshot = self.runtime_metrics.snapshot()
