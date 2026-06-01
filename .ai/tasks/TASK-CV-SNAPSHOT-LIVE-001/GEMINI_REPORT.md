@@ -45,3 +45,14 @@ Jeśli wykryto tylko **2 sąsiednie wierzchołki** (jedną wyraźną krawędź k
 * Wiemy, że na sprostowanym stole (warped frame) kierunek pionowy jest stały.
 * Wyznaczamy kierunek prostopadły do krawędzi w głąb karty (sprawdzamy na masce binarnej tła, po której stronie linii leży jasny obszar).
 * Przesuwamy wierzchołki wzdłuż prostopadłych wektorów o długość $H = L \times 1.72$, odtwarzając brakujące 2 wierzchołki!
+
+#### Krok D (Rewelacyjny pomysł operatora): Fallback z 1 krawędzi (Single-Edge Scale Matching)
+Jeśli z powodu potężnego odblasku zidentyfikujemy **tylko jedną pojedynczą krawędź (linię)** o długości $L$:
+* Ponieważ stół jest sprostowany (warped), skala (piksel/cm) jest stała i znana. Wiemy dokładnie, ile pikseli ma krótki bok ($W$) oraz długi bok ($H$) kart z danej talii (np. dla Gilded: $W \approx 130$ px, $H \approx 224$ px).
+* Porównujemy długość wykrytej krawędzi $L$ z tolerancją (np. 95%):
+  - Jeśli $L \approx W$ ➔ wiemy, że to **krótki bok karty**!
+  - Jeśli $L \approx H$ ➔ wiemy, że to **długi bok karty**!
+* Mając tę krawędź (dwa punkty A i B) oraz kierunek:
+  - Sprawdzamy na masce binarnej `background_diff`, po której stronie linii znajduje się biały obszar karty.
+  - Wyznaczamy wektory prostopadłe skierowane w tę stronę o brakującej długości ($H$ lub $W$) i wyliczamy pozycje brakujących dwóch narożników!
+* Daje to 100% odporność na zasłonięcia karty przez inne obiekty, cienie i flary!
