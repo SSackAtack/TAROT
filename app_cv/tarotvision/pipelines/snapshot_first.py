@@ -5,6 +5,7 @@ Moduł rurociągu Snapshot-First (SnapshotFirstPipeline) TarotVision.
 import time
 import numpy as np
 from tarotvision.pipelines.base import VisionPipeline
+from tarotvision.detection_diagnostics import summarize_detection_diagnostics
 from tarotvision.snapshot_quality import choose_best_snapshot
 
 class SnapshotFirstPipeline(VisionPipeline):
@@ -153,6 +154,9 @@ class SnapshotFirstPipeline(VisionPipeline):
                 self.runtime_metrics.add("snapshot_quads_found", diagnostics.get("quads_found", 0))
                 self.runtime_metrics.add("snapshot_recognition_attempts", diagnostics.get("recognition_attempts", 0))
                 self.runtime_metrics.add("snapshot_recognition_rejections", diagnostics.get("recognition_rejections", 0))
+                for metric_name, metric_value in summarize_detection_diagnostics(
+                        diagnostics.get("detection")).items():
+                    self.runtime_metrics.add(metric_name, metric_value)
                 analysis_ms = (time.perf_counter() - analysis_start) * 1000.0
                 self.runtime_metrics.add("snapshot_analysis_ms", analysis_ms)
                 self.runtime_metrics.add("snapshot_quality_score", selected.quality.quality_score)

@@ -40,6 +40,7 @@ Ten plik stanowi centralny rejestr wszystkich zadań (Tasks) realizowanych w pro
 | **TASK-CV-SNAPSHOT-007** | `DONE` | `codex/snapshot-first-recognition-hardening` | Codex | Recognition-aware snapshot autotuning offline | 2026-06-01 | Oczekuje na review |
 | **TASK-CV-SNAPSHOT-008** | `DONE` | `codex/snapshot-first-recognition-hardening` | Codex | Lokalny benchmark snapshot recognition dla talii i mat | 2026-06-01 | Oczekuje na review |
 | **TASK-CV-SNAPSHOT-LIVE-001** | `DONE` | `codex/snapshot-first-recognition-hardening` | Gemini + Michał | Live smoke test snapshot-first z kamerą i Studio | 2026-06-01 | Test na żywo zakończony pełnym sukcesem (GREEN) |
+| **TASK-CV-GEOMETRY-FALLBACK-001** | `DONE` | `codex/snapshot-first-recognition-hardening` | Codex | MinAreaRect fallback, diagnostyka detekcji i filtr ArUco dla snapshot-first live | 2026-06-01 | Oczekuje na review |
 
 
 

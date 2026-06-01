@@ -4,6 +4,7 @@ import cv2
 import numpy as np
 
 from tarotvision.card_detection import find_card_quads
+from tarotvision.detection_diagnostics import empty_detection_diagnostics
 
 
 @dataclass(frozen=True)
@@ -14,6 +15,7 @@ class DetectionProfile:
     canny_high: int = 100
     min_area_ratio: float = 0.001
     contour_mode: str = "list"
+    use_min_area_rect_fallback: bool = False
 
 
 @dataclass(frozen=True)
@@ -28,6 +30,8 @@ DEFAULT_PROFILES = [
     DetectionProfile("canny_default", "canny", canny_low=50, canny_high=150, min_area_ratio=0.005, contour_mode="external"),
     DetectionProfile("adaptive_light", "adaptive_light", min_area_ratio=0.001, contour_mode="list"),
     DetectionProfile("adaptive_dark", "adaptive_dark", min_area_ratio=0.001, contour_mode="list"),
+    DetectionProfile("min_area_rect", "canny", canny_low=20, canny_high=80, min_area_ratio=0.001,
+                     contour_mode="list", use_min_area_rect_fallback=True),
 ]
 
 
@@ -91,10 +95,12 @@ def find_card_quads_multi_profile(frame, profiles=None, max_candidates=10, backg
     debug_profiles = []
     best_profile = None
     best_count = 0
+    background_mask_nonzero_ratio = None
 
     if background_model is not None and background_model.active:
         mask = background_model.foreground_mask(frame)
         if mask is not None:
+            background_mask_nonzero_ratio = float(np.count_nonzero(mask) / mask.size)
             bg_quads, bg_debug = find_card_quads(
                 mask,
                 min_area_ratio=0.001,
@@ -103,6 +109,7 @@ def find_card_quads_multi_profile(frame, profiles=None, max_candidates=10, backg
                 contour_mode="list",
                 max_candidates=max_candidates,
                 return_debug=True,
+                use_min_area_rect_fallback=True,
             )
             all_quads.extend(bg_quads)
             if len(bg_quads) > best_count:
@@ -114,6 +121,9 @@ def find_card_quads_multi_profile(frame, profiles=None, max_candidates=10, backg
                 "quads": len(bg_quads),
                 "contours_total": bg_debug.get("contours_total", 0),
                 "candidates_after_quad": bg_debug.get("candidates_after_quad", 0),
+                "min_area_rect_candidates": bg_debug.get("min_area_rect_candidates", 0),
+                "min_area_rect_accepted": bg_debug.get("min_area_rect_accepted", 0),
+                "reject_reasons": bg_debug.get("reject_reasons", {}),
             })
 
     for profile in profiles:
@@ -126,6 +136,7 @@ def find_card_quads_multi_profile(frame, profiles=None, max_candidates=10, backg
             contour_mode=profile.contour_mode,
             max_candidates=max_candidates,
             return_debug=True,
+            use_min_area_rect_fallback=profile.use_min_area_rect_fallback,
         )
         all_quads.extend(quads)
         if len(quads) > best_count:
@@ -137,11 +148,22 @@ def find_card_quads_multi_profile(frame, profiles=None, max_candidates=10, backg
             "quads": len(quads),
             "contours_total": debug.get("contours_total", 0),
             "candidates_after_quad": debug.get("candidates_after_quad", 0),
+            "min_area_rect_candidates": debug.get("min_area_rect_candidates", 0),
+            "min_area_rect_accepted": debug.get("min_area_rect_accepted", 0),
+            "reject_reasons": debug.get("reject_reasons", {}),
         })
 
     deduped = _dedupe_quads(all_quads)[:max_candidates]
+    diagnostics = empty_detection_diagnostics()
+    diagnostics.update({
+        "profiles": debug_profiles,
+        "quads_final": len(deduped),
+        "best_profile": best_profile,
+        "geometry_source": best_profile,
+        "background_mask_nonzero_ratio": background_mask_nonzero_ratio,
+    })
     return MultiProfileDetectionResult(
         quads=deduped,
         best_profile=best_profile,
-        debug={"profiles": debug_profiles, "quads_final": len(deduped)},
+        debug=diagnostics,
     )

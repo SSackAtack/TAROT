@@ -3,6 +3,7 @@ import math
 
 import numpy as np
 
+from tarotvision.card_detection_profiles import MultiProfileDetectionResult
 from tarotvision.snapshot_analyzer import SnapshotAnalyzer
 
 
@@ -105,6 +106,42 @@ class SnapshotAnalyzerTest(unittest.TestCase):
         self.assertEqual(result.diagnostics["quads_found"], 1)
         self.assertEqual(result.diagnostics["recognition_attempts"], 1)
         self.assertEqual(result.diagnostics["recognition_rejections"], 1)
+
+    def test_uses_injected_find_quads_without_debug_detector(self):
+        quad = np.array([[[10, 10]], [[20, 10]], [[20, 30]], [[10, 30]]],
+                        dtype=np.float32)
+        calls = []
+        analyzer = SnapshotAnalyzer(
+            find_quads=lambda frame: calls.append(frame.shape) or [quad],
+            crop_card=lambda frame, quad: "crop",
+            recognize_crop=lambda crop: {"name": "17_star"},
+        )
+
+        result = analyzer.analyze(np.zeros((40, 40, 3), dtype=np.uint8))
+
+        self.assertEqual(calls, [(40, 40, 3)])
+        self.assertEqual(result.card_count, 1)
+        self.assertNotIn("detection", result.diagnostics)
+
+    def test_uses_debug_detector_when_provided(self):
+        quad = np.array([[[10, 10]], [[20, 10]], [[20, 30]], [[10, 30]]],
+                        dtype=np.float32)
+        debug = {"profiles": [{"name": "test", "quads": 1}], "quads_final": 1}
+        analyzer = SnapshotAnalyzer(
+            find_quads=lambda frame: [],
+            find_quads_with_debug=lambda frame: MultiProfileDetectionResult(
+                quads=[quad],
+                best_profile="test",
+                debug=debug,
+            ),
+            crop_card=lambda frame, quad: "crop",
+            recognize_crop=lambda crop: {"name": "17_star"},
+        )
+
+        result = analyzer.analyze(np.zeros((40, 40, 3), dtype=np.uint8))
+
+        self.assertEqual(result.card_count, 1)
+        self.assertIs(result.diagnostics["detection"], debug)
 
 
 if __name__ == "__main__":

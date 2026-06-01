@@ -37,6 +37,11 @@ class CardDetectionProfilesTest(unittest.TestCase):
 
         self.assertIn("profiles", result.debug)
         self.assertGreaterEqual(len(result.debug["profiles"]), 3)
+        self.assertIn("quads_final", result.debug)
+        self.assertIn("background_mask_nonzero_ratio", result.debug)
+        for profile in result.debug["profiles"]:
+            self.assertIn("min_area_rect_candidates", profile)
+            self.assertIn("min_area_rect_accepted", profile)
 
     def test_accepts_custom_profile_list(self):
         frame = np.zeros((600, 800, 3), dtype=np.uint8)
@@ -58,6 +63,36 @@ class CardDetectionProfilesTest(unittest.TestCase):
 
         profile_names = [profile["name"] for profile in result.debug["profiles"]]
         self.assertIn("background_diff", profile_names)
+        self.assertIsInstance(result.debug["background_mask_nonzero_ratio"], float)
+
+    def test_min_area_rect_fallback_detects_ragged_card_outline(self):
+        frame = np.zeros((600, 800, 3), dtype=np.uint8)
+        cv2.rectangle(frame, (325, 170), (475, 430), (255, 255, 255), -1)
+        # Missing/overexposed edge fragment: strict approxPolyDP no longer sees
+        # a convex 4-point contour, but the card envelope is still recoverable.
+        cv2.rectangle(frame, (440, 250), (500, 320), (0, 0, 0), -1)
+
+        result = find_card_quads_multi_profile(frame)
+
+        self.assertGreaterEqual(len(result.quads), 1)
+        min_rect_profile = next(
+            profile for profile in result.debug["profiles"]
+            if profile["name"] == "min_area_rect"
+        )
+        self.assertGreaterEqual(min_rect_profile["min_area_rect_accepted"], 1)
+
+    def test_min_area_rect_fallback_does_not_detect_empty_mat(self):
+        frame = np.zeros((600, 800, 3), dtype=np.uint8)
+        frame[:, :] = (20, 55, 35)
+
+        result = find_card_quads_multi_profile(frame)
+
+        self.assertEqual(len(result.quads), 0)
+        min_rect_profile = next(
+            profile for profile in result.debug["profiles"]
+            if profile["name"] == "min_area_rect"
+        )
+        self.assertEqual(min_rect_profile["min_area_rect_accepted"], 0)
 
 
 if __name__ == "__main__":

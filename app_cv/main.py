@@ -20,6 +20,7 @@ from tarotvision.table_calibration import TableCalibration
 from tarotvision.card_recognition import recognize_card_crop
 from tarotvision.background_model import BackgroundModel
 from tarotvision.reference_loader import load_active_reference_cards
+from tarotvision.card_detection_profiles import find_card_quads_multi_profile
 from tarotvision.snapshot_gate import SnapshotGate, SnapshotGateConfig
 from tarotvision.snapshot_analyzer import SnapshotAnalyzer
 from tarotvision.camera import CameraSession
@@ -468,6 +469,10 @@ def recognize_snapshot_crop(gray_crop):
 snapshot_analyzer = SnapshotAnalyzer(
     recognize_crop=recognize_snapshot_crop,
     background_model=background_model,
+    find_quads_with_debug=lambda frame: find_card_quads_multi_profile(
+        frame,
+        background_model=background_model,
+    ),
 )
 
 runtime_metrics = RuntimeMetrics(maxlen=60)

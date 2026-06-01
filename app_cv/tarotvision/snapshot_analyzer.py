@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 import math
+import os
 
+import cv2
 import numpy as np
 
 from tarotvision.card_detection_profiles import find_card_quads_multi_profile
@@ -16,8 +18,10 @@ class SnapshotAnalysisResult:
 
 class SnapshotAnalyzer:
     def __init__(self, find_quads=None, crop_card=None, recognize_crop=None,
-                 scene_width=26.0, scene_height=15.6, background_model=None):
+                 scene_width=26.0, scene_height=15.6, background_model=None,
+                 find_quads_with_debug=None):
         self.find_quads = find_quads or self._find_quads_default
+        self.find_quads_with_debug = find_quads_with_debug
         self.crop_card = crop_card or deskew_card_crop
         self.recognize_crop = recognize_crop
         self.scene_width = scene_width
@@ -35,48 +39,20 @@ class SnapshotAnalyzer:
             "recognition_rejections": 0,
         }
         frame_height, frame_width = frame.shape[:2]
-        
-        # DIAGNOSTYKA DETEKCJI
-        from tarotvision.card_detection_profiles import find_card_quads_multi_profile
-        result_multi = find_card_quads_multi_profile(frame, background_model=self.background_model)
-        quads = result_multi.quads
-        
-        try:
-            import logging
-            import cv2
-            import os
-            log_dir_env = os.environ.get("TAROTVISION_LOG_DIR", os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "logs")))
-            os.makedirs(log_dir_env, exist_ok=True)
-            
-            logging.info(f"[DIAGNOSTYKA DETEKCJI] Znalazlem finalnie quads: {len(quads)}")
-            for prof in result_multi.debug.get("profiles", []):
-                logging.info(f"  - Profil: {prof['name']} | mode: {prof['mode']} | quads: {prof['quads']} | contours: {prof['contours_total']} | candidates: {prof['candidates_after_quad']}")
-                
-            if self.background_model is not None and self.background_model.active:
-                mask = self.background_model.foreground_mask(frame)
-                if mask is not None:
-                    mask_path = os.path.join(log_dir_env, "debug_mask.jpg")
-                    cv2.imwrite(mask_path, mask)
-                    logging.info(f"  [OK] Zapisano debug_mask.jpg w {mask_path}")
-        except Exception as e:
-            pass
+
+        if self.find_quads_with_debug is not None:
+            detection_result = self.find_quads_with_debug(frame)
+            quads = detection_result.quads
+            diagnostics["detection"] = detection_result.debug
+        else:
+            quads = self.find_quads(frame)
 
         diagnostics["quads_found"] = len(quads)
         for quad in quads:
             crop = self.crop_card(frame, quad)
             diagnostics["recognition_attempts"] += 1
-            
-            # DIAGNOSTYKA: Zapisz crop na dysku
-            import cv2
-            import os
-            try:
-                log_dir_env = os.environ.get("TAROTVISION_LOG_DIR", os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "logs")))
-                os.makedirs(log_dir_env, exist_ok=True)
-                crop_path = os.path.join(log_dir_env, f"debug_crop_{diagnostics['recognition_attempts']}.jpg")
-                cv2.imwrite(crop_path, crop)
-            except Exception:
-                pass
-                
+            _write_debug_crop(crop, diagnostics["recognition_attempts"])
+
             recognition = self.recognize_crop(crop) if self.recognize_crop else None
             if not recognition:
                 diagnostics["recognition_rejections"] += 1
@@ -151,3 +127,25 @@ def _frame_to_scene(center_x, center_y, frame_width, frame_height,
     scene_x = (center_x / frame_width * 2.0 - 1.0) * (scene_width / 2.0)
     scene_y = (1.0 - center_y / frame_height * 2.0) * (scene_height / 2.0)
     return float(scene_x), float(scene_y)
+
+
+def _debug_images_enabled():
+    return os.environ.get("TAROTVISION_DEBUG_IMAGES", "0") == "1"
+
+
+def _debug_log_dir():
+    return os.environ.get(
+        "TAROTVISION_LOG_DIR",
+        os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "logs")),
+    )
+
+
+def _write_debug_crop(crop, index):
+    if not _debug_images_enabled() or crop is None:
+        return
+    try:
+        log_dir = _debug_log_dir()
+        os.makedirs(log_dir, exist_ok=True)
+        cv2.imwrite(os.path.join(log_dir, f"debug_crop_{index}.jpg"), crop)
+    except Exception:
+        pass
