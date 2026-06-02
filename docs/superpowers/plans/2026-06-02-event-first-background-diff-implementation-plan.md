@@ -61,6 +61,32 @@ Docelowa sekwencja:
 4. Jesli ROI jest zbyt male albo niepewne, pipeline powinien uzyc paddingu i diagnostyki, a nie publikowac przypadkowe karty.
 5. ORB / recognition nadal pozostaje finalna walidacja tozsamosci karty.
 
+## ROI Semantics
+
+`SnapshotAnalyzer.analyze(frame, roi_hints=...)` musi rozrozniac trzy stany:
+
+1. `roi_hints is None`
+   - Event-first ROI filtering jest niedostepny albo celowo wylaczony.
+   - Global detection moze dzialac jako fallback mode.
+   - Studio / CV Explain powinno jasno pokazac, ze system pracuje bez pelnej kalibracji event-first.
+
+2. `roi_hints == []`
+   - Event-first mode jest aktywny, a `ChangeDetector` nie znalazl regionu `added_or_moved`.
+   - Analyzer nie moze uruchamiac globalnej detekcji kart.
+   - Analyzer powinien zwrocic zero candidate quads / zero kart, a diagnostyka powinna pokazac `roi_limited=True`, `roi_count=0`.
+   - To jest normalny bezpieczny wynik dla stabilnej pustej maty.
+
+3. `roi_hints == [...]`
+   - Event-first mode jest aktywny, a `ChangeDetector` znalazl jeden albo wiecej regionow kandydackich.
+   - Analyzer sprawdza wylacznie te regiony.
+   - Global card detection nie moze dzialac poza wskazanymi ROI.
+
+Obowiazkowy kontrakt bezpieczenstwa:
+
+```text
+empty_reference active + no added_or_moved ROI = no global scan and no new cards
+```
+
 ## Projekt Docelowy
 
 ### Referencje
@@ -593,6 +619,27 @@ Add to `app_cv/tests/test_snapshot_analyzer.py`:
         self.assertGreater(result.cards[0]["x"], 0)
         self.assertTrue(result.diagnostics["roi_limited"])
         self.assertEqual(result.diagnostics["roi_count"], 1)
+
+    def test_analyze_with_empty_roi_hints_does_not_fallback_to_global_detection(self):
+        frame = np.zeros((200, 300, 3), dtype=np.uint8)
+        calls = []
+
+        def find_quads(_frame):
+            calls.append(_frame.shape)
+            return [np.array([[10, 10], [50, 10], [50, 90], [10, 90]], dtype=np.float32)]
+
+        analyzer = SnapshotAnalyzer(
+            find_quads=find_quads,
+            recognize_crop=lambda crop: {"name": "Gilded_01", "confidence": 0.9},
+            validate_candidate_crop=None,
+        )
+
+        result = analyzer.analyze(frame, roi_hints=[])
+
+        self.assertEqual(calls, [])
+        self.assertEqual(result.card_count, 0)
+        self.assertTrue(result.diagnostics["roi_limited"])
+        self.assertEqual(result.diagnostics["roi_count"], 0)
 ```
 
 - [ ] **Step 2: Verify RED**
@@ -616,14 +663,14 @@ Modify `SnapshotAnalyzer.analyze` signature:
 Add diagnostics:
 
 ```python
-            "roi_limited": bool(roi_hints),
+            "roi_limited": roi_hints is not None,
             "roi_count": len(roi_hints or []),
 ```
 
 Replace quad acquisition block with:
 
 ```python
-        if roi_hints:
+        if roi_hints is not None:
             quads = []
             detection_debug = {"roi_hints": []}
             for bbox in roi_hints:
@@ -645,6 +692,13 @@ Replace quad acquisition block with:
             diagnostics["detection"] = detection_result.debug
         else:
             quads = self.find_quads(frame)
+```
+
+The important behavior is:
+
+```python
+roi_hints=[]      # event-first active, no global fallback
+roi_hints=None    # global fallback allowed
 ```
 
 Add helper:
@@ -848,6 +902,18 @@ Before analyzer call in `process_frame`, after `analysis_frame` is prepared:
                         ]
 ```
 
+If this list is empty, it must still be passed as `[]`, not converted back to `None`. This is correct:
+
+```python
+                result = self.snapshot_analyzer.analyze(analysis_frame, roi_hints=roi_hints)
+```
+
+This is incorrect because it re-enables global detection when no event-first ROI exists:
+
+```python
+                result = self.snapshot_analyzer.analyze(analysis_frame, roi_hints=roi_hints or None)
+```
+
 Replace:
 
 ```python
@@ -967,6 +1033,18 @@ Add pipeline contract test:
         # Expected: background_model.capture_many(frames) is called only after the third frame,
         # not after a global detector PASS.
         background_model.capture_many.assert_called_once()
+
+    def test_empty_reference_validation_uses_background_changed_ratio(self):
+        background_model = MagicMock()
+        background_model.active = True
+        background_model.changed_ratio.return_value = 0.0
+
+        # Arrange pipeline/autotune recorder so empty reference is finalized.
+        # Process enough forced empty snapshots to trigger capture_many().
+
+        background_model.capture_many.assert_called_once()
+        background_model.changed_ratio.assert_called()
+        runtime_metrics.add.assert_any_call("background_reference_validation_ratio", 0.0)
 ```
 
 Implement this test fully like existing pipeline tests in `app_cv/tests/test_pipelines_contract.py`; do not leave ellipses in committed test code.
@@ -1052,22 +1130,19 @@ Add `self.empty_reference_frames = []` to `SnapshotFirstPipeline.__init__`.
 
 - [ ] **Step 5: Validate reference after bootstrap**
 
-After `background_model.capture_many(self.empty_reference_frames)`, perform validation with `ChangeDetector` using the new reference and the last empty frame:
+After `background_model.capture_many(self.empty_reference_frames)`, validate the last empty frame against the newly built reference. Do not validate with `change_detector.detect(analysis_frame, analysis_frame, ...)`, because comparing a frame to itself always hides reference drift.
 
 ```python
-                if (
-                        self.change_detector is not None
-                        and self.background_model is not None
-                        and self.background_model.active):
-                    validation = self.change_detector.detect(
-                        analysis_frame,
-                        analysis_frame,
-                        empty_reference=self.background_model,
-                    )
-                    self.runtime_metrics.add("background_reference_validation_regions", len(validation.regions))
+                validation_ratio = self.background_model.changed_ratio(analysis_frame, threshold=20)
+                self.runtime_metrics.add("background_reference_validation_ratio", validation_ratio)
+
+                if validation_ratio > 0.01:
+                    self.runtime_metrics.add("background_reference_validation_warning", 1)
+                else:
+                    self.runtime_metrics.add("background_reference_validation_warning", 0)
 ```
 
-This validation is expected to report zero regions for a stable empty reference. If it reports regions, Studio/CV Explain should surface the issue in Task 6.
+Threshold `0.01` is an initial MVP value and may later move to runtime config / autotune profile. If validation reports warning, Studio / CV Explain should surface the issue in Task 6.
 
 - [ ] **Step 6: Verify GREEN**
 
@@ -1263,6 +1338,10 @@ git commit -m "docs: zapisz weryfikacje event-first background diff"
 - Po ruchu system porownuje `current_snapshot` z `previous_stable_snapshot`.
 - Regiony zmian sa filtrowane po rozmiarze; drobne zmiany nie uruchamiaja rozpoznawania kart.
 - `SnapshotAnalyzer` przyjmuje `roi_hints` i ogranicza detekcje do tych obszarow.
+- `roi_hints=None` jest jedynym stanem, w ktorym global fallback detection moze dzialac.
+- `roi_hints=[]` oznacza aktywny event-first bez regionow `added_or_moved`; analyzer nie moze wtedy uruchamiac globalnej detekcji.
+- Stabilna pusta mata po kalibracji daje `roi_hints=[]`, `card_count=0` i brak globalnego skanu.
+- Walidacja `empty_reference` uzywa `BackgroundModel.changed_ratio(current_empty_frame)` albo rownowaznego porownania reference-vs-current, nie `current_frame` vs samo siebie.
 - Po aktywnej kalibracji `empty_reference` global card detection nie jest glowna sciezka robocza; moze dzialac tylko jako fallback diagnostyczny albo tryb awaryjny.
 - Gdy `ChangeDetector` nie zwraca `added_or_moved`, runtime nie publikuje przypadkowych kart z globalnego skanu.
 - Gdy `ChangeDetector` zwraca `ignored_global_shift`, pipeline zachowuje poprzedni dobry stan i publikuje ostrzezenie operatora.

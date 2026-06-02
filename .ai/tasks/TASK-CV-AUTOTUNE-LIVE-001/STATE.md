@@ -68,8 +68,12 @@ Doprecyzowano architekturę: autotuning jest procedurą kalibracyjną przed sesj
 
 ChatGPT Supervisor dopisał obowiązkową erratę planu: `docs/superpowers/plans/2026-06-02-event-first-background-diff-plan-amendment-001.md`. Errata blokuje implementację do czasu uwzględnienia dwóch zasad: `roi_hints=[]` nie może uruchamiać globalnej detekcji, a walidacja `empty_reference` musi porównywać bieżący pusty frame z referencją przez `BackgroundModel.changed_ratio()` lub równoważny mechanizm, nie `analysis_frame` z samym sobą.
 
+## Session Status (2026-06-02 Event-first amendment merge)
+
+Codex pobrał nowszy stan branchu z GitHuba i scalił erratę bezpośrednio do głównego planu `docs/superpowers/plans/2026-06-02-event-first-background-diff-implementation-plan.md`. Plan zawiera teraz obowiązkową semantykę `roi_hints is None` vs `roi_hints == []`, test chroniący przed globalnym fallbackiem na pustej liście ROI oraz poprawioną walidację `empty_reference` przez porównanie bieżącej pustej klatki z referencją. Osobny amendment został usunięty, żeby główny plan był jedynym źródłem prawdy.
+
 ## Kolejne kroki
 
-1. Przed implementacją event-first background diff uwzględnić `event-first-background-diff-plan-amendment-001.md` jako obowiązkowy dodatek do planu.
+1. Implementować event-first background diff wyłącznie według zaktualizowanego głównego planu `2026-06-02-event-first-background-diff-implementation-plan.md`.
 2. Następny bezpieczny task implementacyjny: `Task 1: Stable Empty Reference`.
 3. Manualny live smoke z kamerą pozostaje wymagany dla obecnego `TASK-CV-AUTOTUNE-LIVE-001` przed oznaczeniem go jako `DONE`.

@@ -319,6 +319,25 @@ npm --prefix E:\Antigravity\Projekty\TAROT\app_ar run build
 
 Wynik: PASS. Vite zglosil te same istniejace ostrzezenia: duzy chunk po minifikacji oraz nieskuteczny dynamiczny import `src/renderer/textureCache.js`.
 
+### Event-first amendment merge
+
+PLAN ONLY. Nie uruchamiano testów kodu, ponieważ zmieniono wyłącznie dokumentację planistyczną.
+
+Zweryfikowano ręcznie, że `docs/superpowers/plans/2026-06-02-event-first-background-diff-implementation-plan.md` zawiera teraz:
+
+- sekcję `ROI Semantics` rozróżniającą `roi_hints is None`, `roi_hints == []` i `roi_hints == [...]`;
+- wymagany test `test_analyze_with_empty_roi_hints_does_not_fallback_to_global_detection`;
+- ostrzeżenie przed `roi_hints or None` w integracji runtime;
+- walidację `empty_reference` przez `BackgroundModel.changed_ratio(analysis_frame, threshold=20)`, nie przez `analysis_frame` porównany z samym sobą;
+- dodatkowe kryteria akceptacji dla `roi_hints=[]` i reference-vs-current validation.
+
+Usunięto osobne pliki erraty:
+
+```text
+docs/superpowers/plans/2026-06-02-event-first-background-diff-plan-amendment-001.md
+.ai/tasks/TASK-CV-AUTOTUNE-LIVE-001/TEST_REPORT_EVENT_FIRST_AMENDMENT_001.md
+```
+
 ```text
 $env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest discover -s app_cv\tests -v
 ```

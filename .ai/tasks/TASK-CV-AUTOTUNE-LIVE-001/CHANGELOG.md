@@ -119,7 +119,13 @@
 
 ## 2026-06-02 Event-first plan amendment 001
 
-- Dodano `docs/superpowers/plans/2026-06-02-event-first-background-diff-plan-amendment-001.md` jako obowiązkową erratę przed implementacją.
+- Pobrano z GitHuba osobną erratę `docs/superpowers/plans/2026-06-02-event-first-background-diff-plan-amendment-001.md` jako obowiązkowy materiał review przed implementacją.
 - Doprecyzowano semantykę `roi_hints`: `None` oznacza fallback globalny, pusta lista `[]` oznacza aktywny event-first bez ROI i zakaz globalnego skanowania.
 - Dodano wymagany test planistyczny chroniący przed fallbackiem globalnym przy `roi_hints=[]`.
 - Skorygowano walidację `empty_reference`: ma używać `BackgroundModel.changed_ratio(current_empty_frame)` albo równoważnego porównania reference-vs-current, nie `analysis_frame` vs `analysis_frame`.
+
+## 2026-06-02 Event-first amendment merge
+
+- Scalono treść `event-first-background-diff-plan-amendment-001.md` bezpośrednio do głównego planu `docs/superpowers/plans/2026-06-02-event-first-background-diff-implementation-plan.md`.
+- Główny plan zawiera teraz sekcję `ROI Semantics`, wymagany test dla `roi_hints=[]`, zakaz `roi_hints or None` oraz poprawioną walidację `empty_reference` przez `BackgroundModel.changed_ratio()`.
+- Usunięto osobny plik amendmentu i osobny raport erraty, aby implementatorzy pracowali z jednym źródłem prawdy.
