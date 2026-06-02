@@ -123,3 +123,26 @@ Dokumentacja-only: README.md, .ai/TASKS_INDEX.md i notatki TASK-CV-AUTOTUNE-LIVE
 ```
 
 Wynik: PASS przez review diffu; brak zmian wykonywalnych.
+
+### Task 10 automatic full verification
+
+```text
+cmd /c "set PYTHONPATH=C:\tmp\tarot_pydeps;app_cv&& python -m unittest discover -s app_cv\tests -v"
+```
+
+Wynik: PASS, 255 testów.
+
+```text
+cmd /c "npm --prefix E:\Antigravity\Projekty\TAROT\app_ar run build"
+```
+
+Wynik: PASS. Vite zgłosił ostrzeżenia o dużym chunku oraz nieskutecznym dynamicznym imporcie `textureCache.js`.
+
+### Task 10 manual live smoke
+
+Wynik: NOT RUN w tej sesji. Test wymaga fizycznej kamery i ręcznej obsługi Studio:
+
+1. Uruchomić `start_tarotvision_studio.bat`.
+2. Potwierdzić preview kamery i ArUco.
+3. Uruchomić Auto Tune dla `empty`, `one_card`, `three_cards`.
+4. Potwierdzić rekomendację, kliknąć `Apply`, zapisać profil i sprawdzić `logs/calibration_profiles/`.

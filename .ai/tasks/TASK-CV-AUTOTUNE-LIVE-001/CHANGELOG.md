@@ -42,3 +42,9 @@
 - Dodano do README sekcję `Live Auto Tune` z opisem roli narzędzia operatorskiego, bezpieczną sekwencją pracy i formatem profilu z metadanymi.
 - Zaktualizowano `.ai/TASKS_INDEX.md`, aby wpis `TASK-CV-AUTOTUNE-LIVE-001` odzwierciedlał wykonanie Tasków 0-9 i oczekiwanie na pełną weryfikację/live smoke.
 - Zaktualizowano stan zadania i kolejny krok dla modelu przejmującego pracę.
+
+## 2026-06-02 Codex Task 10 automatic verification
+
+- Uruchomiono pełny backend test suite.
+- Uruchomiono build frontendu `app_ar`.
+- Manualny live smoke z fizyczną kamerą pozostawiono jako jawny kolejny krok, bo nie został wykonany w tej sesji.
