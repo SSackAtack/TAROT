@@ -108,6 +108,36 @@ class SnapshotAnalyzerTest(unittest.TestCase):
         self.assertEqual(result.diagnostics["recognition_attempts"], 1)
         self.assertEqual(result.diagnostics["recognition_rejections"], 1)
 
+    def test_rejects_glare_like_candidate_before_recognition(self):
+        quad = np.array([[[10, 10]], [[20, 10]], [[20, 30]], [[10, 30]]],
+                        dtype=np.float32)
+        crop = np.full((516, 300), 216, dtype=np.uint8)
+        calls = []
+        analyzer = SnapshotAnalyzer(
+            find_quads=lambda frame: [quad],
+            crop_card=lambda frame, quad: crop,
+            recognize_crop=lambda crop: calls.append(crop) or {
+                "name": "forced_false_match",
+                "confidence": 0.8,
+            },
+        )
+
+        result = analyzer.analyze(np.zeros((40, 40, 3), dtype=np.uint8))
+
+        self.assertEqual(result.cards, [])
+        self.assertEqual(calls, [])
+        self.assertEqual(result.diagnostics["quads_found"], 1)
+        self.assertEqual(result.diagnostics["recognition_attempts"], 0)
+        self.assertEqual(result.diagnostics["recognition_rejections"], 0)
+        self.assertEqual(result.diagnostics["candidate_validation_rejections"], 1)
+        candidates = result.diagnostics["recognition_candidates"]
+        self.assertEqual(len(candidates), 1)
+        self.assertFalse(candidates[0]["accepted"])
+        self.assertIn(
+            candidates[0]["reject_reason"],
+            {"smooth_low_texture", "no_card_border_evidence"},
+        )
+
     def test_records_per_candidate_recognition_debug(self):
         quad = np.array([[[10, 10]], [[20, 10]], [[20, 30]], [[10, 30]]],
                         dtype=np.float32)

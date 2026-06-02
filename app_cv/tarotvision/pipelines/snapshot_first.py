@@ -158,6 +158,7 @@ class SnapshotFirstPipeline(VisionPipeline):
                 self.runtime_metrics.add("snapshot_quads_found", diagnostics.get("quads_found", 0))
                 self.runtime_metrics.add("snapshot_recognition_attempts", diagnostics.get("recognition_attempts", 0))
                 self.runtime_metrics.add("snapshot_recognition_rejections", diagnostics.get("recognition_rejections", 0))
+                self.runtime_metrics.add("snapshot_candidate_validation_rejections", diagnostics.get("candidate_validation_rejections", 0))
                 self.runtime_metrics.add("recognition_score", diagnostics.get("recognition_score", 0.0))
                 self.runtime_metrics.add("snapshot_recognition_score", diagnostics.get("recognition_score", 0.0))
                 for metric_name, metric_value in summarize_detection_diagnostics(
@@ -270,5 +271,6 @@ class SnapshotFirstPipeline(VisionPipeline):
             "false_positive_count": 0,
             "matching_ms": float(analysis_ms),
             "recognition_rejections": int(diagnostics.get("recognition_rejections", 0)),
+            "candidate_validation_rejections": int(diagnostics.get("candidate_validation_rejections", 0)),
         }
         self.autotune_sample_recorder(sample)

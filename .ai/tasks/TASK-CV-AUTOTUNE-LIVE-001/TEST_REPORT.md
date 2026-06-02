@@ -194,3 +194,31 @@ npm --prefix E:\Antigravity\Projekty\TAROT\app_ar run build
 ```
 
 Wynik: PASS. Vite zgłosił istniejące ostrzeżenia o dużym chunku oraz nieskutecznym dynamicznym imporcie `textureCache.js`.
+
+### Glare false-positive candidate validation RED
+
+```text
+python -m unittest tests.test_card_candidate_validation tests.test_snapshot_analyzer tests.test_operator_explainability
+```
+
+Wynik: FAIL. Brakowalo modulu `tarotvision.card_candidate_validation`; `SnapshotAnalyzer` przekazywal gladki crop do rozpoznawania i przyjmowal wymuszony false match; `CV Explain` nie rozroznial odrzucenia cropa bez cech karty.
+
+### Glare false-positive candidate validation GREEN
+
+```text
+python -m unittest tests.test_card_candidate_validation tests.test_snapshot_analyzer tests.test_operator_explainability tests.test_pipelines_contract tests.test_autotune_scoring tests.test_autotune_session
+```
+
+Wynik: PASS, 33 testy.
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest discover -s app_cv\tests -v
+```
+
+Wynik: PASS, 267 testow.
+
+```text
+npm --prefix E:\Antigravity\Projekty\TAROT\app_ar run build
+```
+
+Wynik: PASS. Vite zglosil istniejace ostrzezenia o duzym chunku oraz nieskutecznym dynamicznym imporcie `textureCache.js`.

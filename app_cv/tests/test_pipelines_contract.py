@@ -260,6 +260,7 @@ class TestPipelinesContract(unittest.TestCase):
             "quads_found": 2,
             "recognition_attempts": 2,
             "recognition_rejections": 1,
+            "candidate_validation_rejections": 1,
             "recognition_score": 0.42,
         }
         snapshot_analyzer.analyze.return_value = analyzed
@@ -314,7 +315,9 @@ class TestPipelinesContract(unittest.TestCase):
         self.assertEqual(samples[0]["accepted_count"], 1)
         self.assertEqual(samples[0]["recognition_score"], 0.42)
         self.assertEqual(samples[0]["recognition_rejections"], 1)
+        self.assertEqual(samples[0]["candidate_validation_rejections"], 1)
         self.assertIn("matching_ms", samples[0])
+        runtime_metrics.add.assert_any_call("snapshot_candidate_validation_rejections", 1)
 
 if __name__ == '__main__':
     unittest.main()

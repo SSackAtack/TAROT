@@ -38,6 +38,12 @@ Po ponownym przeglądzie logiki rozpoznawania kart wykryto i domknięto dwie luk
 
 W tej sesji Codex dodał callback próbek autotuningu w `SnapshotFirstPipeline`, podłączył go w `main.py`, rozszerzył `recognize_card_crop_with_debug()` o ranking top-matchy i uzupełnił diagnostykę kandydatów w `SnapshotAnalyzer`. Manualny live smoke z fizyczną kamerą nadal pozostaje wymaganym krokiem przed oznaczeniem taska jako `DONE`.
 
+## Session Status (2026-06-02 Codex glare false-positive hardening)
+
+Po obserwacji live z jedną kartą i odblaskiem na macie wykryto trzecią lukę: detektor geometrii mógł zgłosić jasną plamę jako kandydat, a rozpoznawanie ORB nie miało wcześniejszej bramki „none-of-the-above”. Codex dodał `card_candidate_validation.py`, który przed rozpoznawaniem odrzuca cropy bez tekstury, krawędzi i śladów granicy karty. `SnapshotAnalyzer` publikuje `candidate_validation_rejections`, pipeline zapisuje tę metrykę do próbek autotuningu, a `CV Explain` wskazuje operatorowi odblask/tło zamiast sugerować problem z właściwą kartą.
+
+Weryfikacja automatyczna: 267 testów backend PASS oraz `npm --prefix app_ar run build` PASS. Manualny live smoke z fizyczną kamerą nadal pozostaje wymagany przed zamknięciem taska.
+
 ## Decyzja strategiczna
 
 Po nowych funkcjach rozpoznawania nie wolno implementowac autotuningu jako "znajdz najlepsze Canny/min_area". To byloby lokalne minimum: system moglby idealnie wykrywac prostokaty, ale nadal odrzucac karty przez ORB, homografie, threshold lub konflikt aktywnych talii.

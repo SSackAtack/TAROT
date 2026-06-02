@@ -93,7 +93,7 @@ Najwazniejsze pliki diagnostyczne:
 
 Przy starcie przez launcher `cv_metrics.jsonl`, `cv_runtime.log` i `ar_vite.log` opisuja biezacy przebieg testowy, zeby nowe pomiary nie mieszaly sie ze starymi.
 W `runtime` widac profil pracy, indeks kamery, rozdzielczosc przechwytywania oraz status blokady focus/exposure.
-W metrykach snapshot-first CV dochodza `motion_changed_ratio`, `stable_for_ms`, `snapshot_quality_score`, `snapshot_analysis_ms`, `snapshot_rejected_count`, `layout_publish_count`, `recognition_score` oraz `time_from_motion_to_publish_ms`.
+W metrykach snapshot-first CV dochodza `motion_changed_ratio`, `stable_for_ms`, `snapshot_quality_score`, `snapshot_analysis_ms`, `snapshot_rejected_count`, `layout_publish_count`, `recognition_score`, `snapshot_candidate_validation_rejections` oraz `time_from_motion_to_publish_ms`.
 
 ### Tryb snapshot-first CV
 
@@ -101,7 +101,7 @@ Tryb snapshot-first jest jedyna produkcyjna sciezka CV. Uruchamia lekki watcher 
 
 Startowe parametry sa konserwatywne: okolo 3 sekund stabilnosci, 3 snapshoty kontrolne i publikacja tylko zatwierdzonego ukladu. Overlay w przegladarce trzyma ostatni dobry wynik podczas ruchu lub odrzucenia snapshotu.
 
-Metryki tego trybu obejmuja m.in. `stable_for_ms`, `snapshot_quality_score`, `snapshot_analysis_ms`, `snapshot_rejected_count`, `layout_publish_count`, `recognition_score` oraz `time_from_motion_to_publish_ms`.
+Metryki tego trybu obejmuja m.in. `stable_for_ms`, `snapshot_quality_score`, `snapshot_analysis_ms`, `snapshot_rejected_count`, `layout_publish_count`, `recognition_score`, `snapshot_candidate_validation_rejections` oraz `time_from_motion_to_publish_ms`.
 
 ### Benchmark snapshot recognition
 
@@ -137,7 +137,7 @@ logs/calibration_profiles/
 
 ### Live Auto Tune
 
-Live Auto Tune jest narzedziem operatorskim w Studio, nie automatycznym trybem produkcyjnym. Operator uruchamia kalibracje dla pustej maty, jednej karty albo trzech kart. Backend zbiera stabilne snapshoty, zapisuje realne probki `candidate_count`, `accepted_count`, `recognition_score` i czas analizy, ocenia kandydackie profile i pokazuje rekomendacje. Profil jest stosowany dopiero po kliknieciu Apply, a zapis do `logs/calibration_profiles/` wymaga komendy Save Profile.
+Live Auto Tune jest narzedziem operatorskim w Studio, nie automatycznym trybem produkcyjnym. Operator uruchamia kalibracje dla pustej maty, jednej karty albo trzech kart. Backend zbiera stabilne snapshoty, zapisuje realne probki `candidate_count`, `accepted_count`, `recognition_score`, `candidate_validation_rejections` i czas analizy, ocenia kandydackie profile i pokazuje rekomendacje. Profil jest stosowany dopiero po kliknieciu Apply, a zapis do `logs/calibration_profiles/` wymaga komendy Save Profile.
 
 Bezpieczna sekwencja pracy:
 

@@ -73,6 +73,24 @@ class OperatorExplainabilityTest(unittest.TestCase):
         self.assertEqual(result["severity"], "warn")
         self.assertIn("jedna karta", result["next_action"].lower())
 
+    def test_candidate_gap_mentions_shape_validation_rejection(self):
+        result = build_cv_explainability(
+            cards=[{"id": "gilded_01"}],
+            metrics={
+                "snapshot_quads_found": 2,
+                "snapshot_candidate_validation_rejections": 1,
+            },
+            runtime={"aruco_calibrated": True, "aruco_markers": 4},
+            layout={"state": "holding_last_good"},
+            operator={"active_decks": ["gilded"]},
+            warnings=[],
+        )
+
+        recognition_step = next(step for step in result["steps"] if step["id"] == "recognition")
+        self.assertEqual(recognition_step["state"], "warn")
+        self.assertIn("bez cech karty", recognition_step["message"])
+        self.assertIn("odblask", result["next_action"].lower())
+
     def test_aruco_step_counts_marker_ids_from_table_status(self):
         result = build_cv_explainability(
             cards=[{"id": "gilded_01"}],

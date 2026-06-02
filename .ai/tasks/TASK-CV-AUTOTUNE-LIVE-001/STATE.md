@@ -32,8 +32,12 @@ Commity na branchu:
 - Post-Task 10 hardening: podłączono live sample collection z `SnapshotFirstPipeline` do `AutotuneSession`.
 - Post-Task 10 hardening: dodano per-candidate recognition diagnostics: top match ranking, `crop_keypoints`, `reject_reason`, `score_margin` i agregowany `recognition_score`.
 
+## Session Status (2026-06-02 Codex glare false-positive hardening)
+
+Po live obserwacji operatora: przy jednej karcie na macie silny odblask byl przepuszczany jako kandydat, a rozpoznawanie dobieralo dla niego najlepszy wzorzec. Codex dodal walidacje cropa kandydata przed ORB, ktora odrzuca gladkie/jasne cropy bez tekstury, krawedzi i sladow granicy karty. `SnapshotAnalyzer` publikuje teraz `candidate_validation_rejections`, `SnapshotFirstPipeline` przekazuje te dane do metryk i probek autotuningu, a `CV Explain` komunikuje przypadek jako odrzucony kandydat wygladajacy jak odblask albo tlo.
+
 ## Kolejne kroki
 
 1. Wykonać manualny live smoke z kamerą: Auto Tune `empty`, `one_card`, `three_cards`, potem `Apply` i zapis profilu.
-2. W live smoke sprawdzić, czy `recognition_score` oraz `CV Explain` odpowiadają realnej liczbie kart w kadrze.
+2. W live smoke sprawdzić, czy `recognition_score`, `candidate_validation_rejections` oraz `CV Explain` odpowiadają realnej liczbie kart w kadrze, zwlaszcza przy odblasku na pustej czesci maty.
 3. Jeśli smoke będzie GREEN, oznaczyć task jako `DONE` i przygotować review/merge branchu `codex/live-autotuning-foundation`.

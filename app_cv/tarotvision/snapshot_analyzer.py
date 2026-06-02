@@ -6,6 +6,7 @@ import cv2
 import numpy as np
 
 from tarotvision.card_detection_profiles import find_card_quads_multi_profile
+from tarotvision.card_candidate_validation import validate_card_candidate_crop
 from tarotvision.card_recognition import deskew_card_crop
 from tarotvision.recognition_debug import top_match_summary
 
@@ -20,12 +21,14 @@ class SnapshotAnalysisResult:
 class SnapshotAnalyzer:
     def __init__(self, find_quads=None, crop_card=None, recognize_crop=None,
                  scene_width=26.0, scene_height=15.6, background_model=None,
-                 find_quads_with_debug=None, recognize_crop_with_debug=None):
+                 find_quads_with_debug=None, recognize_crop_with_debug=None,
+                 validate_candidate_crop=validate_card_candidate_crop):
         self.find_quads = find_quads or self._find_quads_default
         self.find_quads_with_debug = find_quads_with_debug
         self.crop_card = crop_card or deskew_card_crop
         self.recognize_crop = recognize_crop
         self.recognize_crop_with_debug = recognize_crop_with_debug
+        self.validate_candidate_crop = validate_candidate_crop
         self.scene_width = scene_width
         self.scene_height = scene_height
         self.background_model = background_model
@@ -39,6 +42,7 @@ class SnapshotAnalyzer:
             "quads_found": 0,
             "recognition_attempts": 0,
             "recognition_rejections": 0,
+            "candidate_validation_rejections": 0,
             "recognition_candidates": [],
             "recognition_score": 0.0,
         }
@@ -55,14 +59,27 @@ class SnapshotAnalyzer:
         diagnostics["quads_found"] = len(quads)
         for quad in quads:
             crop = self.crop_card(frame, quad)
+            candidate_index = len(diagnostics["recognition_candidates"]) + 1
+            candidate_validation = self._validate_candidate_crop(crop)
+            if candidate_validation is not None and not candidate_validation.accepted:
+                diagnostics["candidate_validation_rejections"] += 1
+                diagnostics["recognition_candidates"].append(_candidate_diagnostics(
+                    candidate_index,
+                    None,
+                    None,
+                    candidate_validation,
+                ))
+                continue
+
             diagnostics["recognition_attempts"] += 1
             _write_debug_crop(crop, diagnostics["recognition_attempts"])
 
             recognition, recognition_debug = self._recognize_with_optional_debug(crop)
             candidate_debug = _candidate_diagnostics(
-                diagnostics["recognition_attempts"],
+                candidate_index,
                 recognition,
                 recognition_debug,
+                candidate_validation,
             )
             diagnostics["recognition_candidates"].append(candidate_debug)
             if not recognition:
@@ -113,6 +130,13 @@ class SnapshotAnalyzer:
         recognition = self.recognize_crop(crop) if self.recognize_crop else None
         return recognition, None
 
+    def _validate_candidate_crop(self, crop):
+        if self.validate_candidate_crop is None:
+            return None
+        if crop is None or not hasattr(crop, "shape"):
+            return None
+        return self.validate_candidate_crop(crop)
+
 
 def _quad_points(quad):
     return np.asarray(quad, dtype=np.float32).reshape(4, 2)
@@ -158,21 +182,42 @@ def _frame_to_scene(center_x, center_y, frame_width, frame_height,
     return float(scene_x), float(scene_y)
 
 
-def _candidate_diagnostics(index, recognition, recognition_debug):
+def _candidate_diagnostics(index, recognition, recognition_debug, candidate_validation=None):
     top_matches = top_match_summary(recognition_debug) if recognition_debug else []
+    validation_payload = _validation_diagnostics(candidate_validation)
     return {
         "index": int(index),
         "accepted": recognition is not None,
         "reject_reason": (
             recognition_debug.reject_reason
-            if recognition_debug is not None else None
+            if recognition_debug is not None
+            else (
+                candidate_validation.reject_reason
+                if candidate_validation is not None and not candidate_validation.accepted
+                else None
+            )
         ),
+        "candidate_validation": validation_payload,
         "crop_keypoints": (
             int(recognition_debug.crop_keypoints)
             if recognition_debug is not None else None
         ),
         "top_matches": top_matches,
         "score_margin": _score_margin(top_matches),
+    }
+
+
+def _validation_diagnostics(candidate_validation):
+    if candidate_validation is None:
+        return None
+    return {
+        "accepted": bool(candidate_validation.accepted),
+        "reject_reason": candidate_validation.reject_reason,
+        "contrast": candidate_validation.contrast,
+        "edge_density": candidate_validation.edge_density,
+        "dark_pixel_ratio": candidate_validation.dark_pixel_ratio,
+        "border_edge_density": candidate_validation.border_edge_density,
+        "border_dark_ratio": candidate_validation.border_dark_ratio,
     }
 
 

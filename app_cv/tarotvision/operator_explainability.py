@@ -17,6 +17,13 @@ def _current_aruco_marker_count(runtime, table_status):
     return int(table_status.get("markers_detected", 0) or 0)
 
 
+def _metric_int(metrics, key, fallback=0):
+    try:
+        return int(round(float(metrics.get(key, fallback) or 0)))
+    except (TypeError, ValueError):
+        return int(fallback)
+
+
 def build_cv_explainability(cards, metrics, runtime, layout, operator, warnings):
     cards = cards or []
     metrics = metrics or {}
@@ -45,6 +52,18 @@ def build_cv_explainability(cards, metrics, runtime, layout, operator, warnings)
     accepted_count = len(cards)
     rejected_count = max(0, candidate_count - accepted_count)
     has_candidate_gap = candidate_count > accepted_count and accepted_count > 0
+    validation_rejections = _metric_int(metrics, "snapshot_candidate_validation_rejections")
+    if has_candidate_gap and validation_rejections > 0:
+        recognition_message = (
+            f"Zaakceptowano {accepted_count}, odrzucono {rejected_count}; "
+            f"{validation_rejections} bez cech karty"
+        )
+    elif has_candidate_gap:
+        recognition_message = f"Zaakceptowano {accepted_count}, odrzucono {rejected_count}"
+    elif cards:
+        recognition_message = "Karty zaakceptowane"
+    else:
+        recognition_message = "Czeka na rozpoznanie"
 
     steps = [
         _step(
@@ -82,11 +101,7 @@ def build_cv_explainability(cards, metrics, runtime, layout, operator, warnings)
             "Rozpoznanie",
             "warn" if has_candidate_gap else ("ok" if cards else "wait"),
             f"{accepted_count}/{candidate_count}" if candidate_count else str(accepted_count),
-            (
-                f"Zaakceptowano {accepted_count}, odrzucono {rejected_count}"
-                if has_candidate_gap
-                else ("Karty zaakceptowane" if cards else "Czeka na rozpoznanie")
-            ),
+            recognition_message,
         ),
     ]
 
@@ -107,7 +122,10 @@ def build_cv_explainability(cards, metrics, runtime, layout, operator, warnings)
         next_action = "Popraw swiatlo, kontrast albo polozenie kart."
     elif has_candidate_gap:
         severity = "warn"
-        next_action = "Jedna karta wymaga poprawy rozpoznania: popraw swiatlo, kontrast albo odsun karte od innych."
+        if validation_rejections > 0:
+            next_action = "Odrzucony kandydat wyglada jak odblask albo tlo: zmniejsz refleks i sprawdz separacje karty."
+        else:
+            next_action = "Jedna karta wymaga poprawy rozpoznania: popraw swiatlo, kontrast albo odsun karte od innych."
     elif cards:
         severity = "ok"
         next_action = "Mozna prowadzic sesje."

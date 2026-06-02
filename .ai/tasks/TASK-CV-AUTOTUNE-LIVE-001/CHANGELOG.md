@@ -57,3 +57,11 @@
 - Rozszerzono `SnapshotAnalyzer` o per-candidate recognition diagnostics: `crop_keypoints`, `top_matches`, `reject_reason`, `score_margin`, `accepted` i agregowany `recognition_score`.
 - Rozszerzono `recognize_card_crop_with_debug()` o ranking top-matchy, żeby debug odróżniał zwycięzcę od bliskich alternatyw.
 - README uzupełniono o metrykę `recognition_score` i realne pola próbek Live Auto Tune.
+
+## 2026-06-02 Codex glare false-positive hardening
+
+- Dodano `app_cv/tarotvision/card_candidate_validation.py` z walidacją cropa kandydata przed rozpoznawaniem ORB.
+- `SnapshotAnalyzer` odrzuca cropy bez cech karty (`smooth_low_texture`, `no_card_border_evidence`) zanim trafią do `recognize_crop`.
+- Rozszerzono diagnostykę kandydatów o `candidate_validation` i licznik `candidate_validation_rejections`.
+- `SnapshotFirstPipeline` zapisuje `snapshot_candidate_validation_rejections` w metrykach runtime oraz w próbkach autotuningu.
+- `CV Explain` pokazuje ostrzeżenie „bez cech karty” i kieruje operatora na odblask/tło, gdy luka kandydatów wynika z walidacji cropa.
