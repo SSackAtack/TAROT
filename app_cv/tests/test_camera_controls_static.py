@@ -54,6 +54,18 @@ class CameraControlsStaticTest(unittest.TestCase):
         self.assertIn('id="studio-cv-explain-next"', source)
         self.assertIn("studio-cv-explain-step--", source)
 
+    def test_studio_autotune_panel_sends_operator_commands(self):
+        source = self._read_frontend_file(
+            os.path.join("app_ar", "src", "studio", "studioConsole.js")
+        )
+
+        self.assertIn("studio-autotune-panel", source)
+        self.assertIn("renderStudioAutotune", source)
+        self.assertIn("operator?.calibration?.autotune", source)
+        self.assertIn("autotune_start", source)
+        self.assertIn("autotune_apply", source)
+        self.assertIn("autotune_cancel", source)
+
 
 if __name__ == "__main__":
     unittest.main()

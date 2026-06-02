@@ -194,6 +194,56 @@ function renderCvExplainability(data) {
     nextEl.textContent = explain.next_action || 'Sprawdz diagnostyke CV.'
 }
 
+function formatAutotuneNumber(value) {
+    const numberValue = Number(value)
+    if (!Number.isFinite(numberValue)) return '-'
+    return numberValue.toFixed(2)
+}
+
+function renderStudioAutotune(data) {
+    if (!sidebarEl) return
+    const autotune = data.operator?.calibration?.autotune || {}
+    const panel = sidebarEl.querySelector('#studio-autotune-panel')
+    const stateEl = sidebarEl.querySelector('#studio-autotune-state')
+    const resultEl = sidebarEl.querySelector('#studio-autotune-result')
+    if (!panel || !stateEl || !resultEl) return
+
+    const state = autotune.state || 'idle'
+    const recommendation = autotune.recommendation || null
+    const progress = autotune.progress || {}
+    panel.dataset.state = state
+    stateEl.textContent = String(state).toUpperCase()
+
+    if (!recommendation) {
+        const scenarioProgress = Object.entries(progress)
+            .map(([scenario, value]) => `${scenario}: ${value}`)
+            .join(' | ')
+        const collected = progress.samples_collected ?? progress.sample_count ?? 0
+        const target = progress.samples_target ?? progress.target_samples ?? '-'
+        resultEl.textContent = state === 'idle'
+            ? 'Brak rekomendacji.'
+            : `Zbieranie probek: ${scenarioProgress || `${collected}/${target}`}`
+        return
+    }
+
+    const profile = recommendation.profile || {}
+    const profileName = recommendation.profile_name || recommendation.name || 'kandydat'
+    const score = recommendation.score ?? recommendation.confidence ?? recommendation.value
+    const confidence = recommendation.confidence
+    const profileSummary = Object.entries(profile)
+        .slice(0, 3)
+        .map(([key, value]) => `${key}=${value}`)
+        .join(', ')
+    const details = [
+        `Profil: ${profileName}`,
+        `Score: ${formatAutotuneNumber(score)}`,
+        confidence !== undefined ? `Pewnosc: ${formatAutotuneNumber(confidence)}` : '',
+        profileSummary
+    ].filter(Boolean)
+
+    resultEl.textContent = details.join(' | ')
+}
+
 function initStudioDecksPanel() {
     if (isDecksInitialized || !sidebarEl) return
     isDecksInitialized = true
@@ -508,6 +558,20 @@ export function createStudioConsole() {
             <div class="studio-active-decks-status studio-active-decks-status--warning" id="studio-active-decks-status">
                 Wybierz 1-3 talie przed kalibracją
             </div>
+            <div class="studio-autotune-panel" id="studio-autotune-panel" data-state="idle">
+                <div class="studio-autotune-header">
+                    <span class="studio-autotune-title">Auto Tune</span>
+                    <span class="studio-autotune-state" id="studio-autotune-state">IDLE</span>
+                </div>
+                <div class="studio-autotune-actions">
+                    <button type="button" data-studio-action="autotune_start" data-scenario="empty">Pusta mata</button>
+                    <button type="button" data-studio-action="autotune_start" data-scenario="one_card">1 karta</button>
+                    <button type="button" data-studio-action="autotune_start" data-scenario="three_cards">3 karty</button>
+                    <button type="button" data-studio-action="autotune_apply">Apply</button>
+                    <button type="button" data-studio-action="autotune_cancel">Cancel</button>
+                </div>
+                <div class="studio-autotune-result" id="studio-autotune-result">Brak rekomendacji.</div>
+            </div>
             <div class="studio-decks-list" id="studio-decks-list" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;">
                 <div style="font-size: 11px; color: rgba(255,255,255,0.4); text-align: center; padding: 8px;">Ładowanie listy talii...</div>
             </div>
@@ -622,6 +686,25 @@ function initStudioConsoleEvents() {
     if (cameraProbeBtn) {
         cameraProbeBtn.addEventListener('click', () => {
             sendControlMessage({ type: 'camera_probe' })
+        })
+    }
+
+    const autotunePanel = sidebarEl.querySelector('#studio-autotune-panel')
+    if (autotunePanel) {
+        autotunePanel.addEventListener('click', (event) => {
+            const button = event.target.closest('[data-studio-action]')
+            if (!button) return
+            const action = button.dataset.studioAction
+            if (action === 'autotune_start') {
+                sendControlMessage({
+                    type: 'autotune_start',
+                    scenario: button.dataset.scenario || 'empty'
+                })
+                return
+            }
+            if (action === 'autotune_apply' || action === 'autotune_cancel') {
+                sendControlMessage({ type: action })
+            }
         })
     }
 
@@ -1151,6 +1234,7 @@ export function updateStudioConsole(data) {
     }
 
     renderCvExplainability(data)
+    renderStudioAutotune(data)
 
     // 4b. Ostrzeżenia operatora w Studio HUD
     const cvWarningBox = sidebarEl.querySelector('#cv-warning-box')

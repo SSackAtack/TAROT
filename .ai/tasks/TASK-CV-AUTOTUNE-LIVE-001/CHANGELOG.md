@@ -21,3 +21,11 @@
 - Dodano `update_autotune_recommendation_from_samples()` jako helper dla przyszłej integracji próbek z pipeline.
 - Dodano obsługę `autotune_start`, `autotune_cancel`, `autotune_apply` i `autotune_save` w backendowym handlerze komend.
 - Dodano statyczny test, że `main.py` obsługuje autotuning bez ukrytego auto-apply.
+
+## 2026-06-02 Codex Task 7
+
+- Dodano panel `Auto Tune` w Studio z przyciskami scenariuszy `empty`, `one_card`, `three_cards`.
+- Podłączono komendy operatorskie `autotune_start`, `autotune_apply` i `autotune_cancel` przez WebSocket.
+- Dodano renderowanie stanu i rekomendacji z `operator.calibration.autotune`.
+- Dodano style panelu zgodne z istniejącą diagnostyką Studio/CV Explain.
+- Rozszerzono statyczny test UI o kontrakt panelu Auto Tune.

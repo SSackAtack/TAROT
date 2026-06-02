@@ -77,3 +77,25 @@ cmd /c "cd /d E:\Antigravity\Projekty\TAROT && set PYTHONPATH=C:\tmp\tarot_pydep
 ```
 
 Wynik: PASS.
+
+### Task 7 Studio Auto Tune panel RED
+
+```text
+cmd /c "set PYTHONPATH=C:\tmp\tarot_pydeps;app_cv&& python -m unittest app_cv.tests.test_camera_controls_static -v"
+```
+
+Wynik: FAIL. Nowy test `test_studio_autotune_panel_sends_operator_commands` oczekiwał panelu `studio-autotune-panel`, renderera statusu i komend `autotune_start/apply/cancel`.
+
+### Task 7 Studio Auto Tune panel GREEN
+
+```text
+cmd /c "set PYTHONPATH=C:\tmp\tarot_pydeps;app_cv&& python -m unittest app_cv.tests.test_camera_controls_static -v"
+```
+
+Wynik: PASS, 5 testów.
+
+```text
+cmd /c "npm --prefix E:\Antigravity\Projekty\TAROT\app_ar run build"
+```
+
+Wynik: PASS. Vite zgłosił ostrzeżenia o dużym chunku oraz nieskutecznym dynamicznym imporcie `textureCache.js`.
