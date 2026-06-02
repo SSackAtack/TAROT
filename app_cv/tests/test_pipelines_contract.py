@@ -687,5 +687,167 @@ class TestPipelinesContract(unittest.TestCase):
         self.assertEqual(kwargs["cards"], [{"name": "17_star"}])
         self.assertEqual(kwargs["layout"]["snapshot_reject_reason"], "no_change_hold_previous")
 
+    def test_snapshot_pipeline_collects_empty_reference_frames_before_validation(self):
+        camera_session = MagicMock()
+        camera_session.frame_width = 300
+        camera_session.frame_height = 200
+        camera_session.camera_index = 0
+
+        opencv_preview = MagicMock()
+        opencv_preview.handle_keyboard.return_value = None
+        status_store = MagicMock()
+        diagnostics_writer = MagicMock()
+        snapshot_gate = MagicMock()
+        gate_decision = MagicMock()
+        gate_decision.state = "sampling_snapshots"
+        gate_decision.stable_for_ms = 700
+        gate_decision.should_sample = True
+        snapshot_gate.update.return_value = gate_decision
+
+        snapshot_analyzer = MagicMock()
+        snapshot_analyzer.analyze.return_value.card_count = 0
+        snapshot_analyzer.analyze.return_value.cards = []
+        snapshot_analyzer.analyze.return_value.diagnostics = {}
+
+        table_calibration = MagicMock()
+        table_calibration.calibrated = False
+        table_calibration.status.return_value = {"calibrated": False, "marker_ids": []}
+
+        runtime_metrics = MagicMock()
+        runtime_metrics.snapshot.return_value = {}
+        runtime_config = MagicMock()
+        runtime_config.values = {}
+
+        background_model = MagicMock()
+        background_model.changed_ratio.return_value = 0.0
+        recorder = MagicMock(side_effect=[
+            {"collect_empty_reference_frame": True, "request_next_sample": True},
+            {"collect_empty_reference_frame": True, "request_next_sample": True},
+            {"collect_empty_reference_frame": True, "finalize_empty_reference": True},
+        ])
+
+        pipeline = SnapshotFirstPipeline(
+            camera_session=camera_session,
+            opencv_preview=opencv_preview,
+            status_store=status_store,
+            diagnostics_writer=diagnostics_writer,
+            snapshot_gate=snapshot_gate,
+            snapshot_analyzer=snapshot_analyzer,
+            table_calibration=table_calibration,
+            runtime_metrics=runtime_metrics,
+            runtime_config=runtime_config,
+            build_operator_snapshot_fn=MagicMock(return_value={}),
+            operator_warnings=[],
+            log_dir="dummy",
+            runtime_profile="default",
+            background_model=background_model,
+            autotune_sample_recorder=recorder,
+        )
+
+        motion_result = MagicMock()
+        motion_result.motion_detected = False
+        motion_result.changed_ratio = 0.0
+
+        for index in range(2):
+            pipeline.process_frame(
+                frame=self._readable_frame(value=80 + index)[0:200, 0:300],
+                motion_result=motion_result,
+                frame_width=300,
+                frame_height=200,
+                frame_loop_start=12345.67,
+            )
+            background_model.capture_many.assert_not_called()
+
+        final_frame = self._readable_frame(value=128)[0:200, 0:300]
+        pipeline.process_frame(
+            frame=final_frame,
+            motion_result=motion_result,
+            frame_width=300,
+            frame_height=200,
+            frame_loop_start=12345.67,
+        )
+
+        background_model.capture_many.assert_called_once()
+        captured_frames = background_model.capture_many.call_args.args[0]
+        self.assertEqual(len(captured_frames), 3)
+        self.assertTrue(all(frame is not final_frame for frame in captured_frames))
+
+    def test_empty_reference_validation_uses_background_changed_ratio(self):
+        camera_session = MagicMock()
+        camera_session.frame_width = 300
+        camera_session.frame_height = 200
+        camera_session.camera_index = 0
+
+        opencv_preview = MagicMock()
+        opencv_preview.handle_keyboard.return_value = None
+        status_store = MagicMock()
+        diagnostics_writer = MagicMock()
+        snapshot_gate = MagicMock()
+        gate_decision = MagicMock()
+        gate_decision.state = "sampling_snapshots"
+        gate_decision.stable_for_ms = 700
+        gate_decision.should_sample = True
+        snapshot_gate.update.return_value = gate_decision
+
+        snapshot_analyzer = MagicMock()
+        snapshot_analyzer.analyze.return_value.card_count = 0
+        snapshot_analyzer.analyze.return_value.cards = []
+        snapshot_analyzer.analyze.return_value.diagnostics = {}
+
+        table_calibration = MagicMock()
+        table_calibration.calibrated = False
+        table_calibration.status.return_value = {"calibrated": False, "marker_ids": []}
+
+        runtime_metrics = MagicMock()
+        runtime_metrics.snapshot.return_value = {}
+        runtime_config = MagicMock()
+        runtime_config.values = {}
+
+        background_model = MagicMock()
+        background_model.active = True
+        background_model.changed_ratio.return_value = 0.0
+        recorder = MagicMock(return_value={
+            "collect_empty_reference_frame": True,
+            "finalize_empty_reference": True,
+        })
+
+        pipeline = SnapshotFirstPipeline(
+            camera_session=camera_session,
+            opencv_preview=opencv_preview,
+            status_store=status_store,
+            diagnostics_writer=diagnostics_writer,
+            snapshot_gate=snapshot_gate,
+            snapshot_analyzer=snapshot_analyzer,
+            table_calibration=table_calibration,
+            runtime_metrics=runtime_metrics,
+            runtime_config=runtime_config,
+            build_operator_snapshot_fn=MagicMock(return_value={}),
+            operator_warnings=[],
+            log_dir="dummy",
+            runtime_profile="default",
+            background_model=background_model,
+            autotune_sample_recorder=recorder,
+        )
+
+        motion_result = MagicMock()
+        motion_result.motion_detected = False
+        motion_result.changed_ratio = 0.0
+        frame = self._readable_frame(value=128)[0:200, 0:300]
+
+        pipeline.process_frame(
+            frame=frame,
+            motion_result=motion_result,
+            frame_width=300,
+            frame_height=200,
+            frame_loop_start=12345.67,
+        )
+
+        background_model.capture_many.assert_called_once()
+        background_model.changed_ratio.assert_called_once()
+        self.assertTrue(np.array_equal(background_model.changed_ratio.call_args.args[0], frame))
+        self.assertEqual(background_model.changed_ratio.call_args.kwargs["threshold"], 20)
+        runtime_metrics.add.assert_any_call("background_reference_validation_ratio", 0.0)
+        runtime_metrics.add.assert_any_call("background_reference_validation_warning", 0)
+
 if __name__ == '__main__':
     unittest.main()

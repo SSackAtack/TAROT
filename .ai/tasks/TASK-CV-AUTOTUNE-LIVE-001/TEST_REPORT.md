@@ -237,6 +237,39 @@ npm --prefix E:\Antigravity\Projekty\TAROT\app_ar run build
 
 Wynik: PASS. Vite zglosil te same istniejace ostrzezenia: duzy chunk po minifikacji oraz nieskuteczny dynamiczny import `src/renderer/textureCache.js`.
 
+### Event-first Task 5 Autotune Creates Session Reference
+
+#### RED
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_main_static_audit app_cv.tests.test_pipelines_contract -v
+```
+
+Wynik: FAIL oczekiwany, 3 porazki:
+- brak `message.scenario == "empty"` / `background_model.clear()` / sygnalow bootstrapu w `main.py`,
+- brak `BackgroundModel.capture_many()` po trzeciej pustej probce,
+- brak walidacji `BackgroundModel.changed_ratio()`.
+
+#### GREEN
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_main_static_audit app_cv.tests.test_pipelines_contract -v
+```
+
+Wynik: PASS, 25 testow.
+
+```text
+$env:PYTHONDONTWRITEBYTECODE='1'; python -B -m py_compile app_cv\main.py app_cv\tarotvision\pipelines\snapshot_first.py
+```
+
+Wynik: PASS.
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest discover -s app_cv\tests -v
+```
+
+Wynik: PASS, 296 testow.
+
 ### Event-first background diff plan
 
 Wynik: PLAN ONLY. Nie uruchamiano testow, poniewaz w tej sesji zapisano dokument planistyczny bez zmian produkcyjnych.

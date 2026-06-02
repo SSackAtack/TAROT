@@ -167,3 +167,11 @@
 - Przy braku regionów `added_or_moved` i `removed` pipeline traktuje snapshot jako `no_change_hold_previous`, zachowuje `last_snapshot_cards`, zeruje `empty_snapshot_streak` i nie uruchamia globalnego fallbacku.
 - `previous_stable_snapshot` aktualizuje się tylko dla bezpiecznych stanów: nowy opublikowany layout, potwierdzone usunięcie kart albo no-change bez global shift.
 - Dodano testy regresji dla `global_shift -> hold previous state` oraz `no_change with existing cards -> preserve layout`.
+
+## 2026-06-02 Event-first Task 5 Autotune Creates Session Reference
+
+- `autotune_start` dla scenariusza `empty` czyści aktywny `BackgroundModel` oraz bufor `SnapshotFirstPipeline.empty_reference_frames`.
+- `record_autotune_sample_from_snapshot()` zwraca dla scenariusza `empty` sygnały `collect_empty_reference_frame` oraz `finalize_empty_reference`, bez używania starego wyniku globalnej detekcji kart jako warunku utworzenia referencji.
+- `SnapshotFirstPipeline` zbiera stabilne snapshoty pustej maty do `empty_reference_frames` i dopiero przy finalizacji wywołuje `BackgroundModel.capture_many()`.
+- Po zbudowaniu referencji pipeline waliduje ostatnią pustą klatkę przez `BackgroundModel.changed_ratio(frame, threshold=20)` i publikuje metryki `background_reference_validation_ratio` oraz `background_reference_validation_warning`.
+- Dodano testy RED/GREEN dla bootstrapu pustej maty, opóźnionego `capture_many()` oraz walidacji reference-vs-current.

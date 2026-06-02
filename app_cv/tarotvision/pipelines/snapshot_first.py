@@ -44,6 +44,7 @@ class SnapshotFirstPipeline(VisionPipeline):
         self.autotune_sample_recorder = autotune_sample_recorder
         self.change_detector = change_detector
         self.background_model = background_model
+        self.empty_reference_frames = []
 
         # Zmienne stanu rurociągu
         self.last_snapshot_cards = []
@@ -263,6 +264,31 @@ class SnapshotFirstPipeline(VisionPipeline):
                         isinstance(autotune_recorder_result, dict)
                         and autotune_recorder_result.get("request_next_sample")):
                     self.snapshot_gate.request_sample(now_ms=int(time.time() * 1000))
+
+                if (
+                        isinstance(autotune_recorder_result, dict)
+                        and autotune_recorder_result.get("collect_empty_reference_frame")):
+                    self.empty_reference_frames.append(analysis_frame.copy())
+
+                if (
+                        isinstance(autotune_recorder_result, dict)
+                        and autotune_recorder_result.get("finalize_empty_reference")
+                        and self.background_model is not None):
+                    self.background_model.capture_many(self.empty_reference_frames)
+                    self.runtime_metrics.add("background_reference_captured", 1)
+                    validation_ratio = self.background_model.changed_ratio(
+                        analysis_frame,
+                        threshold=20,
+                    )
+                    self.runtime_metrics.add(
+                        "background_reference_validation_ratio",
+                        validation_ratio,
+                    )
+                    self.runtime_metrics.add(
+                        "background_reference_validation_warning",
+                        1 if validation_ratio > 0.01 else 0,
+                    )
+                    self.empty_reference_frames = []
 
                 layout_snapshot.update({
                     "layout_id": self.snapshot_layout_id,

@@ -982,7 +982,7 @@ git commit -m "feat: uzyj regionow zmian w snapshot-first"
 
 **Important:** Ten task nie moze uzywac starego wyniku globalnej detekcji kart jako warunku utworzenia pierwszego `empty_reference`. Najpierw powstaje median reference z kilku stabilnych snapshotow pustej maty. Dopiero potem system waliduje, czy referencja jest stabilna i czy nie generuje regionow zmian.
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 Add static test:
 
@@ -996,8 +996,9 @@ Add static test:
 
         self.assertIn('message.scenario == "empty"', autotune_start_block)
         self.assertIn("background_model.clear()", autotune_start_block)
-        self.assertIn("empty_reference_bootstrap", source)
-        self.assertIn("capture_many", source)
+        self.assertIn("snapshot_pipeline.empty_reference_frames.clear()", autotune_start_block)
+        self.assertIn("collect_empty_reference_frame", source)
+        self.assertIn("finalize_empty_reference", source)
 ```
 
 Add pipeline contract test:
@@ -1049,7 +1050,7 @@ Add pipeline contract test:
 
 Implement this test fully like existing pipeline tests in `app_cv/tests/test_pipelines_contract.py`; do not leave ellipses in committed test code.
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 Run:
 
@@ -1059,20 +1060,16 @@ $env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.te
 
 Expected: FAIL for missing clear/capture behavior.
 
-- [ ] **Step 3: Implement bootstrap state in main.py**
+- [x] **Step 3: Implement bootstrap state in main.py**
 
-Add a small bootstrap buffer near existing autotune globals:
-
-```python
-empty_reference_bootstrap = []
-```
-
-In `autotune_start` block:
+The actual frame bootstrap buffer lives in `SnapshotFirstPipeline` as `self.empty_reference_frames`.
+At `autotune_start`, clear the active reference and the pipeline buffer:
 
 ```python
         if message.scenario == "empty":
             background_model.clear()
-            empty_reference_bootstrap.clear()
+            if "snapshot_pipeline" in globals():
+                snapshot_pipeline.empty_reference_frames.clear()
 ```
 
 In `record_autotune_sample_from_snapshot(sample)`, return bootstrap signals for empty scenario:
@@ -1107,7 +1104,7 @@ Preserve existing `stage_completed` logging. The final ready block should be sha
         return None
 ```
 
-- [ ] **Step 4: Implement capture_many in pipeline**
+- [x] **Step 4: Implement capture_many in pipeline**
 
 In pipeline after recorder result:
 
@@ -1128,7 +1125,7 @@ In pipeline after recorder result:
 
 Add `self.empty_reference_frames = []` to `SnapshotFirstPipeline.__init__`.
 
-- [ ] **Step 5: Validate reference after bootstrap**
+- [x] **Step 5: Validate reference after bootstrap**
 
 After `background_model.capture_many(self.empty_reference_frames)`, validate the last empty frame against the newly built reference. Do not validate with `change_detector.detect(analysis_frame, analysis_frame, ...)`, because comparing a frame to itself always hides reference drift.
 
@@ -1144,7 +1141,7 @@ After `background_model.capture_many(self.empty_reference_frames)`, validate the
 
 Threshold `0.01` is an initial MVP value and may later move to runtime config / autotune profile. If validation reports warning, Studio / CV Explain should surface the issue in Task 6.
 
-- [ ] **Step 6: Verify GREEN**
+- [x] **Step 6: Verify GREEN**
 
 Run:
 
@@ -1154,7 +1151,7 @@ $env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.te
 
 Expected: PASS.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```powershell
 git add app_cv/main.py app_cv/tarotvision/pipelines/snapshot_first.py app_cv/tests/test_main_static_audit.py app_cv/tests/test_pipelines_contract.py

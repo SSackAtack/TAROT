@@ -92,8 +92,12 @@ Codex wykonał Task 4 z planu event-first background diff. `SnapshotFirstPipelin
 
 Po review ChatGPT Supervisor z decyzją `CHANGES_REQUESTED` Codex poprawił runtime logikę event-first. `global_shift` nie wraca już do globalnej detekcji i nie nadpisuje `previous_stable_snapshot`. Brak regionów zmian przy istniejących kartach nie jest już interpretowany jako pusty stół; pipeline zachowuje poprzedni layout i nie inkrementuje `empty_snapshot_streak`. Usunięcie kart pozostaje osobnym stanem (`removed_only`) obsługiwanym przez `roi_hints=[]` i dotychczasową ścieżkę potwierdzania pustych snapshotów.
 
+## Session Status (2026-06-02 Event-first Task 5 Autotune Creates Session Reference)
+
+Codex wykonał Task 5 z planu event-first background diff. Etap Auto Tune `Pusta mata` czyści poprzedni `BackgroundModel`, zbiera stabilne snapshoty pustej maty, buduje median `empty_reference` przez `BackgroundModel.capture_many()` i waliduje ostatnią pustą klatkę przez `BackgroundModel.changed_ratio(frame, threshold=20)`. Walidacja nie porównuje już klatki z samą sobą ani nie zależy od globalnego wyniku detekcji kart. Następny bezpieczny task: Task 6 `CV Explain and Diagnostics`.
+
 ## Kolejne kroki
 
 1. Implementować event-first background diff wyłącznie według zaktualizowanego głównego planu `2026-06-02-event-first-background-diff-implementation-plan.md`.
-2. Następny bezpieczny task implementacyjny: `Task 5: Autotune Creates Session Reference`.
+2. Następny bezpieczny task implementacyjny: `Task 6: CV Explain and Diagnostics`.
 3. Manualny live smoke z kamerą pozostaje wymagany dla obecnego `TASK-CV-AUTOTUNE-LIVE-001` przed oznaczeniem go jako `DONE`.

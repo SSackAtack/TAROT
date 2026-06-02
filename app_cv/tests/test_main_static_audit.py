@@ -184,5 +184,19 @@ class TestMainStaticAudit(unittest.TestCase):
         self.assertIn("change_detector=change_detector", source)
         self.assertIn("background_model=background_model", source)
 
+    def test_autotune_empty_stage_bootstraps_reference_before_validation(self):
+        """Etap pustej maty ma najpierw zbierac referencje, a dopiero potem ja walidowac."""
+        source = self._read_main_source()
+        autotune_start_index = source.index('if message.type == "autotune_start"')
+        autotune_start_block = source[
+            autotune_start_index:source.index('if message.type == "autotune_calibrate"')
+        ]
+
+        self.assertIn('message.scenario == "empty"', autotune_start_block)
+        self.assertIn("background_model.clear()", autotune_start_block)
+        self.assertIn("snapshot_pipeline.empty_reference_frames.clear()", autotune_start_block)
+        self.assertIn("collect_empty_reference_frame", source)
+        self.assertIn("finalize_empty_reference", source)
+
 if __name__ == '__main__':
     unittest.main()
