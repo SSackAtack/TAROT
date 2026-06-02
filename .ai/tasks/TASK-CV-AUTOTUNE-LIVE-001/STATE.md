@@ -76,8 +76,12 @@ Codex pobrał nowszy stan branchu z GitHuba i scalił erratę bezpośrednio do g
 
 Codex wykonał Task 1 z planu event-first background diff. `BackgroundModel` potrafi teraz budować stabilną referencję pustej maty przez medianę wielu ramek (`capture_many`) oraz raportować udział zmienionych pikseli względem referencji (`changed_ratio`). Dodano testy jednostkowe zabezpieczające oba kontrakty. Kod nie podłącza jeszcze event-first runtime; to pozostaje zakresem kolejnych tasków.
 
+## Session Status (2026-06-02 Event-first Task 2 ChangeDetector)
+
+Codex wykonał Task 2 z planu event-first background diff. Dodano niezależny moduł `ChangeDetector`, który klasyfikuje regiony zmian między stabilnymi snapshotami jako `added_or_moved` lub `removed`, raportuje `mask_nonzero_ratio`, `global_shift`, `ignored_small_count` i `ignored_large_count`. Moduł nie jest jeszcze podłączony do `SnapshotFirstPipeline`; integracja runtime pozostaje zakresem Task 4.
+
 ## Kolejne kroki
 
 1. Implementować event-first background diff wyłącznie według zaktualizowanego głównego planu `2026-06-02-event-first-background-diff-implementation-plan.md`.
-2. Następny bezpieczny task implementacyjny: `Task 2: ChangeDetector`.
+2. Następny bezpieczny task implementacyjny: `Task 3: SnapshotAnalyzer ROI Hints`.
 3. Manualny live smoke z kamerą pozostaje wymagany dla obecnego `TASK-CV-AUTOTUNE-LIVE-001` przed oznaczeniem go jako `DONE`.

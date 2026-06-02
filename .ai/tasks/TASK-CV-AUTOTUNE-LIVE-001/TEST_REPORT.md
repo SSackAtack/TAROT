@@ -370,6 +370,38 @@ $env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest discover -s app
 
 Wynik: PASS, 282 testy.
 
+### Event-first Task 2 ChangeDetector
+
+#### RED
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_change_detection -v
+```
+
+Wynik: FAIL zgodnie z oczekiwaniem. Brakowało modułu `tarotvision.change_detection`.
+
+#### GREEN
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_change_detection -v
+```
+
+Wynik: PASS, 4 testy.
+
+```text
+$env:PYTHONDONTWRITEBYTECODE='1'; python -B -m py_compile app_cv\tarotvision\change_detection.py
+```
+
+Wynik: PASS.
+
+#### Full backend verification
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest discover -s app_cv\tests -v
+```
+
+Wynik: PASS, 286 testów.
+
 ```text
 $env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest discover -s app_cv\tests -v
 ```

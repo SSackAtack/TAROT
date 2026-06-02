@@ -135,3 +135,10 @@
 - Rozszerzono `BackgroundModel` o `capture_many(frames)`, które buduje referencję pustej maty jako medianę ramek o zgodnym kształcie.
 - Dodano `changed_ratio(frame, threshold)`, wspólny helper `_to_gray()` i testy regresji dla median reference oraz udziału foreground.
 - Oznaczono Task 1 w głównym planie jako wykonany; kolejnym krokiem implementacyjnym jest Task 2 `ChangeDetector`.
+
+## 2026-06-02 Event-first Task 2 ChangeDetector
+
+- Dodano `app_cv/tarotvision/change_detection.py` z dataclassami `ChangeDetectorConfig`, `ChangeRegion` i `ChangeDetectionResult`.
+- `ChangeDetector.detect()` porównuje `previous_frame` z `current_frame`, filtruje małe/duże regiony, wykrywa global shift i klasyfikuje region jako `added_or_moved` albo `removed` względem `empty_reference`.
+- Dodano testy syntetyczne dla dodania karty, usunięcia karty, ignorowania drobnej zmiany i globalnej zmiany obrazu.
+- Oznaczono Task 2 w głównym planie jako wykonany; kolejnym krokiem implementacyjnym jest Task 3 `SnapshotAnalyzer ROI Hints`.

@@ -361,7 +361,7 @@ git commit -m "feat: ustabilizuj model pustej maty"
 - Create: `app_cv/tarotvision/change_detection.py`
 - Test: `app_cv/tests/test_change_detection.py`
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 Create `app_cv/tests/test_change_detection.py`:
 
@@ -438,7 +438,7 @@ if __name__ == "__main__":
     unittest.main()
 ```
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 Run:
 
@@ -448,7 +448,7 @@ $env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.te
 
 Expected: FAIL because `tarotvision.change_detection` does not exist.
 
-- [ ] **Step 3: Implement ChangeDetector**
+- [x] **Step 3: Implement ChangeDetector**
 
 Create `app_cv/tarotvision/change_detection.py`:
 
@@ -569,7 +569,7 @@ def _classify_region(current_frame, bbox, empty_reference):
     return "added_or_moved" if foreground_ratio >= 0.10 else "removed"
 ```
 
-- [ ] **Step 4: Verify GREEN**
+- [x] **Step 4: Verify GREEN**
 
 Run:
 
@@ -579,7 +579,7 @@ $env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.te
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
 git add app_cv/tarotvision/change_detection.py app_cv/tests/test_change_detection.py
