@@ -240,5 +240,81 @@ class TestPipelinesContract(unittest.TestCase):
         self.assertEqual(kwargs["layout"]["snapshot_reject_reason"], "cards_removed_confirmed")
         runtime_metrics.add.assert_any_call("cards_removed_count", 1)
 
+    def test_snapshot_pipeline_records_autotune_sample_after_analysis(self):
+        camera_session = MagicMock()
+        camera_session.frame_width = 1280
+        camera_session.frame_height = 720
+        camera_session.camera_index = 0
+
+        opencv_preview = MagicMock()
+        opencv_preview.handle_keyboard.return_value = None
+        status_store = MagicMock()
+        diagnostics_writer = MagicMock()
+        snapshot_gate = MagicMock()
+
+        snapshot_analyzer = MagicMock()
+        analyzed = MagicMock()
+        analyzed.card_count = 1
+        analyzed.cards = [{"name": "Gilded_17"}]
+        analyzed.diagnostics = {
+            "quads_found": 2,
+            "recognition_attempts": 2,
+            "recognition_rejections": 1,
+            "recognition_score": 0.42,
+        }
+        snapshot_analyzer.analyze.return_value = analyzed
+
+        table_calibration = MagicMock()
+        table_calibration.calibrated = False
+        table_calibration.status.return_value = {"calibrated": False, "marker_ids": []}
+
+        runtime_metrics = MagicMock()
+        runtime_metrics.snapshot.return_value = {}
+        runtime_config = MagicMock()
+        runtime_config.values = {}
+
+        gate_decision = MagicMock()
+        gate_decision.state = "sampling_snapshots"
+        gate_decision.stable_for_ms = 700
+        gate_decision.should_sample = True
+        snapshot_gate.update.return_value = gate_decision
+
+        samples = []
+        pipeline = SnapshotFirstPipeline(
+            camera_session=camera_session,
+            opencv_preview=opencv_preview,
+            status_store=status_store,
+            diagnostics_writer=diagnostics_writer,
+            snapshot_gate=snapshot_gate,
+            snapshot_analyzer=snapshot_analyzer,
+            table_calibration=table_calibration,
+            runtime_metrics=runtime_metrics,
+            runtime_config=runtime_config,
+            build_operator_snapshot_fn=MagicMock(return_value={}),
+            operator_warnings=[],
+            log_dir="dummy",
+            runtime_profile="default",
+            autotune_sample_recorder=samples.append,
+        )
+
+        motion_result = MagicMock()
+        motion_result.motion_detected = False
+        motion_result.changed_ratio = 0.0
+
+        pipeline.process_frame(
+            frame=self._readable_frame(),
+            motion_result=motion_result,
+            frame_width=1280,
+            frame_height=720,
+            frame_loop_start=12345.67,
+        )
+
+        self.assertEqual(len(samples), 1)
+        self.assertEqual(samples[0]["candidate_count"], 2)
+        self.assertEqual(samples[0]["accepted_count"], 1)
+        self.assertEqual(samples[0]["recognition_score"], 0.42)
+        self.assertEqual(samples[0]["recognition_rejections"], 1)
+        self.assertIn("matching_ms", samples[0])
+
 if __name__ == '__main__':
     unittest.main()

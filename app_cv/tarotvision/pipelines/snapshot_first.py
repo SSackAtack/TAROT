@@ -23,7 +23,8 @@ class SnapshotFirstPipeline(VisionPipeline):
         build_operator_snapshot_fn,
         operator_warnings,
         log_dir,
-        runtime_profile="default"
+        runtime_profile="default",
+        autotune_sample_recorder=None,
     ):
         self.camera_session = camera_session
         self.opencv_preview = opencv_preview
@@ -38,6 +39,7 @@ class SnapshotFirstPipeline(VisionPipeline):
         self.operator_warnings = operator_warnings
         self.log_dir = log_dir
         self.runtime_profile = runtime_profile
+        self.autotune_sample_recorder = autotune_sample_recorder
 
         # Zmienne stanu rurociągu
         self.last_snapshot_cards = []
@@ -156,12 +158,20 @@ class SnapshotFirstPipeline(VisionPipeline):
                 self.runtime_metrics.add("snapshot_quads_found", diagnostics.get("quads_found", 0))
                 self.runtime_metrics.add("snapshot_recognition_attempts", diagnostics.get("recognition_attempts", 0))
                 self.runtime_metrics.add("snapshot_recognition_rejections", diagnostics.get("recognition_rejections", 0))
+                self.runtime_metrics.add("recognition_score", diagnostics.get("recognition_score", 0.0))
+                self.runtime_metrics.add("snapshot_recognition_score", diagnostics.get("recognition_score", 0.0))
                 for metric_name, metric_value in summarize_detection_diagnostics(
                         diagnostics.get("detection")).items():
                     self.runtime_metrics.add(metric_name, metric_value)
                 analysis_ms = (time.perf_counter() - analysis_start) * 1000.0
                 self.runtime_metrics.add("snapshot_analysis_ms", analysis_ms)
                 self.runtime_metrics.add("snapshot_quality_score", selected.quality.quality_score)
+                self._record_autotune_sample(
+                    diagnostics=diagnostics,
+                    accepted_count=result.card_count,
+                    analysis_ms=analysis_ms,
+                    quality_score=selected.quality.quality_score,
+                )
 
                 if result.card_count > 0:
                     self.empty_snapshot_streak = 0
@@ -248,3 +258,17 @@ class SnapshotFirstPipeline(VisionPipeline):
             "frame_width": self.camera_session.frame_width,
             "frame_height": self.camera_session.frame_height
         }
+
+    def _record_autotune_sample(self, diagnostics, accepted_count, analysis_ms, quality_score):
+        if self.autotune_sample_recorder is None:
+            return
+        sample = {
+            "candidate_count": int(diagnostics.get("quads_found", 0)),
+            "accepted_count": int(accepted_count),
+            "geometry_score": float(quality_score),
+            "recognition_score": float(diagnostics.get("recognition_score", 0.0)),
+            "false_positive_count": 0,
+            "matching_ms": float(analysis_ms),
+            "recognition_rejections": int(diagnostics.get("recognition_rejections", 0)),
+        }
+        self.autotune_sample_recorder(sample)

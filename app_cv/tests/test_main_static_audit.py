@@ -133,5 +133,14 @@ class TestMainStaticAudit(unittest.TestCase):
         self.assertIn("load_parameters", source)
         self.assertNotIn('profile_store.save(message.name, autotune_session.recommendation["profile"])', source)
 
+    def test_main_wires_live_autotune_samples_from_snapshot_pipeline(self):
+        """SnapshotFirstPipeline powinien zapisywać realne próbki do aktywnej sesji autotuningu."""
+        source = self._read_main_source()
+
+        self.assertIn("def record_autotune_sample_from_snapshot", source)
+        self.assertIn("autotune_session.add_sample", source)
+        self.assertIn("update_autotune_recommendation_from_samples", source)
+        self.assertIn("autotune_sample_recorder=record_autotune_sample_from_snapshot", source)
+
 if __name__ == '__main__':
     unittest.main()

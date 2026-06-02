@@ -48,3 +48,12 @@
 - Uruchomiono pełny backend test suite.
 - Uruchomiono build frontendu `app_ar`.
 - Manualny live smoke z fizyczną kamerą pozostawiono jako jawny kolejny krok, bo nie został wykonany w tej sesji.
+
+## 2026-06-02 Codex Post-Task 10 recognition diagnostics hook
+
+- Podłączono `SnapshotFirstPipeline` do opcjonalnego callbacku `autotune_sample_recorder`, który po analizie snapshotu przekazuje `candidate_count`, `accepted_count`, `recognition_score`, `recognition_rejections` i czas analizy.
+- Dodano w `main.py` `record_autotune_sample_from_snapshot()`, które zapisuje realne próbki do aktywnej `AutotuneSession` i uruchamia rekomendację po zebraniu wymaganej liczby próbek.
+- Dla scenariusza `empty` próbki autotuningu karzą false positives na podstawie liczby wykrytych/zaakceptowanych obiektów.
+- Rozszerzono `SnapshotAnalyzer` o per-candidate recognition diagnostics: `crop_keypoints`, `top_matches`, `reject_reason`, `score_margin`, `accepted` i agregowany `recognition_score`.
+- Rozszerzono `recognize_card_crop_with_debug()` o ranking top-matchy, żeby debug odróżniał zwycięzcę od bliskich alternatyw.
+- README uzupełniono o metrykę `recognition_score` i realne pola próbek Live Auto Tune.

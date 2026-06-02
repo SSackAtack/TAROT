@@ -4,6 +4,7 @@ import math
 import numpy as np
 
 from tarotvision.card_detection_profiles import MultiProfileDetectionResult
+from tarotvision.recognition_debug import RecognitionDebug
 from tarotvision.snapshot_analyzer import SnapshotAnalyzer
 
 
@@ -106,6 +107,59 @@ class SnapshotAnalyzerTest(unittest.TestCase):
         self.assertEqual(result.diagnostics["quads_found"], 1)
         self.assertEqual(result.diagnostics["recognition_attempts"], 1)
         self.assertEqual(result.diagnostics["recognition_rejections"], 1)
+
+    def test_records_per_candidate_recognition_debug(self):
+        quad = np.array([[[10, 10]], [[20, 10]], [[20, 30]], [[10, 30]]],
+                        dtype=np.float32)
+        debug = RecognitionDebug(
+            crop_keypoints=81,
+            top_matches=[
+                {"name": "Gilded_10", "score": 11.0, "match_count": 22, "inlier_ratio": 0.5},
+                {"name": "Gilded_09", "score": 10.0, "match_count": 20, "inlier_ratio": 0.5},
+            ],
+            reject_reason="ambiguous_top_matches",
+        )
+        analyzer = SnapshotAnalyzer(
+            find_quads=lambda frame: [quad],
+            crop_card=lambda frame, quad: "crop",
+            recognize_crop_with_debug=lambda crop: (None, debug),
+        )
+
+        result = analyzer.analyze(np.zeros((40, 40, 3), dtype=np.uint8))
+
+        self.assertEqual(result.card_count, 0)
+        self.assertEqual(result.diagnostics["recognition_rejections"], 1)
+        candidates = result.diagnostics["recognition_candidates"]
+        self.assertEqual(len(candidates), 1)
+        self.assertFalse(candidates[0]["accepted"])
+        self.assertEqual(candidates[0]["reject_reason"], "ambiguous_top_matches")
+        self.assertEqual(candidates[0]["crop_keypoints"], 81)
+        self.assertEqual(candidates[0]["top_matches"][0]["name"], "Gilded_10")
+        self.assertAlmostEqual(candidates[0]["score_margin"], 1.0)
+
+    def test_aggregates_recognition_score_from_accepted_candidates(self):
+        quad = np.array([[[10, 10]], [[20, 10]], [[20, 30]], [[10, 30]]],
+                        dtype=np.float32)
+        debug = RecognitionDebug(
+            crop_keypoints=120,
+            top_matches=[{"name": "Gilded_17", "score": 15.0, "match_count": 30, "inlier_ratio": 0.5}],
+            reject_reason=None,
+        )
+        analyzer = SnapshotAnalyzer(
+            find_quads=lambda frame: [quad],
+            crop_card=lambda frame, quad: "crop",
+            recognize_crop_with_debug=lambda crop: ({
+                "name": "Gilded_17",
+                "confidence": 0.5,
+                "orientation": "upright",
+            }, debug),
+        )
+
+        result = analyzer.analyze(np.zeros((40, 40, 3), dtype=np.uint8))
+
+        self.assertEqual(result.card_count, 1)
+        self.assertAlmostEqual(result.diagnostics["recognition_score"], 0.5)
+        self.assertEqual(result.diagnostics["recognition_candidates"][0]["name"], "Gilded_17")
 
     def test_uses_injected_find_quads_without_debug_detector(self):
         quad = np.array([[[10, 10]], [[20, 10]], [[20, 30]], [[10, 30]]],

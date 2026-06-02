@@ -29,6 +29,15 @@ Projekt ma juz fundament pod autotuning:
 - `TASK-STUDIO-CV-EXPLAIN-001`: panel `CV Explain` zatwierdzony i scalony do `master`.
 - `TASK-STUDIO-CV-EXPLAIN-002`: follow-up zaplanowany po live smoke, aby wyjasnic roznice miedzy kandydatami a zaakceptowanymi kartami.
 
+## Session Status (2026-06-02 Codex Post-Task 10)
+
+Po ponownym przeglądzie logiki rozpoznawania kart wykryto i domknięto dwie luki, które ograniczały sensowność live autotuningu:
+
+- `AutotuneSession.add_sample()` był przygotowany, ale nie był podłączony do produkcyjnej ścieżki snapshot-first.
+- `SnapshotAnalyzer` liczył odrzucone rozpoznania, ale nie publikował per-candidate przyczyn odrzucenia, rankingu top-matchy ani agregowanego `recognition_score`.
+
+W tej sesji Codex dodał callback próbek autotuningu w `SnapshotFirstPipeline`, podłączył go w `main.py`, rozszerzył `recognize_card_crop_with_debug()` o ranking top-matchy i uzupełnił diagnostykę kandydatów w `SnapshotAnalyzer`. Manualny live smoke z fizyczną kamerą nadal pozostaje wymaganym krokiem przed oznaczeniem taska jako `DONE`.
+
 ## Decyzja strategiczna
 
 Po nowych funkcjach rozpoznawania nie wolno implementowac autotuningu jako "znajdz najlepsze Canny/min_area". To byloby lokalne minimum: system moglby idealnie wykrywac prostokaty, ale nadal odrzucac karty przez ORB, homografie, threshold lub konflikt aktywnych talii.

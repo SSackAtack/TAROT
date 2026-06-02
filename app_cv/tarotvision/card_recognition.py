@@ -216,21 +216,7 @@ def recognize_card_crop(gray_crop, reference_cards, orb, matcher,
     if not reference_cards:
         return None
 
-    # Dedykowany, lekki detektor 500 cech dla cropa (kompatybilność z mockami w testach)
-    is_mock = False
-    try:
-        from unittest.mock import MagicMock
-        if isinstance(orb, MagicMock):
-            is_mock = True
-    except ImportError:
-        pass
-
-    if is_mock or type(orb).__name__ in ('MagicMock', 'Mock'):
-        kp_crop, des_crop = orb.detectAndCompute(gray_crop, None)
-    else:
-        # Tworzymy zoptymalizowany detektor lokalny, by uniknąć przetwarzania ciężkich 2000 cech z globalnego orb
-        orb_crop = cv2.ORB_create(nfeatures=500)
-        kp_crop, des_crop = orb_crop.detectAndCompute(gray_crop, None)
+    kp_crop, des_crop = _detect_crop_features(gray_crop, orb)
 
     if des_crop is None or len(des_crop) < min_good_matches:
         return None
@@ -387,10 +373,167 @@ def recognize_card_crop(gray_crop, reference_cards, orb, matcher,
     return best_result
 
 
+def _detect_crop_features(gray_crop, orb):
+    # Dedykowany, lekki detektor 500 cech dla cropa (kompatybilność z mockami w testach).
+    is_mock = False
+    try:
+        from unittest.mock import MagicMock
+        if isinstance(orb, MagicMock):
+            is_mock = True
+    except ImportError:
+        pass
+
+    if is_mock or type(orb).__name__ in ('MagicMock', 'Mock'):
+        return orb.detectAndCompute(gray_crop, None)
+
+    # Tworzymy zoptymalizowany detektor lokalny, by uniknąć przetwarzania ciężkich 2000 cech z globalnego orb.
+    orb_crop = cv2.ORB_create(nfeatures=500)
+    return orb_crop.detectAndCompute(gray_crop, None)
+
+
+def _lowe_filter(matches, lowe_ratio):
+    good_matches = []
+    for match_pair in matches:
+        if len(match_pair) == 2:
+            m, n = match_pair
+            if m.distance < lowe_ratio * n.distance:
+                good_matches.append(m)
+    return good_matches
+
+
+def _homography_ratio_for_debug(good_matches, ref_kp, kp_crop,
+                                ref_index_attr, crop_index_attr):
+    if len(good_matches) < 4 or not ref_kp:
+        return 0.0
+
+    try:
+        src_pts = np.float32(
+            [ref_kp[getattr(m, ref_index_attr)].pt for m in good_matches]
+        ).reshape(-1, 1, 2)
+        dst_pts = np.float32(
+            [kp_crop[getattr(m, crop_index_attr)].pt for m in good_matches]
+        ).reshape(-1, 1, 2)
+        _, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
+    except (cv2.error, IndexError):
+        return 0.0
+
+    if mask is None:
+        return 0.0
+    return float(np.sum(mask)) / len(mask)
+
+
+def _match_debug_item(card_name, orientation, good_matches, ref_kp, kp_crop,
+                      ref_index_attr, crop_index_attr,
+                      min_good_matches, min_inlier_ratio):
+    inlier_ratio = _homography_ratio_for_debug(
+        good_matches,
+        ref_kp,
+        kp_crop,
+        ref_index_attr,
+        crop_index_attr,
+    )
+    match_count = len(good_matches)
+    score = match_count * inlier_ratio
+    return {
+        "name": card_name,
+        "orientation": orientation,
+        "score": float(score),
+        "match_count": match_count,
+        "inlier_ratio": float(inlier_ratio),
+        "passed": (
+            match_count >= min_good_matches
+            and inlier_ratio >= min_inlier_ratio
+        ),
+    }
+
+
+def _collect_top_match_debug(kp_crop, des_crop, reference_cards, matcher,
+                             min_good_matches, lowe_ratio, min_inlier_ratio):
+    top_matches = []
+    for card_name, ref_data in reference_cards.items():
+        card_matcher = ref_data.get("matcher")
+        if card_matcher is not None:
+            try:
+                matches = card_matcher.knnMatch(des_crop, k=2)
+            except cv2.error:
+                continue
+            good_matches = _lowe_filter(matches, lowe_ratio)
+            if good_matches:
+                top_matches.append(_match_debug_item(
+                    card_name,
+                    "upright",
+                    good_matches,
+                    ref_data.get("keypoints", []),
+                    kp_crop,
+                    "trainIdx",
+                    "queryIdx",
+                    min_good_matches,
+                    min_inlier_ratio,
+                ))
+            continue
+
+        for orientation, des_key, kp_key in [
+            ("upright", "descriptors", "keypoints"),
+            ("reversed", "reversed_descriptors", "reversed_keypoints"),
+        ]:
+            des_ref = ref_data.get(des_key)
+            if des_ref is None:
+                continue
+            try:
+                matches = matcher.knnMatch(des_ref, des_crop, k=2)
+            except cv2.error:
+                continue
+            good_matches = _lowe_filter(matches, lowe_ratio)
+            if not good_matches:
+                continue
+            top_matches.append(_match_debug_item(
+                card_name,
+                orientation,
+                good_matches,
+                ref_data.get(kp_key, []),
+                kp_crop,
+                "queryIdx",
+                "trainIdx",
+                min_good_matches,
+                min_inlier_ratio,
+            ))
+
+    return sorted(
+        top_matches,
+        key=lambda item: item.get("score", 0.0),
+        reverse=True,
+    )
+
+
+def _debug_reject_reason(result, top_matches, min_good_matches):
+    if result is not None:
+        return None
+    if not top_matches:
+        return "no_candidate_matches"
+    if int(top_matches[0].get("match_count", 0)) < min_good_matches:
+        return "not_enough_good_matches"
+    return "no_match_above_thresholds"
+
+
 def recognize_card_crop_with_debug(gray_crop, reference_cards, orb, matcher,
                                    min_good_matches=MIN_GOOD_MATCHES,
                                    lowe_ratio=LOWE_RATIO,
                                    min_inlier_ratio=MIN_INLIER_RATIO):
+    kp_crop, des_crop = _detect_crop_features(gray_crop, orb)
+    crop_keypoints = len(kp_crop or [])
+    if not reference_cards:
+        return None, RecognitionDebug(
+            crop_keypoints=crop_keypoints,
+            top_matches=[],
+            reject_reason="no_reference_cards",
+        )
+    if des_crop is None or len(des_crop) < min_good_matches:
+        return None, RecognitionDebug(
+            crop_keypoints=crop_keypoints,
+            top_matches=[],
+            reject_reason="not_enough_crop_descriptors",
+        )
+
     result = recognize_card_crop(
         gray_crop,
         reference_cards,
@@ -400,25 +543,18 @@ def recognize_card_crop_with_debug(gray_crop, reference_cards, orb, matcher,
         lowe_ratio=lowe_ratio,
         min_inlier_ratio=min_inlier_ratio,
     )
-    orb_crop = cv2.ORB_create(nfeatures=500)
-    keypoints, descriptors = orb_crop.detectAndCompute(gray_crop, None)
-    crop_keypoints = len(keypoints or [])
-    if descriptors is None or len(descriptors) < min_good_matches:
-        debug = RecognitionDebug(
-            crop_keypoints=crop_keypoints,
-            top_matches=[],
-            reject_reason="not_enough_crop_descriptors",
-        )
-        return result, debug
-
+    top_matches = _collect_top_match_debug(
+        kp_crop,
+        des_crop,
+        reference_cards,
+        matcher,
+        min_good_matches,
+        lowe_ratio,
+        min_inlier_ratio,
+    )
     debug = RecognitionDebug(
         crop_keypoints=crop_keypoints,
-        top_matches=[] if result is None else [{
-            "name": result["name"],
-            "score": float(result.get("match_count", 0)) * float(result.get("inlier_ratio", 0.0)),
-            "match_count": int(result.get("match_count", 0)),
-            "inlier_ratio": float(result.get("inlier_ratio", 0.0)),
-        }],
-        reject_reason=None if result is not None else "no_match_above_thresholds",
+        top_matches=top_matches,
+        reject_reason=_debug_reject_reason(result, top_matches, min_good_matches),
     )
     return result, debug

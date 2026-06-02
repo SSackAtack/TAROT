@@ -17,7 +17,7 @@ from tarotvision.profile_store import ProfileStore
 from tarotvision.camera_controls import read_camera_control
 from tarotvision.calibration_session import choose_best_candidate
 from tarotvision.table_calibration import TableCalibration
-from tarotvision.card_recognition import recognize_card_crop
+from tarotvision.card_recognition import recognize_card_crop, recognize_card_crop_with_debug
 from tarotvision.background_model import BackgroundModel
 from tarotvision.reference_loader import load_active_reference_cards
 from tarotvision.card_detection_profiles import find_card_quads_multi_profile
@@ -136,6 +136,34 @@ def update_autotune_recommendation_from_samples():
         "autotune": autotune_session.status(),
     }
     return best
+
+
+def record_autotune_sample_from_snapshot(sample):
+    global calibration_state
+    if autotune_session is None or autotune_session.recommendation is not None:
+        return None
+
+    scenario = autotune_session.required_scenarios[0]
+    sample_payload = dict(sample)
+    if scenario == "empty":
+        sample_payload["false_positive_count"] = max(
+            int(sample_payload.get("candidate_count", 0)),
+            int(sample_payload.get("accepted_count", 0)),
+        )
+
+    autotune_session.add_sample(scenario, sample_payload)
+    calibration_state = {
+        "state": autotune_session.state,
+        "last_score": None,
+        "autotune": autotune_session.status(),
+    }
+    recommendation = update_autotune_recommendation_from_samples()
+    if recommendation is not None:
+        add_operator_warning(
+            f"Autotuning: rekomendacja gotowa "
+            f"(score={recommendation['score']:.3f}, confidence={recommendation['confidence']})"
+        )
+    return recommendation
 
 
 def handle_control_message(message, camera_session):
@@ -528,19 +556,16 @@ table_calibration = TableCalibration(table_width=CAMERA_WIDTH, table_height=CAME
 log_event("[ARUCO] Modul kalibracji stolu zainicjalizowany (markery ID 10-13, DICT_4X4_50)")
 
 
-def recognize_snapshot_crop(gray_crop):
-    crop_for_matching = clahe.apply(gray_crop)
+def _recognition_thresholds():
     config_values = runtime_config.values
-    min_match_count = int(config_values.get("MIN_MATCH_COUNT", 12.0))
-    ratio_thresh = config_values.get("RATIO_THRESH", 0.79)
-    min_inlier_ratio = config_values.get("MIN_INLIER_RATIO", 0.25)
-
-    result = recognize_card_crop(
-        crop_for_matching, reference_cards, orb, flann,
-        min_good_matches=min_match_count,
-        lowe_ratio=ratio_thresh,
-        min_inlier_ratio=min_inlier_ratio
+    return (
+        int(config_values.get("MIN_MATCH_COUNT", 12.0)),
+        config_values.get("RATIO_THRESH", 0.79),
+        config_values.get("MIN_INLIER_RATIO", 0.25),
     )
+
+
+def _public_recognition_result(result):
     if result is None:
         return None
 
@@ -557,11 +582,40 @@ def recognize_snapshot_crop(gray_crop):
         "confidence": result.get("confidence", 0.0),
         "orientation": result.get("orientation", "unknown"),
         "homography_angle_deg": angle_deg,
+        "match_count": result.get("match_count", 0),
+        "inlier_ratio": result.get("inlier_ratio", 0.0),
     }
+
+
+def recognize_snapshot_crop(gray_crop):
+    crop_for_matching = clahe.apply(gray_crop)
+    min_match_count, ratio_thresh, min_inlier_ratio = _recognition_thresholds()
+
+    result = recognize_card_crop(
+        crop_for_matching, reference_cards, orb, flann,
+        min_good_matches=min_match_count,
+        lowe_ratio=ratio_thresh,
+        min_inlier_ratio=min_inlier_ratio
+    )
+    return _public_recognition_result(result)
+
+
+def recognize_snapshot_crop_with_debug(gray_crop):
+    crop_for_matching = clahe.apply(gray_crop)
+    min_match_count, ratio_thresh, min_inlier_ratio = _recognition_thresholds()
+
+    result, debug = recognize_card_crop_with_debug(
+        crop_for_matching, reference_cards, orb, flann,
+        min_good_matches=min_match_count,
+        lowe_ratio=ratio_thresh,
+        min_inlier_ratio=min_inlier_ratio,
+    )
+    return _public_recognition_result(result), debug
 
 
 snapshot_analyzer = SnapshotAnalyzer(
     recognize_crop=recognize_snapshot_crop,
+    recognize_crop_with_debug=recognize_snapshot_crop_with_debug,
     background_model=background_model,
     find_quads_with_debug=lambda frame: find_card_quads_multi_profile(
         frame,
@@ -589,7 +643,8 @@ snapshot_pipeline = SnapshotFirstPipeline(
     build_operator_snapshot_fn=build_operator_snapshot,
     operator_warnings=operator_warnings,
     log_dir=LOG_DIR,
-    runtime_profile=RUNTIME_PROFILE
+    runtime_profile=RUNTIME_PROFILE,
+    autotune_sample_recorder=record_autotune_sample_from_snapshot,
 )
 snapshot_pipeline.snapshot_sample_count = SNAPSHOT_SAMPLE_COUNT
 snapshot_pipeline.snapshot_sample_interval_ms = SNAPSHOT_SAMPLE_INTERVAL_MS

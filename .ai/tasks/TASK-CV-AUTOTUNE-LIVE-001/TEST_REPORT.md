@@ -146,3 +146,51 @@ Wynik: NOT RUN w tej sesji. Test wymaga fizycznej kamery i ręcznej obsługi Stu
 2. Potwierdzić preview kamery i ArUco.
 3. Uruchomić Auto Tune dla `empty`, `one_card`, `three_cards`.
 4. Potwierdzić rekomendację, kliknąć `Apply`, zapisać profil i sprawdzić `logs/calibration_profiles/`.
+
+### Post-Task 10 recognition diagnostics hook RED
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_snapshot_analyzer app_cv.tests.test_pipelines_contract app_cv.tests.test_main_static_audit -v
+```
+
+Wynik: FAIL. Nowe testy oczekiwały `recognize_crop_with_debug` w `SnapshotAnalyzer`, `autotune_sample_recorder` w `SnapshotFirstPipeline` oraz podłączenia `record_autotune_sample_from_snapshot` w `main.py`.
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_card_recognition.RecognizeCardCropTest.test_debug_reports_top_match_ranking -v
+```
+
+Wynik: FAIL. `recognize_card_crop_with_debug()` zwracał `not_enough_crop_descriptors` zamiast rankingu top-matchy, bo debug nie korzystał ze wspólnej ścieżki detekcji cech.
+
+### Post-Task 10 recognition diagnostics hook GREEN
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_snapshot_analyzer app_cv.tests.test_pipelines_contract app_cv.tests.test_main_static_audit -v
+```
+
+Wynik: PASS, 23 testy.
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_card_recognition.RecognizeCardCropTest.test_debug_reports_top_match_ranking -v
+```
+
+Wynik: PASS, 1 test.
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_card_recognition app_cv.tests.test_recognition_debug app_cv.tests.test_snapshot_analyzer app_cv.tests.test_pipelines_contract app_cv.tests.test_main_static_audit app_cv.tests.test_autotune_session app_cv.tests.test_autotune_scoring -v
+```
+
+Wynik: PASS, 46 testów.
+
+### Post-Task 10 full automatic verification
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest discover -s app_cv\tests -v
+```
+
+Wynik: PASS, 261 testów.
+
+```text
+npm --prefix E:\Antigravity\Projekty\TAROT\app_ar run build
+```
+
+Wynik: PASS. Vite zgłosił istniejące ostrzeżenia o dużym chunku oraz nieskutecznym dynamicznym imporcie `textureCache.js`.

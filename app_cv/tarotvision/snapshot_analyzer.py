@@ -7,6 +7,7 @@ import numpy as np
 
 from tarotvision.card_detection_profiles import find_card_quads_multi_profile
 from tarotvision.card_recognition import deskew_card_crop
+from tarotvision.recognition_debug import top_match_summary
 
 
 @dataclass(frozen=True)
@@ -19,11 +20,12 @@ class SnapshotAnalysisResult:
 class SnapshotAnalyzer:
     def __init__(self, find_quads=None, crop_card=None, recognize_crop=None,
                  scene_width=26.0, scene_height=15.6, background_model=None,
-                 find_quads_with_debug=None):
+                 find_quads_with_debug=None, recognize_crop_with_debug=None):
         self.find_quads = find_quads or self._find_quads_default
         self.find_quads_with_debug = find_quads_with_debug
         self.crop_card = crop_card or deskew_card_crop
         self.recognize_crop = recognize_crop
+        self.recognize_crop_with_debug = recognize_crop_with_debug
         self.scene_width = scene_width
         self.scene_height = scene_height
         self.background_model = background_model
@@ -37,8 +39,11 @@ class SnapshotAnalyzer:
             "quads_found": 0,
             "recognition_attempts": 0,
             "recognition_rejections": 0,
+            "recognition_candidates": [],
+            "recognition_score": 0.0,
         }
         frame_height, frame_width = frame.shape[:2]
+        recognition_score_total = 0.0
 
         if self.find_quads_with_debug is not None:
             detection_result = self.find_quads_with_debug(frame)
@@ -53,10 +58,22 @@ class SnapshotAnalyzer:
             diagnostics["recognition_attempts"] += 1
             _write_debug_crop(crop, diagnostics["recognition_attempts"])
 
-            recognition = self.recognize_crop(crop) if self.recognize_crop else None
+            recognition, recognition_debug = self._recognize_with_optional_debug(crop)
+            candidate_debug = _candidate_diagnostics(
+                diagnostics["recognition_attempts"],
+                recognition,
+                recognition_debug,
+            )
+            diagnostics["recognition_candidates"].append(candidate_debug)
             if not recognition:
                 diagnostics["recognition_rejections"] += 1
                 continue
+            candidate_score = _candidate_recognition_score(
+                recognition,
+                recognition_debug,
+            )
+            candidate_debug["recognition_score"] = candidate_score
+            recognition_score_total += candidate_score
             center_x, center_y = _quad_center(quad)
             scene_x, scene_y = _frame_to_scene(
                 center_x,
@@ -78,11 +95,23 @@ class SnapshotAnalyzer:
                 "orientation": recognition.get("orientation", "unknown"),
                 "homography_angle_deg": recognition.get("homography_angle_deg", 0.0),
             })
+            candidate_debug["name"] = recognition["name"]
+        if diagnostics["quads_found"] > 0:
+            diagnostics["recognition_score"] = round(
+                recognition_score_total / diagnostics["quads_found"],
+                3,
+            )
         return SnapshotAnalysisResult(
             cards=cards,
             card_count=len(cards),
             diagnostics=diagnostics,
         )
+
+    def _recognize_with_optional_debug(self, crop):
+        if self.recognize_crop_with_debug is not None:
+            return self.recognize_crop_with_debug(crop)
+        recognition = self.recognize_crop(crop) if self.recognize_crop else None
+        return recognition, None
 
 
 def _quad_points(quad):
@@ -127,6 +156,47 @@ def _frame_to_scene(center_x, center_y, frame_width, frame_height,
     scene_x = (center_x / frame_width * 2.0 - 1.0) * (scene_width / 2.0)
     scene_y = (1.0 - center_y / frame_height * 2.0) * (scene_height / 2.0)
     return float(scene_x), float(scene_y)
+
+
+def _candidate_diagnostics(index, recognition, recognition_debug):
+    top_matches = top_match_summary(recognition_debug) if recognition_debug else []
+    return {
+        "index": int(index),
+        "accepted": recognition is not None,
+        "reject_reason": (
+            recognition_debug.reject_reason
+            if recognition_debug is not None else None
+        ),
+        "crop_keypoints": (
+            int(recognition_debug.crop_keypoints)
+            if recognition_debug is not None else None
+        ),
+        "top_matches": top_matches,
+        "score_margin": _score_margin(top_matches),
+    }
+
+
+def _candidate_recognition_score(recognition, recognition_debug):
+    if recognition_debug is not None:
+        top_matches = top_match_summary(recognition_debug, limit=1)
+        if top_matches:
+            return round(min(float(top_matches[0]["score"]) / 30.0, 1.0), 3)
+
+    match_count = float(recognition.get("match_count", 0.0))
+    inlier_ratio = float(recognition.get("inlier_ratio", recognition.get("confidence", 0.0)))
+    if match_count <= 0:
+        return round(max(0.0, min(inlier_ratio, 1.0)), 3)
+    return round(min(match_count / 30.0, 1.0) * max(0.0, min(inlier_ratio, 1.0)), 3)
+
+
+def _score_margin(top_matches):
+    if len(top_matches) < 2:
+        return None
+    return round(
+        float(top_matches[0].get("score", 0.0))
+        - float(top_matches[1].get("score", 0.0)),
+        3,
+    )
 
 
 def _debug_images_enabled():
