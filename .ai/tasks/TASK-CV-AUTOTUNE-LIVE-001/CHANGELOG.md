@@ -129,3 +129,9 @@
 - Scalono treść `event-first-background-diff-plan-amendment-001.md` bezpośrednio do głównego planu `docs/superpowers/plans/2026-06-02-event-first-background-diff-implementation-plan.md`.
 - Główny plan zawiera teraz sekcję `ROI Semantics`, wymagany test dla `roi_hints=[]`, zakaz `roi_hints or None` oraz poprawioną walidację `empty_reference` przez `BackgroundModel.changed_ratio()`.
 - Usunięto osobny plik amendmentu i osobny raport erraty, aby implementatorzy pracowali z jednym źródłem prawdy.
+
+## 2026-06-02 Event-first Task 1 Stable Empty Reference
+
+- Rozszerzono `BackgroundModel` o `capture_many(frames)`, które buduje referencję pustej maty jako medianę ramek o zgodnym kształcie.
+- Dodano `changed_ratio(frame, threshold)`, wspólny helper `_to_gray()` i testy regresji dla median reference oraz udziału foreground.
+- Oznaczono Task 1 w głównym planie jako wykonany; kolejnym krokiem implementacyjnym jest Task 2 `ChangeDetector`.

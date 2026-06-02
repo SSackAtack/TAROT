@@ -338,6 +338,38 @@ docs/superpowers/plans/2026-06-02-event-first-background-diff-plan-amendment-001
 .ai/tasks/TASK-CV-AUTOTUNE-LIVE-001/TEST_REPORT_EVENT_FIRST_AMENDMENT_001.md
 ```
 
+### Event-first Task 1 Stable Empty Reference
+
+#### RED
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_background_model -v
+```
+
+Wynik: FAIL zgodnie z oczekiwaniem. Brakowało metod `BackgroundModel.capture_many()` i `BackgroundModel.changed_ratio()`.
+
+#### GREEN
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_background_model -v
+```
+
+Wynik: PASS, 5 testów.
+
+```text
+$env:PYTHONDONTWRITEBYTECODE='1'; python -B -m py_compile app_cv\tarotvision\background_model.py
+```
+
+Wynik: PASS.
+
+#### Full backend verification
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest discover -s app_cv\tests -v
+```
+
+Wynik: PASS, 282 testy.
+
 ```text
 $env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest discover -s app_cv\tests -v
 ```
