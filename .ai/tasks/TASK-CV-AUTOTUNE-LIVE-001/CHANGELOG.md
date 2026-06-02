@@ -116,3 +116,10 @@
 - Poprawiono bootstrap `empty_reference`: referencja powstaje z 3-5 stabilnych snapshotow pustej maty przed walidacja, bez polegania na starej globalnej detekcji kart.
 - Dodano safety rules: global detection po udanej kalibracji nie jest glowna sciezka, `ignored_global_shift` zachowuje poprzedni stan, brak referencji oznacza jawny fallback mode.
 - Zaktualizowano breakdown do Task 0-7 zgodnie z handoffem Supervisor.
+
+## 2026-06-02 Event-first plan amendment 001
+
+- Dodano `docs/superpowers/plans/2026-06-02-event-first-background-diff-plan-amendment-001.md` jako obowiązkową erratę przed implementacją.
+- Doprecyzowano semantykę `roi_hints`: `None` oznacza fallback globalny, pusta lista `[]` oznacza aktywny event-first bez ROI i zakaz globalnego skanowania.
+- Dodano wymagany test planistyczny chroniący przed fallbackiem globalnym przy `roi_hints=[]`.
+- Skorygowano walidację `empty_reference`: ma używać `BackgroundModel.changed_ratio(current_empty_frame)` albo równoważnego porównania reference-vs-current, nie `analysis_frame` vs `analysis_frame`.
