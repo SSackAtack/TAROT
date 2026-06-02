@@ -55,3 +55,25 @@ cmd /c "cd /d E:\Antigravity\Projekty\TAROT && set PYTHONPATH=C:\tmp\tarot_pydep
 ```
 
 Wynik: PASS, 39 testów.
+
+### Task 6 backend orchestration RED
+
+```text
+cmd /c "cd /d E:\Antigravity\Projekty\TAROT && set PYTHONPATH=C:\tmp\tarot_pydeps;app_cv && python -m unittest app_cv.tests.test_main_static_audit -v"
+```
+
+Wynik: FAIL. Nowy test `test_main_handles_autotune_without_auto_apply` oczekiwał importów i obsługi komend autotuningu w `main.py`.
+
+### Task 6 backend orchestration GREEN
+
+```text
+cmd /c "cd /d E:\Antigravity\Projekty\TAROT && set PYTHONPATH=C:\tmp\tarot_pydeps;app_cv && python -m unittest app_cv.tests.test_main_static_audit app_cv.tests.test_tuning_protocol -v"
+```
+
+Wynik: PASS, 44 testy.
+
+```text
+cmd /c "cd /d E:\Antigravity\Projekty\TAROT && set PYTHONPATH=C:\tmp\tarot_pydeps;app_cv && python -m py_compile app_cv\main.py app_cv\tarotvision\autotune_session.py app_cv\tarotvision\autotune_profiles.py app_cv\tarotvision\autotune_scoring.py app_cv\tarotvision\tuning_protocol.py"
+```
+
+Wynik: PASS.

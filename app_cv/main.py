@@ -28,6 +28,9 @@ from tarotvision.preview import OpenCvPreview
 from tarotvision.pipelines import SnapshotFirstPipeline
 from tarotvision.frame_stream import LatestFrameStore, start_preview_server
 from tarotvision.operator_explainability import build_cv_explainability
+from tarotvision.autotune_session import AutotuneSession
+from tarotvision.autotune_profiles import generate_candidate_profiles
+from tarotvision.autotune_scoring import choose_best_profile_result
 
 # Konfiguracja
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -63,6 +66,8 @@ profile_store = ProfileStore(os.path.join(LOG_DIR, "calibration_profiles"))
 active_tuning_profile = "default"
 background_model = BackgroundModel()
 pending_background_capture = False
+autotune_session = None
+autotune_candidate_profiles = []
 
 # Inicjalizacja DiagnosticsWriter, CameraSession i OpenCvPreview
 reset_logs = os.environ.get("TAROTVISION_RESET_LOGS") == "1"
@@ -110,10 +115,35 @@ def add_operator_warning(message):
     log_event(f"[OPERATOR] {message}")
 
 
+def update_autotune_recommendation_from_samples():
+    global calibration_state
+    if autotune_session is None or not autotune_session.ready_to_score():
+        return None
+
+    samples = autotune_session.all_samples()
+    profile_results = [
+        {"profile": profile, "samples": samples}
+        for profile in autotune_candidate_profiles
+    ]
+    best = choose_best_profile_result(profile_results)
+    if best is None:
+        return None
+
+    autotune_session.set_recommendation(best)
+    calibration_state = {
+        "state": "recommendation_ready",
+        "last_score": best["score"],
+        "autotune": autotune_session.status(),
+    }
+    return best
+
+
 def handle_control_message(message, camera_session):
     global calibration_state
     global active_tuning_profile
     global pending_background_capture
+    global autotune_session
+    global autotune_candidate_profiles
 
     if message.type == "tuning_update":
         try:
@@ -179,6 +209,51 @@ def handle_control_message(message, camera_session):
     if message.type == "calibration_cancel":
         calibration_state = {"state": "idle", "last_score": None}
         add_operator_warning("Anulowano kalibracje")
+        return
+
+    if message.type == "autotune_start":
+        autotune_session = AutotuneSession(
+            required_scenarios=(message.scenario,),
+            samples_per_scenario=3,
+        )
+        autotune_candidate_profiles = generate_candidate_profiles()
+        calibration_state = {
+            "state": "collecting",
+            "last_score": None,
+            "autotune": autotune_session.status(),
+        }
+        add_operator_warning(f"Autotuning: zbieram probki scenariusza {message.scenario}")
+        return
+
+    if message.type == "autotune_cancel":
+        autotune_session = None
+        autotune_candidate_profiles = []
+        calibration_state = {"state": "idle", "last_score": None}
+        add_operator_warning("Anulowano autotuning")
+        return
+
+    if message.type == "autotune_apply":
+        if autotune_session is None or not autotune_session.recommendation:
+            add_operator_warning("Brak rekomendacji autotuningu do zastosowania")
+            return
+        for param_name, value in autotune_session.recommendation["profile"].items():
+            config_session.update(param_name, value)
+        config_session.commit_stable()
+        calibration_state = {
+            "state": "applied",
+            "last_score": autotune_session.recommendation["score"],
+            "autotune": autotune_session.status(),
+        }
+        add_operator_warning("Zastosowano rekomendacje autotuningu")
+        return
+
+    if message.type == "autotune_save":
+        if autotune_session is None or not autotune_session.recommendation:
+            add_operator_warning("Brak rekomendacji autotuningu do zapisania")
+            return
+        profile_store.save(message.name, autotune_session.recommendation["profile"])
+        active_tuning_profile = message.name
+        add_operator_warning(f"Zapisano rekomendacje autotuningu jako profil {message.name}")
         return
 
     if message.type == "background_capture":

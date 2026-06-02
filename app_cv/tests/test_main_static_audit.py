@@ -43,6 +43,11 @@ class TestMainStaticAudit(unittest.TestCase):
     def setUp(self):
         self.main_py_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "main.py"))
 
+    def _read_main_source(self):
+        self.assertTrue(os.path.exists(self.main_py_path), f"Plik {self.main_py_path} nie istnieje")
+        with open(self.main_py_path, "r", encoding="utf-8") as f:
+            return f.read()
+
     def test_no_dead_references_in_main(self):
         """Weryfikuje, że w main.py nie ma zakazanych, surowych odwołań do camera_index lub cap."""
         self.assertTrue(os.path.exists(self.main_py_path), f"Plik {self.main_py_path} nie istnieje")
@@ -102,13 +107,22 @@ class TestMainStaticAudit(unittest.TestCase):
 
     def test_main_publishes_operator_explainability(self):
         """Payload operatora powinien zawierać uporządkowaną diagnostykę CV Explain."""
-        self.assertTrue(os.path.exists(self.main_py_path), f"Plik {self.main_py_path} nie istnieje")
-
-        with open(self.main_py_path, "r", encoding="utf-8") as f:
-            source = f.read()
+        source = self._read_main_source()
 
         self.assertIn("from tarotvision.operator_explainability import build_cv_explainability", source)
         self.assertIn('"explainability": build_cv_explainability(', source)
+
+    def test_main_handles_autotune_without_auto_apply(self):
+        """Autotuning ma publikować rekomendację, ale nie stosować jej bez komendy operatora."""
+        source = self._read_main_source()
+
+        self.assertIn("from tarotvision.autotune_session import AutotuneSession", source)
+        self.assertIn("from tarotvision.autotune_profiles import generate_candidate_profiles", source)
+        self.assertIn("from tarotvision.autotune_scoring import choose_best_profile_result", source)
+        self.assertIn('message.type == "autotune_start"', source)
+        self.assertIn('message.type == "autotune_apply"', source)
+        self.assertIn("set_recommendation", source)
+        self.assertNotIn("auto_apply_recommendation", source)
 
 if __name__ == '__main__':
     unittest.main()

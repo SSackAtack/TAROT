@@ -14,3 +14,10 @@
 - Rozszerzono `tuning_protocol.py` o `autotune_start`, `autotune_apply`, `autotune_save` i `autotune_cancel`.
 - Dodano walidację scenariusza autotuningu: `empty`, `one_card`, `three_cards`.
 - Dodano testy parsera dla nowych komend i błędnych payloadów.
+
+## 2026-06-02 Codex Task 6
+
+- Podłączono w `main.py` globalny stan `AutotuneSession` i listę profili kandydackich.
+- Dodano `update_autotune_recommendation_from_samples()` jako helper dla przyszłej integracji próbek z pipeline.
+- Dodano obsługę `autotune_start`, `autotune_cancel`, `autotune_apply` i `autotune_save` w backendowym handlerze komend.
+- Dodano statyczny test, że `main.py` obsługuje autotuning bez ukrytego auto-apply.
