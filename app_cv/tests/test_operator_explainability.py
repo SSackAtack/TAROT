@@ -123,6 +123,67 @@ class OperatorExplainabilityTest(unittest.TestCase):
         self.assertEqual(result["severity"], "warn")
         self.assertEqual(result["next_action"], "Pokaz wszystkie markery ArUco w kadrze.")
 
+    def test_change_detector_explains_missing_change_regions(self):
+        result = build_cv_explainability(
+            cards=[],
+            metrics={
+                "change_region_count": 0,
+                "change_mask_ratio": 0.0,
+                "snapshot_quads_found": 2,
+            },
+            runtime={"table": {"calibrated": True, "marker_ids": [10, 11, 12, 13]}},
+            layout={"state": "holding_last_good", "card_count": 0},
+            operator={"active_decks": ["gilded"]},
+            warnings=[],
+        )
+
+        change_step = next(step for step in result["steps"] if step["id"] == "change_detection")
+        self.assertEqual(change_step["state"], "warn")
+        self.assertIn("brak regionow zmian", change_step["message"].lower())
+
+    def test_change_detector_explains_global_shift(self):
+        result = build_cv_explainability(
+            cards=[],
+            metrics={
+                "change_region_count": 0,
+                "change_mask_ratio": 0.70,
+                "change_global_shift": 1,
+            },
+            runtime={"table": {"calibrated": True, "marker_ids": [10, 11, 12, 13]}},
+            layout={"state": "holding_last_good", "card_count": 0},
+            operator={"active_decks": ["gilded"]},
+            warnings=[],
+        )
+
+        change_step = next(step for step in result["steps"] if step["id"] == "change_detection")
+        self.assertEqual(change_step["state"], "warn")
+        self.assertIn("globalna zmiane obrazu", change_step["message"])
+
+    def test_empty_reference_step_reports_capture_progress_and_validation_warning(self):
+        result = build_cv_explainability(
+            cards=[],
+            metrics={
+                "background_reference_validation_ratio": 0.025,
+                "background_reference_validation_warning": 1,
+            },
+            runtime={
+                "aruco_calibrated": True,
+                "aruco_markers": 4,
+                "background_reference_active": False,
+                "empty_reference_capture_active": True,
+                "empty_reference_frame_count": 2,
+            },
+            layout={"state": "sampling_snapshots"},
+            operator={"active_decks": ["gilded"]},
+            warnings=[],
+        )
+
+        reference_step = next(step for step in result["steps"] if step["id"] == "empty_reference")
+        self.assertEqual(reference_step["state"], "warn")
+        self.assertEqual(reference_step["value"], "2/3")
+        self.assertIn("zbieram", reference_step["message"].lower())
+        self.assertIn("0.025", reference_step["message"])
+
 
 if __name__ == "__main__":
     unittest.main()

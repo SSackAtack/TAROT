@@ -313,6 +313,9 @@ class SnapshotFirstPipeline(VisionPipeline):
             "camera_exposure_locked": self.runtime_config.values.get("CAMERA_EXPOSURE_LOCKED", False),
             "schedule_mode": "snapshot_first",
             "table": self.table_calibration.status(),
+            "background_reference_active": bool(getattr(self.background_model, "active", False)),
+            "empty_reference_capture_active": self.empty_reference_capture_active,
+            "empty_reference_frame_count": len(self.empty_reference_frames),
         }
         
         status_update_start = time.perf_counter()

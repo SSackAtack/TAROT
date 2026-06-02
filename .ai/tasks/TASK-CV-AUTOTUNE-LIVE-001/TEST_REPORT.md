@@ -237,6 +237,42 @@ npm --prefix E:\Antigravity\Projekty\TAROT\app_ar run build
 
 Wynik: PASS. Vite zglosil te same istniejace ostrzezenia: duzy chunk po minifikacji oraz nieskuteczny dynamiczny import `src/renderer/textureCache.js`.
 
+### Event-first Task 6 CV Explain and Diagnostics
+
+#### RED
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_operator_explainability -v
+```
+
+Wynik: FAIL oczekiwany. Brakowalo krokow `change_detection` i `empty_reference` w payloadzie CV Explain.
+
+#### GREEN
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_operator_explainability -v
+```
+
+Wynik: PASS, 11 testow.
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_background_model app_cv.tests.test_change_detection app_cv.tests.test_snapshot_analyzer app_cv.tests.test_pipelines_contract app_cv.tests.test_operator_explainability -v
+```
+
+Wynik: PASS, 47 testow.
+
+```text
+$env:PYTHONDONTWRITEBYTECODE='1'; python -B -m py_compile app_cv\tarotvision\operator_explainability.py app_cv\tarotvision\pipelines\snapshot_first.py
+```
+
+Wynik: PASS.
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest discover -s app_cv\tests -v
+```
+
+Wynik: PASS, 300 testow.
+
 ### Event-first Task 5 Autotune Creates Session Reference
 
 #### RED

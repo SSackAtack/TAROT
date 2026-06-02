@@ -100,8 +100,12 @@ Codex wykonał Task 5 z planu event-first background diff. Etap Auto Tune `Pusta
 
 Po review ChatGPT Supervisor z decyzją `CHANGES_REQUESTED` Codex zabezpieczył interakcję Task 5 z `hold_previous_state` z Task 4. `Pusta mata` ustawia teraz `empty_reference_capture_active`, dzięki czemu recorder zbiera próbki empty również wtedy, gdy aktywny `ChangeDetector` i istniejący `previous_stable_snapshot` dają `no_change_hold_previous`. Pipeline nadal nie uruchamia `SnapshotAnalyzer` w hold-state, więc nie wraca do globalnej detekcji; zapisuje pustą próbkę `0/0`, a po komplecie ramek wykonuje `capture_many()` i `changed_ratio()`.
 
+## Session Status (2026-06-02 Event-first Task 6 CV Explain and Diagnostics)
+
+Codex wykonał Task 6 z planu event-first background diff. CV Explain pokazuje teraz stan pustej referencji (`inactive`, aktywna, zbieranie `N/3`, warning walidacji) oraz stan change detection: brak regionów zmian, global shift albo liczby regionów `added`/`removed` z `mask ratio`. Pipeline publikuje wyłącznie minimalne pola diagnostyczne potrzebne UI: `background_reference_active`, `empty_reference_capture_active`, `empty_reference_frame_count`; logika detekcji nie została zmieniona.
+
 ## Kolejne kroki
 
 1. Implementować event-first background diff wyłącznie według zaktualizowanego głównego planu `2026-06-02-event-first-background-diff-implementation-plan.md`.
-2. Następny bezpieczny task implementacyjny: `Task 6: CV Explain and Diagnostics`.
+2. Następny bezpieczny task implementacyjny: `Task 7: Live Smoke`.
 3. Manualny live smoke z kamerą pozostaje wymagany dla obecnego `TASK-CV-AUTOTUNE-LIVE-001` przed oznaczeniem go jako `DONE`.

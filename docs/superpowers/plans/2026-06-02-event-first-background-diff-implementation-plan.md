@@ -1167,7 +1167,7 @@ git commit -m "feat: zapisz pusta mate jako referencje tła"
 - Test: `app_cv/tests/test_operator_explainability.py`
 - Modify: `.ai/tasks/TASK-CV-AUTOTUNE-LIVE-001/TEST_REPORT.md`
 
-- [ ] **Step 1: Write failing explainability test**
+- [x] **Step 1: Write failing explainability test**
 
 Add to `app_cv/tests/test_operator_explainability.py`:
 
@@ -1189,7 +1189,7 @@ Add to `app_cv/tests/test_operator_explainability.py`:
         self.assertIn("brak regionow zmian", messages.lower())
 ```
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 Run:
 
@@ -1199,7 +1199,7 @@ $env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.te
 
 Expected: FAIL because explainability does not mention change regions.
 
-- [ ] **Step 3: Implement explainability message**
+- [x] **Step 3: Implement explainability message**
 
 In `operator_explainability.py`, add a step after ArUco/snapshot step:
 
@@ -1217,7 +1217,7 @@ def _change_detection_step(metrics):
 
 Use the local helper names actually present in the file. Do not invent `_step` if the file uses another helper; adapt to existing pattern.
 
-- [ ] **Step 4: Verify GREEN**
+- [x] **Step 4: Verify GREEN**
 
 Run:
 
@@ -1227,7 +1227,7 @@ $env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.te
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
 git add app_cv/tarotvision/operator_explainability.py app_cv/tests/test_operator_explainability.py

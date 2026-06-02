@@ -24,6 +24,87 @@ def _metric_int(metrics, key, fallback=0):
         return int(fallback)
 
 
+def _metric_float(metrics, key, fallback=0.0):
+    try:
+        return float(metrics.get(key, fallback) or 0.0)
+    except (TypeError, ValueError):
+        return float(fallback)
+
+
+def _empty_reference_step(metrics, runtime):
+    capture_active = bool(runtime.get("empty_reference_capture_active", False))
+    frame_count = _metric_int(runtime, "empty_reference_frame_count")
+    reference_active = bool(runtime.get("background_reference_active", False))
+    validation_ratio = _metric_float(metrics, "background_reference_validation_ratio")
+    validation_warning = bool(metrics.get("background_reference_validation_warning", 0) or 0)
+
+    if capture_active:
+        message = f"Zbieram pusta referencje ({frame_count}/3)"
+        if validation_ratio:
+            message += f"; ostatnia walidacja={validation_ratio:.3f}"
+        return _step("empty_reference", "Pusta mata", "warn", f"{frame_count}/3", message)
+    if validation_warning:
+        return _step(
+            "empty_reference",
+            "Pusta mata",
+            "warn",
+            f"{validation_ratio:.3f}",
+            f"Referencja pustej maty wymaga uwagi: validation ratio={validation_ratio:.3f}.",
+        )
+    if reference_active:
+        message = "Referencja pustej maty aktywna"
+        if validation_ratio:
+            message += f"; validation ratio={validation_ratio:.3f}"
+        return _step("empty_reference", "Pusta mata", "ok", "active", message)
+    return _step(
+        "empty_reference",
+        "Pusta mata",
+        "warn",
+        "inactive",
+        "Brak aktywnej referencji pustej maty; system pracuje w trybie fallback.",
+    )
+
+
+def _change_detection_step(metrics):
+    if "change_region_count" not in metrics and "change_global_shift" not in metrics:
+        return _step(
+            "change_detection",
+            "Zmiana",
+            "wait",
+            "n/a",
+            "Brak danych change detection dla ostatniego snapshotu.",
+        )
+
+    region_count = _metric_int(metrics, "change_region_count")
+    added_count = _metric_int(metrics, "change_added_count")
+    removed_count = _metric_int(metrics, "change_removed_count")
+    mask_ratio = _metric_float(metrics, "change_mask_ratio")
+    global_shift = bool(metrics.get("change_global_shift", 0) or 0)
+    if global_shift:
+        return _step(
+            "change_detection",
+            "Zmiana",
+            "warn",
+            "global",
+            "Wykryto globalna zmiane obrazu: sprawdz swiatlo, ekspozycje albo stabilnosc kamery.",
+        )
+    if region_count == 0:
+        return _step(
+            "change_detection",
+            "Zmiana",
+            "warn",
+            "0 ROI",
+            "Brak regionow zmian; false positives z detektora kart powinny zostac odrzucone lub wymagaja kalibracji pustej maty.",
+        )
+    return _step(
+        "change_detection",
+        "Zmiana",
+        "ok",
+        str(region_count),
+        f"Regiony zmian: added={added_count}, removed={removed_count}, mask ratio={mask_ratio:.3f}.",
+    )
+
+
 def build_cv_explainability(cards, metrics, runtime, layout, operator, warnings):
     cards = cards or []
     metrics = metrics or {}
@@ -89,6 +170,8 @@ def build_cv_explainability(cards, metrics, runtime, layout, operator, warnings)
             if layout_state in {"settling", "sampling_snapshots", "analyzing_snapshot"}
             else "Snapshot gotowy",
         ),
+        _empty_reference_step(metrics, runtime),
+        _change_detection_step(metrics),
         _step(
             "candidates",
             "Kandydaci kart",

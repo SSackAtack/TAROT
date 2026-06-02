@@ -183,3 +183,10 @@
 - Zachowano bezpieczeństwo runtime: przy hold-state analyzer nadal nie jest wywoływany, a próbka empty ma `accepted_count=0`, `candidate_count=0` i `analysis_ms=0.0`.
 - Po finalizacji `capture_many()` i walidacji przez `changed_ratio()` pipeline czyści `empty_reference_frames` oraz wyłącza `empty_reference_capture_active`.
 - Dodano regresję dla aktywnego `change_detector`, istniejącego `previous_stable_snapshot` i trzech pustych próbek z finalizacją referencji.
+
+## 2026-06-02 Event-first Task 6 CV Explain and Diagnostics
+
+- Dodano krok CV Explain `Pusta mata`, który pokazuje, czy `empty_reference` jest aktywna, czy trwa zbieranie ramek oraz jaki był ostatni `background_reference_validation_ratio`.
+- Dodano krok CV Explain `Zmiana`, który pokazuje brak regionów zmian, global shift albo liczby `added`/`removed` i `mask ratio`.
+- `SnapshotFirstPipeline` publikuje minimalne pola runtime: `background_reference_active`, `empty_reference_capture_active`, `empty_reference_frame_count`.
+- Dodano testy dla braku regionów zmian, globalnej zmiany obrazu oraz statusu zbierania pustej referencji z ostrzeżeniem walidacji.
