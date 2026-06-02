@@ -142,6 +142,28 @@ class TestMainStaticAudit(unittest.TestCase):
         self.assertIn("update_autotune_recommendation_from_samples", source)
         self.assertIn("autotune_sample_recorder=record_autotune_sample_from_snapshot", source)
 
+    def test_autotune_start_forces_snapshot_sampling_request(self):
+        """Klikniecie etapu Auto Tune nie moze czekac na naturalny ruch w snapshot gate."""
+        source = self._read_main_source()
+
+        autotune_start_index = source.index('if message.type == "autotune_start"')
+        autotune_start_block = source[
+            autotune_start_index:source.index('if message.type == "autotune_calibrate"')
+        ]
+
+        self.assertIn("snapshot_gate.request_sample", autotune_start_block)
+        self.assertIn('write_autotune_log("stage_started")', autotune_start_block)
+
+    def test_autotune_sample_recorder_requests_next_sample_until_stage_complete(self):
+        """Auto Tune ma sam dociagac probki do 3/3 po pierwszym wymuszonym snapshocie."""
+        source = self._read_main_source()
+
+        recorder_index = source.index("def record_autotune_sample_from_snapshot")
+        recorder_block = source[recorder_index:source.index("def handle_control_message")]
+
+        self.assertIn('"request_next_sample"', recorder_block)
+        self.assertIn("autotune_session.ready_to_score()", recorder_block)
+
     def test_main_logs_autotune_wizard_events_and_calibrate_command(self):
         """Wizard Auto Tune powinien zapisywać zdarzenia i generować rekomendację dopiero po jawnej komendzie."""
         source = self._read_main_source()

@@ -52,6 +52,10 @@ Codex wdrozyl minimalny wizard operatorski dla Auto Tune: scenariusze `empty`, `
 
 Codex usunal twardy limit `560px` z okna PiP w Studio, ktory powodowal, ze suwak rozmiaru wizualnie przestawal powiekszac podglad od okolo 38%, mimo zakresu do 45%. PiP jest teraz limitowany dostepna szerokoscia overlayu (`calc(100% - 56px)`), wiec zakres 20-45% pozostaje uzyteczny bez ryzyka wyjscia poza obszar podgladu. Weryfikacja przegladarkowa potwierdzila wzrost szerokosci z okolo 494px przy 38% do okolo 585px przy 45%.
 
+## Session Status (2026-06-02 Codex Auto Tune forced sampling fix)
+
+Po live obserwacji Michala: klikniecie `Pusta mata` tworzylo log `stage_started`, ale przez kilka minut nie zbieralo probek (`0/3`). Analiza logow pokazala, ze kamera i ArUco dzialaly, ale `stable_for_ms` pozostawal `0.0`, bo `SnapshotGate` w stanie `holding_last_good` nie uruchamia probkowania bez naturalnego ruchu. Codex dodal jawne `SnapshotGate.request_sample()` wywolywane przy `autotune_start` oraz petle dociagania kolejnych snapshotow az do kompletu `3/3`. Live smoke po restarcie backendu potwierdzil `stage_started` + trzy `sample_collected` + `stage_completed` dla `empty` w okolo 5 sekund. Wynik etapu byl poprawnie `FAIL`, bo na pustej macie system nadal widzial false positives (`candidate_count` 1-2, `accepted_count` 1), co jest teraz zapisane w logach i widoczne w UI.
+
 ## Kolejne kroki
 
 1. Wykonać manualny live smoke z kamerą: Auto Tune `empty`, `one_card`, `three_cards`, potem `Apply` i zapis profilu.

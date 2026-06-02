@@ -167,7 +167,7 @@ class SnapshotFirstPipeline(VisionPipeline):
                 analysis_ms = (time.perf_counter() - analysis_start) * 1000.0
                 self.runtime_metrics.add("snapshot_analysis_ms", analysis_ms)
                 self.runtime_metrics.add("snapshot_quality_score", selected.quality.quality_score)
-                self._record_autotune_sample(
+                autotune_recorder_result = self._record_autotune_sample(
                     diagnostics=diagnostics,
                     accepted_count=result.card_count,
                     analysis_ms=analysis_ms,
@@ -202,6 +202,11 @@ class SnapshotFirstPipeline(VisionPipeline):
                         layout_snapshot["snapshot_reject_reason"] = "cards_removed_confirmed"
                         self.runtime_metrics.add("cards_removed_count", 1)
                         self.runtime_metrics.add("layout_changed", 1)
+
+                if (
+                        isinstance(autotune_recorder_result, dict)
+                        and autotune_recorder_result.get("request_next_sample")):
+                    self.snapshot_gate.request_sample(now_ms=int(time.time() * 1000))
 
                 layout_snapshot.update({
                     "layout_id": self.snapshot_layout_id,
@@ -262,7 +267,7 @@ class SnapshotFirstPipeline(VisionPipeline):
 
     def _record_autotune_sample(self, diagnostics, accepted_count, analysis_ms, quality_score):
         if self.autotune_sample_recorder is None:
-            return
+            return None
         sample = {
             "candidate_count": int(diagnostics.get("quads_found", 0)),
             "accepted_count": int(accepted_count),
@@ -273,4 +278,4 @@ class SnapshotFirstPipeline(VisionPipeline):
             "recognition_rejections": int(diagnostics.get("recognition_rejections", 0)),
             "candidate_validation_rejections": int(diagnostics.get("candidate_validation_rejections", 0)),
         }
-        self.autotune_sample_recorder(sample)
+        return self.autotune_sample_recorder(sample)

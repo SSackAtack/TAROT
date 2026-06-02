@@ -93,3 +93,12 @@
 - Usunieto twardy limit `560px` z szerokosci okna PiP w Studio.
 - Zmieniono ograniczenie rozmiaru PiP na limit wzgledem dostepnej szerokosci overlayu: `calc(100% - 56px)`.
 - Dodano statyczny test chroniacy przed ponownym uciekaniem zakresu suwaka 38-45% w martwa strefe.
+
+## 2026-06-02 Codex Auto Tune forced sampling fix
+
+- Zdiagnozowano live przypadek, w ktorym `Pusta mata` zapisywala tylko `stage_started`, ale nie zbierala probek, bo snapshot gate nie dostawal naturalnego ruchu.
+- Dodano `SnapshotGate.request_sample(now_ms)` dla operatorskich zadan probkowania.
+- `autotune_start` wymusza teraz snapshot po krotkim settle zamiast czekac na ruch.
+- `record_autotune_sample_from_snapshot()` zwraca `request_next_sample`, dopoki etap nie ma kompletu probek.
+- `SnapshotFirstPipeline` obsluguje zwrot recordera i zada kolejnego snapshotu po zakonczeniu biezacej analizy.
+- Dodano testy regresji dla manualnego requestu bramki, wymuszenia probkowania po `autotune_start` i dociagania probek do `3/3`.

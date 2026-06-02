@@ -1141,6 +1141,14 @@ Co zostalo zrobione: twardy limit zastapiono limitem wzgledem szerokosci overlay
 
 Kolejne kroki: manualny live smoke z kamera nadal pozostaje wymagany dla calego taska Auto Tune; sama poprawka PiP zostala zweryfikowana testem, buildem i pomiarem w przegladarce.
 
+## Session Status (2026-06-02 Codex Auto Tune forced sampling fix)
+
+Stan aktualny: live klik `Pusta mata` zapisywal `stage_started`, ale nie zbieral probek, jezeli zwykla bramka snapshot-first nie widziala naturalnego ruchu. W logach `cv_metrics.jsonl` kamera i ArUco dzialaly, natomiast `stable_for_ms` pozostawal `0.0`.
+
+Co zostalo zrobione: dodano manualne `SnapshotGate.request_sample()` dla Auto Tune, wywolanie przy `autotune_start` oraz automatyczne dociaganie kolejnych snapshotow do kompletu `3/3`.
+
+Kolejne kroki: detekcja pustej maty nadal wymaga strojenia, bo live smoke po poprawce zakonczyl etap `empty` jako `FAIL` z false positives (`candidate_count` 1-2, `accepted_count` 1). Logi sa juz kompletne i mozna ich uzyc do doboru parametrow.
+
 ## Plan integracji
 
 Najpierw domykamy diagnostyke, bo bez niej autotuning bedzie czarna skrzynka. Potem dodajemy czysty scoring, potem stan sesji, potem protokol, potem backend, potem UI. Dopiero na koncu zapis profilu i live smoke. Taka kolejnosc minimalizuje ryzyko, ze Studio dostanie przyciski, ktore uruchamiaja niediagnostyczny albo nieodwracalny mechanizm.

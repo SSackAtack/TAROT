@@ -51,6 +51,16 @@ class SnapshotGateTest(unittest.TestCase):
         self.assertEqual(gate.state, "holding_last_good")
         self.assertEqual(gate.last_published_layout_id, 4)
 
+    def test_manual_request_samples_after_settle_even_without_motion(self):
+        gate = SnapshotGate(SnapshotGateConfig(settle_seconds=0.5))
+
+        gate.request_sample(now_ms=1000)
+        decision = gate.update(now_ms=1600, motion_detected=False, changed_ratio=0.001)
+
+        self.assertEqual(decision.state, "sampling_snapshots")
+        self.assertTrue(decision.should_sample)
+        self.assertGreaterEqual(decision.stable_for_ms, 500)
+
 
 if __name__ == "__main__":
     unittest.main()

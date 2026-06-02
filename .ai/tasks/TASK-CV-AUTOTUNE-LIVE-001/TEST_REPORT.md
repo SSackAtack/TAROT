@@ -346,3 +346,35 @@ Browser QA: http://127.0.0.1:5174/?studio=1
 ```
 
 Wynik: PASS. Programowy pomiar PiP w trybie Studio: 38% = okolo 493.74px, 45% = okolo 584.70px, roznica = okolo 90.96px. Suwak nie ma juz martwej strefy w zakresie 38-45%.
+
+### Auto Tune forced sampling fix
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_snapshot_gate app_cv.tests.test_main_static_audit app_cv.tests.test_pipelines_contract app_cv.tests.test_autotune_session app_cv.tests.test_autotune_session_log -v
+```
+
+Wynik: PASS, 31 testow.
+
+```text
+$env:PYTHONDONTWRITEBYTECODE='1'; python -B -m py_compile app_cv\tarotvision\snapshot_gate.py app_cv\tarotvision\pipelines\snapshot_first.py app_cv\main.py
+```
+
+Wynik: PASS.
+
+```text
+Live Browser QA: http://127.0.0.1:5174/?studio=1
+```
+
+Wynik: PASS techniczny. Po kliknieciu `Pusta mata` logi utworzyly `stage_started`, trzy `sample_collected` i `stage_completed` w katalogu `logs/autotune_sessions/`. Najnowszy wynik live: `empty` zakonczyl sie `FAIL`, bo system wykryl false positives na pustej macie (`candidate_count` 1-2, `accepted_count` 1). UI pokazal `READY_TO_SCORE` oraz `FAIL: Pusta mata FAIL: wykryto false positive na macie`.
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest discover -s app_cv\tests -v
+```
+
+Wynik: PASS, 280 testow.
+
+```text
+npm --prefix E:\Antigravity\Projekty\TAROT\app_ar run build
+```
+
+Wynik: PASS. Vite zglosil te same istniejace ostrzezenia: duzy chunk po minifikacji oraz nieskuteczny dynamiczny import `src/renderer/textureCache.js`.

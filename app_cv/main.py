@@ -187,7 +187,8 @@ def record_autotune_sample_from_snapshot(sample):
         add_operator_warning(
             f"Autotuning {scenario}: {result['state']} - {result['message']}"
         )
-    return None
+        return None
+    return {"request_next_sample": True}
 
 
 def handle_control_message(message, camera_session):
@@ -268,6 +269,7 @@ def handle_control_message(message, camera_session):
             required_scenarios=(message.scenario,),
             samples_per_scenario=3,
         )
+        snapshot_gate.request_sample(now_ms=int(time.time() * 1000))
         autotune_candidate_profiles = generate_candidate_profiles()
         calibration_state = {
             "state": "collecting",
