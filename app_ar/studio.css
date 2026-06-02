@@ -961,6 +961,15 @@ body.studio-mode-active {
     background: rgba(52, 211, 153, 0.06);
 }
 
+.studio-autotune-panel[data-stage-result="PASS"] {
+    border-color: rgba(52, 211, 153, 0.38);
+}
+
+.studio-autotune-panel[data-stage-result="FAIL"] {
+    border-color: rgba(248, 113, 113, 0.42);
+    background: rgba(127, 29, 29, 0.12);
+}
+
 .studio-autotune-header {
     display: flex;
     align-items: center;

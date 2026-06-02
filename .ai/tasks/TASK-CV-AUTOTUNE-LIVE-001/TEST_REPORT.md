@@ -266,3 +266,43 @@ $env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest discover -s app
 ```
 
 Wynik: PASS, 268 testow.
+
+### Auto Tune wizard MVP RED
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_autotune_session app_cv.tests.test_autotune_session_log app_cv.tests.test_tuning_protocol app_cv.tests.test_camera_controls_static -v
+```
+
+Wynik: FAIL. Brakowalo `stage_result` i `next_action` w `AutotuneSession`, modulu `tarotvision.autotune_session_log`, parsera `autotune_calibrate` oraz przyciskow `Skalibruj`/`Save Profile` w Studio.
+
+### Auto Tune wizard MVP GREEN
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_autotune_session app_cv.tests.test_autotune_session_log app_cv.tests.test_tuning_protocol app_cv.tests.test_camera_controls_static -v
+```
+
+Wynik: PASS, 55 testow.
+
+```text
+$env:PYTHONDONTWRITEBYTECODE='1'; python -B -m py_compile app_cv\tarotvision\autotune_session.py app_cv\tarotvision\autotune_session_log.py app_cv\tarotvision\tuning_protocol.py app_cv\main.py
+```
+
+Wynik: PASS. Poprzednia proba bez `-B` zakonczyla sie bledem Windows `WinError 5` na zablokowanym pliku `__pycache__`.
+
+```text
+npm --prefix E:\Antigravity\Projekty\TAROT\app_ar run build
+```
+
+Wynik: PASS. Vite zglosil te same istniejace ostrzezenia: duzy chunk po minifikacji oraz nieskuteczny dynamiczny import `src/renderer/textureCache.js`.
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest discover -s app_cv\tests -v
+```
+
+Wynik: PASS, 275 testow.
+
+```text
+Browser QA: http://127.0.0.1:5174/?studio=1
+```
+
+Wynik: PASS. Panel Auto Tune renderuje przyciski `Pusta mata`, `1 karta`, `3 karty`, `Skalibruj`, `Apply`, `Save Profile`, `Cancel`; konsola przegladarki nie zglosila bledow. Nie klikano akcji live, aby nie mieszac w aktywnej sesji operatora.

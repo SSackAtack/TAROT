@@ -142,5 +142,17 @@ class TestMainStaticAudit(unittest.TestCase):
         self.assertIn("update_autotune_recommendation_from_samples", source)
         self.assertIn("autotune_sample_recorder=record_autotune_sample_from_snapshot", source)
 
+    def test_main_logs_autotune_wizard_events_and_calibrate_command(self):
+        """Wizard Auto Tune powinien zapisywać zdarzenia i generować rekomendację dopiero po jawnej komendzie."""
+        source = self._read_main_source()
+
+        self.assertIn("from tarotvision.autotune_session_log import AutotuneSessionLog", source)
+        self.assertIn("autotune_session_log = AutotuneSessionLog", source)
+        self.assertIn("def write_autotune_log", source)
+        self.assertIn('message.type == "autotune_calibrate"', source)
+        self.assertIn('write_autotune_log("stage_completed")', source)
+        self.assertIn('write_autotune_log(', source)
+        self.assertIn('"saved"', source)
+
 if __name__ == '__main__':
     unittest.main()

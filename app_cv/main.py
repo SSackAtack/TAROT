@@ -29,6 +29,7 @@ from tarotvision.pipelines import SnapshotFirstPipeline
 from tarotvision.frame_stream import LatestFrameStore, start_preview_server
 from tarotvision.operator_explainability import build_cv_explainability
 from tarotvision.autotune_session import AutotuneSession
+from tarotvision.autotune_session_log import AutotuneSessionLog
 from tarotvision.autotune_profiles import generate_candidate_profiles
 from tarotvision.autotune_scoring import choose_best_profile_result
 
@@ -63,6 +64,7 @@ runtime_config = config_session.config
 operator_warnings = []
 calibration_state = {"state": "idle", "last_score": None}
 profile_store = ProfileStore(os.path.join(LOG_DIR, "calibration_profiles"))
+autotune_session_log = AutotuneSessionLog(os.path.join(LOG_DIR, "autotune_sessions"))
 active_tuning_profile = "default"
 background_model = BackgroundModel()
 pending_background_capture = False
@@ -115,6 +117,27 @@ def add_operator_warning(message):
     log_event(f"[OPERATOR] {message}")
 
 
+def current_active_decks():
+    return status_store.get_status().get("operator", {}).get("active_decks", [])
+
+
+def write_autotune_log(event, recommendation=None, profile_name=None):
+    if autotune_session is None:
+        return None
+    try:
+        return autotune_session_log.write_event(
+            event=event,
+            session=autotune_session,
+            active_decks=current_active_decks(),
+            runtime_parameters=runtime_config.values,
+            recommendation=recommendation,
+            profile_name=profile_name,
+        )
+    except OSError as exc:
+        add_operator_warning(f"Nie zapisano logu autotuningu: {exc}")
+        return None
+
+
 def update_autotune_recommendation_from_samples():
     global calibration_state
     if autotune_session is None or not autotune_session.ready_to_score():
@@ -157,13 +180,14 @@ def record_autotune_sample_from_snapshot(sample):
         "last_score": None,
         "autotune": autotune_session.status(),
     }
-    recommendation = update_autotune_recommendation_from_samples()
-    if recommendation is not None:
+    write_autotune_log("sample_collected")
+    if autotune_session.ready_to_score():
+        result = autotune_session.stage_result()
+        write_autotune_log("stage_completed")
         add_operator_warning(
-            f"Autotuning: rekomendacja gotowa "
-            f"(score={recommendation['score']:.3f}, confidence={recommendation['confidence']})"
+            f"Autotuning {scenario}: {result['state']} - {result['message']}"
         )
-    return recommendation
+    return None
 
 
 def handle_control_message(message, camera_session):
@@ -250,10 +274,25 @@ def handle_control_message(message, camera_session):
             "last_score": None,
             "autotune": autotune_session.status(),
         }
+        write_autotune_log("stage_started")
         add_operator_warning(f"Autotuning: zbieram probki scenariusza {message.scenario}")
         return
 
+    if message.type == "autotune_calibrate":
+        if autotune_session is None or not autotune_session.ready_to_score():
+            add_operator_warning("Brak kompletnych probek autotuningu do kalibracji")
+            return
+        recommendation = update_autotune_recommendation_from_samples()
+        write_autotune_log("recommendation_ready", recommendation=recommendation)
+        if recommendation is not None:
+            add_operator_warning(
+                f"Autotuning: rekomendacja gotowa "
+                f"(score={recommendation['score']:.3f}, confidence={recommendation['confidence']})"
+            )
+        return
+
     if message.type == "autotune_cancel":
+        write_autotune_log("cancelled")
         autotune_session = None
         autotune_candidate_profiles = []
         calibration_state = {"state": "idle", "last_score": None}
@@ -272,6 +311,7 @@ def handle_control_message(message, camera_session):
             "last_score": autotune_session.recommendation["score"],
             "autotune": autotune_session.status(),
         }
+        write_autotune_log("applied", recommendation=autotune_session.recommendation)
         add_operator_warning("Zastosowano rekomendacje autotuningu")
         return
 
@@ -281,6 +321,11 @@ def handle_control_message(message, camera_session):
             return
         profile_store.save_autotune_recommendation(message.name, autotune_session.recommendation)
         active_tuning_profile = message.name
+        write_autotune_log(
+            "saved",
+            recommendation=autotune_session.recommendation,
+            profile_name=message.name,
+        )
         add_operator_warning(f"Zapisano rekomendacje autotuningu jako profil {message.name}")
         return
 

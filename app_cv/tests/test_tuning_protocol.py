@@ -263,6 +263,11 @@ class TuningProtocolTest(unittest.TestCase):
 
         self.assertEqual(message.type, "autotune_apply")
 
+    def test_parses_autotune_calibrate(self):
+        message = parse_control_message('{"type": "autotune_calibrate"}')
+
+        self.assertEqual(message.type, "autotune_calibrate")
+
     def test_parses_autotune_cancel(self):
         message = parse_control_message('{"type": "autotune_cancel"}')
 

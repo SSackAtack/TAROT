@@ -44,6 +44,10 @@ Codex wznowil prace na czystym branchu `codex/live-autotuning-foundation` i potw
 
 Po uwagach Michala o pomieszaniu aktywnych talii z diagnostyka Codex uporzadkowal prawy panel Studio. Sekcje `Transport`, `Kamera`, `Widok`, `Rezyser`, `Audio`, `Aktywne Talie`, `Auto Tune` i `CV Health` sa teraz osobnymi rozwijanymi szufladami z zapamietaniem stanu w `localStorage`. `Auto Tune` zostal oddzielony od wyboru talii, a domyslnie otwarte zostaja sekcje operacyjne: `Transport`, `Auto Tune` i `CV Health`. Manualny live smoke z fizyczna kamera nadal pozostaje wymagany przed zamknieciem taska.
 
+## Session Status (2026-06-02 Codex Auto Tune wizard MVP)
+
+Codex wdrozyl minimalny wizard operatorski dla Auto Tune: scenariusze `empty`, `one_card` i `three_cards` dostaja teraz czytelny `stage_result` (`COLLECTING`/`PASS`/`FAIL`) oraz `next_action` w payloadzie Studio. Dodano jawna komende `autotune_calibrate`, ktora generuje rekomendacje dopiero po komplecie probek, zamiast robic to nieczytelnie automatycznie po samym kliknieciu scenariusza. Dodano trwaly logger sesji `logs/autotune_sessions/autotune_*.json`, zapisujacy start, probki, zakonczenie etapu, rekomendacje, apply, save i cancel. Panel Studio ma teraz przyciski `Skalibruj` oraz `Save Profile`; zapis profilu uzywa automatycznej nazwy `studio_live_YYYYMMDD_HHMMSS`. Manualny live smoke z fizyczna kamera nadal pozostaje wymagany przed oznaczeniem taska jako `DONE`.
+
 ## Kolejne kroki
 
 1. Wykonać manualny live smoke z kamerą: Auto Tune `empty`, `one_card`, `three_cards`, potem `Apply` i zapis profilu.

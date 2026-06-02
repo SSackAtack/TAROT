@@ -38,6 +38,7 @@ ALLOWED_TYPES = {
     "calibration_start",
     "calibration_cancel",
     "autotune_start",
+    "autotune_calibrate",
     "autotune_apply",
     "autotune_save",
     "autotune_cancel",
@@ -88,7 +89,7 @@ def parse_control_message(raw_message):
             raise ControlMessageError(f"Invalid autotune scenario: {scenario}")
         return ControlMessage(type=message_type, scenario=scenario)
 
-    if message_type in {"autotune_apply", "autotune_cancel"}:
+    if message_type in {"autotune_calibrate", "autotune_apply", "autotune_cancel"}:
         return ControlMessage(type=message_type)
 
     if message_type == "autotune_save":

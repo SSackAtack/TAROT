@@ -321,7 +321,10 @@ function renderStudioAutotune(data) {
     const state = autotune.state || 'idle'
     const recommendation = autotune.recommendation || null
     const progress = autotune.progress || {}
+    const stageResult = autotune.stage_result || null
+    const nextAction = autotune.next_action || ''
     panel.dataset.state = state
+    panel.dataset.stageResult = stageResult?.state || 'WAIT'
     stateEl.textContent = String(state).toUpperCase()
 
     if (!recommendation) {
@@ -330,9 +333,10 @@ function renderStudioAutotune(data) {
             .join(' | ')
         const collected = progress.samples_collected ?? progress.sample_count ?? 0
         const target = progress.samples_target ?? progress.target_samples ?? '-'
-        resultEl.textContent = state === 'idle'
-            ? 'Brak rekomendacji.'
-            : `Zbieranie probek: ${scenarioProgress || `${collected}/${target}`}`
+        const stageText = stageResult
+            ? `${stageResult.state}: ${stageResult.message}`
+            : (state === 'idle' ? 'Brak rekomendacji.' : `Zbieranie probek: ${scenarioProgress || `${collected}/${target}`}`)
+        resultEl.textContent = [stageText, nextAction].filter(Boolean).join(' | ')
         return
     }
 
@@ -348,10 +352,19 @@ function renderStudioAutotune(data) {
         `Profil: ${profileName}`,
         `Score: ${formatAutotuneNumber(score)}`,
         confidence !== undefined ? `Pewnosc: ${formatAutotuneNumber(confidence)}` : '',
-        profileSummary
+        profileSummary,
+        nextAction
     ].filter(Boolean)
 
     resultEl.textContent = details.join(' | ')
+}
+
+function buildStudioAutotuneProfileName() {
+    const stamp = new Date().toISOString()
+        .replace(/[-:]/g, '')
+        .replace(/\..+$/, '')
+        .replace('T', '_')
+    return `studio_live_${stamp}`
 }
 
 function initStudioDecksPanel() {
@@ -732,7 +745,9 @@ export function createStudioConsole() {
                     <button type="button" data-studio-action="autotune_start" data-scenario="empty">Pusta mata</button>
                     <button type="button" data-studio-action="autotune_start" data-scenario="one_card">1 karta</button>
                     <button type="button" data-studio-action="autotune_start" data-scenario="three_cards">3 karty</button>
+                    <button type="button" data-studio-action="autotune_calibrate">Skalibruj</button>
                     <button type="button" data-studio-action="autotune_apply">Apply</button>
+                    <button type="button" data-studio-action="autotune_save">Save Profile</button>
                     <button type="button" data-studio-action="autotune_cancel">Cancel</button>
                 </div>
                 <div class="studio-autotune-result" id="studio-autotune-result">Brak rekomendacji.</div>
@@ -883,7 +898,14 @@ function initStudioConsoleEvents() {
                 })
                 return
             }
-            if (action === 'autotune_apply' || action === 'autotune_cancel') {
+            if (action === 'autotune_save') {
+                sendControlMessage({
+                    type: 'autotune_save',
+                    name: buildStudioAutotuneProfileName()
+                })
+                return
+            }
+            if (action === 'autotune_calibrate' || action === 'autotune_apply' || action === 'autotune_cancel') {
                 sendControlMessage({ type: action })
             }
         })

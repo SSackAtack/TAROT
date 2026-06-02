@@ -63,7 +63,9 @@ class CameraControlsStaticTest(unittest.TestCase):
         self.assertIn("renderStudioAutotune", source)
         self.assertIn("operator?.calibration?.autotune", source)
         self.assertIn("autotune_start", source)
+        self.assertIn("autotune_calibrate", source)
         self.assertIn("autotune_apply", source)
+        self.assertIn("autotune_save", source)
         self.assertIn("autotune_cancel", source)
 
     def test_studio_sidebar_uses_collapsible_separate_sections(self):

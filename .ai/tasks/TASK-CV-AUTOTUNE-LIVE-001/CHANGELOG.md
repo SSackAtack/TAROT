@@ -72,3 +72,12 @@
 - Oddzielono `Auto Tune` od `Aktywnych Talii`, aby wybór talii nie mieszał się z diagnostyką i kalibracją.
 - Dodano zapamiętywanie zwiniętych sekcji w `localStorage` pod kluczem `studio:sidebarCollapsedSections`.
 - Dodano statyczny test kontraktu UI dla osobnych sekcji i akordeonów.
+
+## 2026-06-02 Codex Auto Tune wizard MVP
+
+- Rozszerzono `AutotuneSession.status()` o `scenario`, `stage_result` i `next_action`.
+- Dodano reguly PASS/FAIL dla scenariuszy `empty`, `one_card` i `three_cards`.
+- Dodano `app_cv/tarotvision/autotune_session_log.py` zapisujacy trwale logi sesji do `logs/autotune_sessions/`.
+- Dodano komende WebSocket `autotune_calibrate`.
+- Zmieniono backend tak, aby rekomendacja powstawala po jawnej komendzie `autotune_calibrate`, a nie automatycznie po zebraniu probek.
+- Panel Studio pokazuje wynik etapu i ma nowe przyciski `Skalibruj` oraz `Save Profile`.
