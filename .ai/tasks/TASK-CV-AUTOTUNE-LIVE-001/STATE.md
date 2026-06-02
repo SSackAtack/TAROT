@@ -48,6 +48,10 @@ Po uwagach Michala o pomieszaniu aktywnych talii z diagnostyka Codex uporzadkowa
 
 Codex wdrozyl minimalny wizard operatorski dla Auto Tune: scenariusze `empty`, `one_card` i `three_cards` dostaja teraz czytelny `stage_result` (`COLLECTING`/`PASS`/`FAIL`) oraz `next_action` w payloadzie Studio. Dodano jawna komende `autotune_calibrate`, ktora generuje rekomendacje dopiero po komplecie probek, zamiast robic to nieczytelnie automatycznie po samym kliknieciu scenariusza. Dodano trwaly logger sesji `logs/autotune_sessions/autotune_*.json`, zapisujacy start, probki, zakonczenie etapu, rekomendacje, apply, save i cancel. Panel Studio ma teraz przyciski `Skalibruj` oraz `Save Profile`; zapis profilu uzywa automatycznej nazwy `studio_live_YYYYMMDD_HHMMSS`. Manualny live smoke z fizyczna kamera nadal pozostaje wymagany przed oznaczeniem taska jako `DONE`.
 
+## Session Status (2026-06-02 Codex PiP slider cap fix)
+
+Codex usunal twardy limit `560px` z okna PiP w Studio, ktory powodowal, ze suwak rozmiaru wizualnie przestawal powiekszac podglad od okolo 38%, mimo zakresu do 45%. PiP jest teraz limitowany dostepna szerokoscia overlayu (`calc(100% - 56px)`), wiec zakres 20-45% pozostaje uzyteczny bez ryzyka wyjscia poza obszar podgladu. Weryfikacja przegladarkowa potwierdzila wzrost szerokosci z okolo 494px przy 38% do okolo 585px przy 45%.
+
 ## Kolejne kroki
 
 1. Wykonać manualny live smoke z kamerą: Auto Tune `empty`, `one_card`, `three_cards`, potem `Apply` i zapis profilu.

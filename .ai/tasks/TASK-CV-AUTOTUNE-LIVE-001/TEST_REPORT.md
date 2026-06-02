@@ -326,3 +326,23 @@ Browser QA: http://127.0.0.1:5174/?studio=1
 ```
 
 Wynik: PASS. Sekcja `Widok podgladu` jest rozwinieta, przyciski `Wirtualny stol`, `Kamera`, `PiP` oraz suwak rozmiaru PiP sa widoczne; konsola przegladarki bez bledow.
+
+### PiP slider cap fix
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_camera_controls_static -v
+```
+
+Wynik: PASS, 8 testow.
+
+```text
+npm --prefix E:\Antigravity\Projekty\TAROT\app_ar run build
+```
+
+Wynik: PASS. Vite zglosil te same istniejace ostrzezenia: duzy chunk po minifikacji oraz nieskuteczny dynamiczny import `src/renderer/textureCache.js`.
+
+```text
+Browser QA: http://127.0.0.1:5174/?studio=1
+```
+
+Wynik: PASS. Programowy pomiar PiP w trybie Studio: 38% = okolo 493.74px, 45% = okolo 584.70px, roznica = okolo 90.96px. Suwak nie ma juz martwej strefy w zakresie 38-45%.

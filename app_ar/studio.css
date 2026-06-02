@@ -165,7 +165,7 @@ body.studio-mode-active {
 }
 
 .studio-preview-overlay[data-preview-mode="pip"] .studio-camera-preview {
-    width: min(var(--studio-pip-width, 30%), 560px);
+    width: min(var(--studio-pip-width, 30%), calc(100% - 56px));
     min-width: 260px;
     border-color: rgba(214, 125, 62, 0.48);
     box-shadow: 0 12px 34px rgba(0, 0, 0, 0.62);

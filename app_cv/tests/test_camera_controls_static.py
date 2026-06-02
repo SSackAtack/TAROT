@@ -97,6 +97,16 @@ class CameraControlsStaticTest(unittest.TestCase):
         self.assertIn("--studio-pip-width", source)
         self.assertIn("studio:pipSize", source)
 
+    def test_studio_pip_slider_is_not_capped_before_maximum_value(self):
+        source = self._read_frontend_file(os.path.join("app_ar", "studio.css"))
+
+        self.assertIn("--studio-pip-width", source)
+        self.assertIn("calc(100% - 56px)", source)
+        self.assertNotIn(
+            "width: min(var(--studio-pip-width, 30%), 560px)",
+            source,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

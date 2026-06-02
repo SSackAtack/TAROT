@@ -1133,6 +1133,14 @@ Wdrozenie jest gotowe do review dopiero gdy:
 4. Kazdy task commituj osobno.
 5. Po kazdym tasku aktualizuj `STATE.md`, `CHANGELOG.md` i `TEST_REPORT.md` dla `TASK-CV-AUTOTUNE-LIVE-001`.
 
+## Session Status (2026-06-02 Codex PiP slider cap fix)
+
+Stan aktualny: Studio mialo martwa strefe suwaka PiP od okolo 38% do 45%, bo CSS ograniczal okno PiP do stalego `560px`.
+
+Co zostalo zrobione: twardy limit zastapiono limitem wzgledem szerokosci overlayu (`calc(100% - 56px)`) i dodano test statyczny pilnujacy, zeby zakres 38-45% nie byl ponownie ucinany.
+
+Kolejne kroki: manualny live smoke z kamera nadal pozostaje wymagany dla calego taska Auto Tune; sama poprawka PiP zostala zweryfikowana testem, buildem i pomiarem w przegladarce.
+
 ## Plan integracji
 
 Najpierw domykamy diagnostyke, bo bez niej autotuning bedzie czarna skrzynka. Potem dodajemy czysty scoring, potem stan sesji, potem protokol, potem backend, potem UI. Dopiero na koncu zapis profilu i live smoke. Taka kolejnosc minimalizuje ryzyko, ze Studio dostanie przyciski, ktore uruchamiaja niediagnostyczny albo nieodwracalny mechanizm.
