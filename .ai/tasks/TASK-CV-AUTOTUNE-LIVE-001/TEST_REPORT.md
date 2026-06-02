@@ -237,6 +237,16 @@ npm --prefix E:\Antigravity\Projekty\TAROT\app_ar run build
 
 Wynik: PASS. Vite zglosil te same istniejace ostrzezenia: duzy chunk po minifikacji oraz nieskuteczny dynamiczny import `src/renderer/textureCache.js`.
 
+### Event-first background diff plan
+
+Wynik: PLAN ONLY. Nie uruchamiano testow, poniewaz w tej sesji zapisano dokument planistyczny bez zmian produkcyjnych.
+
+Plik planu:
+
+```text
+docs/superpowers/plans/2026-06-02-event-first-background-diff-implementation-plan.md
+```
+
 ### Continuation manual live smoke
 
 Wynik: NOT RUN w tej sesji. Nadal wymagany jest test z fizyczna kamera i stolem: `empty`, `one_card`, `three_cards`, rekomendacja, `Apply`, zapis profilu w `logs/calibration_profiles/` oraz kontrola `CV Explain` przy realnym odblasku.

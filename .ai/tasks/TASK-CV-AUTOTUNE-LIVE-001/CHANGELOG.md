@@ -102,3 +102,9 @@
 - `record_autotune_sample_from_snapshot()` zwraca `request_next_sample`, dopoki etap nie ma kompletu probek.
 - `SnapshotFirstPipeline` obsluguje zwrot recordera i zada kolejnego snapshotu po zakonczeniu biezacej analizy.
 - Dodano testy regresji dla manualnego requestu bramki, wymuszenia probkowania po `autotune_start` i dociagania probek do `3/3`.
+
+## 2026-06-02 Codex event-first background diff plan
+
+- Dodano plan wykonawczy `docs/superpowers/plans/2026-06-02-event-first-background-diff-implementation-plan.md`.
+- Plan definiuje docelowy model `empty_reference`, `previous_stable_snapshot` i ROI hints dla `SnapshotAnalyzer`.
+- Plan rozbija implementacje na testowalne taski dla `BackgroundModel`, `ChangeDetector`, `SnapshotAnalyzer`, `SnapshotFirstPipeline`, `main.py`, CV Explain i live smoke.

@@ -56,6 +56,10 @@ Codex usunal twardy limit `560px` z okna PiP w Studio, ktory powodowal, ze suwak
 
 Po live obserwacji Michala: klikniecie `Pusta mata` tworzylo log `stage_started`, ale przez kilka minut nie zbieralo probek (`0/3`). Analiza logow pokazala, ze kamera i ArUco dzialaly, ale `stable_for_ms` pozostawal `0.0`, bo `SnapshotGate` w stanie `holding_last_good` nie uruchamia probkowania bez naturalnego ruchu. Codex dodal jawne `SnapshotGate.request_sample()` wywolywane przy `autotune_start` oraz petle dociagania kolejnych snapshotow az do kompletu `3/3`. Live smoke po restarcie backendu potwierdzil `stage_started` + trzy `sample_collected` + `stage_completed` dla `empty` w okolo 5 sekund. Wynik etapu byl poprawnie `FAIL`, bo na pustej macie system nadal widzial false positives (`candidate_count` 1-2, `accepted_count` 1), co jest teraz zapisane w logach i widoczne w UI.
 
+## Session Status (2026-06-02 Codex event-first background diff plan)
+
+Po dyskusji z Michalem o uzyciu pustej maty jako stalej referencji oraz kolejnych stabilnych snapshotow jako referencji zdarzen Codex przygotowal szczegolowy plan implementacyjny: `docs/superpowers/plans/2026-06-02-event-first-background-diff-implementation-plan.md`. Plan opisuje przejscie z globalnego szukania kart na model `empty_reference` + `previous_stable_snapshot` + ROI z regionow zmian. Kod nie zostal zmieniony w tej sesji planistycznej.
+
 ## Kolejne kroki
 
 1. Wykonać manualny live smoke z kamerą: Auto Tune `empty`, `one_card`, `three_cards`, potem `Apply` i zapis profilu.
