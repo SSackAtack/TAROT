@@ -115,3 +115,11 @@ cmd /c "set PYTHONPATH=C:\tmp\tarot_pydeps;app_cv&& python -m unittest app_cv.te
 ```
 
 Wynik: PASS, 12 testów.
+
+### Task 9 documentation/runbook
+
+```text
+Dokumentacja-only: README.md, .ai/TASKS_INDEX.md i notatki TASK-CV-AUTOTUNE-LIVE-001.
+```
+
+Wynik: PASS przez review diffu; brak zmian wykonywalnych.

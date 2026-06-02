@@ -36,3 +36,9 @@
 - Dodano `load_parameters()`, aby `profile_apply` obsługiwał zarówno stare surowe profile, jak i nowe profile z metadanymi.
 - Podłączono `autotune_save` w `main.py` do zapisu rekomendacji z metadanymi zamiast surowej mapy parametrów.
 - Dodano testy zapisu rekomendacji autotuningu, walidacji parametrów i statycznego kontraktu `main.py`.
+
+## 2026-06-02 Codex Task 9
+
+- Dodano do README sekcję `Live Auto Tune` z opisem roli narzędzia operatorskiego, bezpieczną sekwencją pracy i formatem profilu z metadanymi.
+- Zaktualizowano `.ai/TASKS_INDEX.md`, aby wpis `TASK-CV-AUTOTUNE-LIVE-001` odzwierciedlał wykonanie Tasków 0-9 i oczekiwanie na pełną weryfikację/live smoke.
+- Zaktualizowano stan zadania i kolejny krok dla modelu przejmującego pracę.

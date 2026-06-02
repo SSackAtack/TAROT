@@ -135,6 +135,34 @@ Profile strojenia zapisywane sa lokalnie w:
 logs/calibration_profiles/
 ```
 
+### Live Auto Tune
+
+Live Auto Tune jest narzedziem operatorskim w Studio, nie automatycznym trybem produkcyjnym. Operator uruchamia kalibracje dla pustej maty, jednej karty albo trzech kart. Backend zbiera stabilne snapshoty, ocenia kandydackie profile i pokazuje rekomendacje. Profil jest stosowany dopiero po kliknieciu Apply, a zapis do `logs/calibration_profiles/` wymaga komendy Save Profile.
+
+Bezpieczna sekwencja pracy:
+
+1. Uruchom Studio i upewnij sie, ze `CV Explain` pokazuje aktywna talie oraz skalibrowany stol ArUco.
+2. W panelu `Auto Tune` wybierz scenariusz: `Pusta mata`, `1 karta` albo `3 karty`.
+3. Poczekaj, az status autotuningu pokaze rekomendacje z `score`, `confidence` i parametrami profilu.
+4. Kliknij `Apply` tylko wtedy, gdy rekomendacja jest zgodna z realnym obrazem kamery.
+5. Zapisz profil dopiero po potwierdzeniu poprawy rozpoznawania w `CV Explain`.
+
+Profil autotuningu zapisany przez backend ma format z metadanymi:
+
+```json
+{
+  "name": "studio-live-20260602",
+  "parameters": {
+    "CARD_DETECT_MIN_AREA_RATIO": 0.001,
+    "CARD_DETECT_MAX_CANDIDATES": 10.0,
+    "WORKSPACE_INFLATE_PERCENT": 6.0
+  },
+  "source": "autotune",
+  "score": 1.25,
+  "confidence": "HIGH"
+}
+```
+
 Probe parametrów kamery (`CAP_PROP_*`) jest teraz bezpiecznym odczytem-only: pokazuje wartosc odczytana, ale nie ustawia focusem, ekspozycja ani kontrastem. Dlaczego: samo wywolanie `cap.set()` dla focus/exposure potrafi przelaczyc niektóre kamery w tryb manualny i rozjechac ostrosc.
 
 **Manualnie:**
