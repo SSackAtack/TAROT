@@ -540,5 +540,152 @@ class TestPipelinesContract(unittest.TestCase):
         self.assertEqual(snapshot_analyzer.analyze.call_args.kwargs["roi_hints"], [])
         runtime_metrics.add.assert_any_call("change_removed_count", 1)
 
+    def test_snapshot_pipeline_holds_previous_state_on_global_shift(self):
+        camera_session = MagicMock()
+        camera_session.frame_width = 300
+        camera_session.frame_height = 200
+        camera_session.camera_index = 0
+
+        opencv_preview = MagicMock()
+        opencv_preview.handle_keyboard.return_value = None
+        status_store = MagicMock()
+        diagnostics_writer = MagicMock()
+        snapshot_gate = MagicMock()
+        gate_decision = MagicMock()
+        gate_decision.state = "sampling_snapshots"
+        gate_decision.stable_for_ms = 700
+        gate_decision.should_sample = True
+        snapshot_gate.update.return_value = gate_decision
+
+        snapshot_analyzer = MagicMock()
+        table_calibration = MagicMock()
+        table_calibration.calibrated = False
+        table_calibration.status.return_value = {"calibrated": False, "marker_ids": []}
+
+        runtime_metrics = MagicMock()
+        runtime_metrics.snapshot.return_value = {}
+        runtime_config = MagicMock()
+        runtime_config.values = {}
+
+        change_detector = MagicMock()
+        change_detector.detect.return_value.regions = []
+        change_detector.detect.return_value.mask_nonzero_ratio = 0.90
+        change_detector.detect.return_value.global_shift = True
+        change_detector.detect.return_value.ignored_small_count = 0
+        change_detector.detect.return_value.ignored_large_count = 0
+
+        pipeline = SnapshotFirstPipeline(
+            camera_session=camera_session,
+            opencv_preview=opencv_preview,
+            status_store=status_store,
+            diagnostics_writer=diagnostics_writer,
+            snapshot_gate=snapshot_gate,
+            snapshot_analyzer=snapshot_analyzer,
+            table_calibration=table_calibration,
+            runtime_metrics=runtime_metrics,
+            runtime_config=runtime_config,
+            build_operator_snapshot_fn=MagicMock(return_value={}),
+            operator_warnings=[],
+            log_dir="dummy",
+            runtime_profile="default",
+            change_detector=change_detector,
+        )
+        previous_snapshot = self._readable_frame()[0:200, 0:300].copy()
+        pipeline.previous_stable_snapshot = previous_snapshot.copy()
+        pipeline.last_snapshot_cards = [{"name": "17_star"}]
+
+        motion_result = MagicMock()
+        motion_result.motion_detected = False
+        motion_result.changed_ratio = 0.0
+
+        pipeline.process_frame(
+            frame=self._readable_frame(value=128)[0:200, 0:300],
+            motion_result=motion_result,
+            frame_width=300,
+            frame_height=200,
+            frame_loop_start=12345.67,
+        )
+
+        snapshot_analyzer.analyze.assert_not_called()
+        self.assertEqual(pipeline.last_snapshot_cards, [{"name": "17_star"}])
+        self.assertTrue(np.array_equal(pipeline.previous_stable_snapshot, previous_snapshot))
+        runtime_metrics.add.assert_any_call("change_global_shift", 1)
+        _, kwargs = status_store.update_cv_state.call_args
+        self.assertEqual(kwargs["cards"], [{"name": "17_star"}])
+        self.assertEqual(kwargs["layout"]["snapshot_reject_reason"], "global_shift_detected")
+
+    def test_snapshot_pipeline_preserves_cards_when_no_added_or_removed_regions(self):
+        camera_session = MagicMock()
+        camera_session.frame_width = 300
+        camera_session.frame_height = 200
+        camera_session.camera_index = 0
+
+        opencv_preview = MagicMock()
+        opencv_preview.handle_keyboard.return_value = None
+        status_store = MagicMock()
+        diagnostics_writer = MagicMock()
+        snapshot_gate = MagicMock()
+        gate_decision = MagicMock()
+        gate_decision.state = "sampling_snapshots"
+        gate_decision.stable_for_ms = 700
+        gate_decision.should_sample = True
+        snapshot_gate.update.return_value = gate_decision
+
+        snapshot_analyzer = MagicMock()
+        table_calibration = MagicMock()
+        table_calibration.calibrated = False
+        table_calibration.status.return_value = {"calibrated": False, "marker_ids": []}
+
+        runtime_metrics = MagicMock()
+        runtime_metrics.snapshot.return_value = {}
+        runtime_config = MagicMock()
+        runtime_config.values = {}
+
+        change_detector = MagicMock()
+        change_detector.detect.return_value.regions = []
+        change_detector.detect.return_value.mask_nonzero_ratio = 0.0
+        change_detector.detect.return_value.global_shift = False
+        change_detector.detect.return_value.ignored_small_count = 0
+        change_detector.detect.return_value.ignored_large_count = 0
+
+        pipeline = SnapshotFirstPipeline(
+            camera_session=camera_session,
+            opencv_preview=opencv_preview,
+            status_store=status_store,
+            diagnostics_writer=diagnostics_writer,
+            snapshot_gate=snapshot_gate,
+            snapshot_analyzer=snapshot_analyzer,
+            table_calibration=table_calibration,
+            runtime_metrics=runtime_metrics,
+            runtime_config=runtime_config,
+            build_operator_snapshot_fn=MagicMock(return_value={}),
+            operator_warnings=[],
+            log_dir="dummy",
+            runtime_profile="default",
+            change_detector=change_detector,
+        )
+        pipeline.previous_stable_snapshot = self._readable_frame()[0:200, 0:300]
+        pipeline.last_snapshot_cards = [{"name": "17_star"}]
+
+        motion_result = MagicMock()
+        motion_result.motion_detected = False
+        motion_result.changed_ratio = 0.0
+
+        for _ in range(2):
+            pipeline.process_frame(
+                frame=self._readable_frame()[0:200, 0:300],
+                motion_result=motion_result,
+                frame_width=300,
+                frame_height=200,
+                frame_loop_start=12345.67,
+            )
+
+        snapshot_analyzer.analyze.assert_not_called()
+        self.assertEqual(pipeline.last_snapshot_cards, [{"name": "17_star"}])
+        self.assertEqual(pipeline.empty_snapshot_streak, 0)
+        _, kwargs = status_store.update_cv_state.call_args
+        self.assertEqual(kwargs["cards"], [{"name": "17_star"}])
+        self.assertEqual(kwargs["layout"]["snapshot_reject_reason"], "no_change_hold_previous")
+
 if __name__ == '__main__':
     unittest.main()

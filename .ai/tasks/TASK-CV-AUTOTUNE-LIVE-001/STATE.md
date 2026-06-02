@@ -88,6 +88,10 @@ Codex wykonał Task 3 z planu event-first background diff. `SnapshotAnalyzer.ana
 
 Codex wykonał Task 4 z planu event-first background diff. `SnapshotFirstPipeline` przyjmuje teraz opcjonalne `change_detector` i `background_model`, pamięta `previous_stable_snapshot`, wylicza regiony zmian po stabilnym snapshocie i przekazuje `roi_hints` do `SnapshotAnalyzer`. `main.py` tworzy `ChangeDetector` i przekazuje go razem z `background_model` do pipeline. Kluczowa semantyka erraty została zabezpieczona testem: brak regionów `added_or_moved` jest przekazywany jako `roi_hints=[]`, nie jako `None`.
 
+## Session Status (2026-06-02 Event-first Task 4 Supervisor fix)
+
+Po review ChatGPT Supervisor z decyzją `CHANGES_REQUESTED` Codex poprawił runtime logikę event-first. `global_shift` nie wraca już do globalnej detekcji i nie nadpisuje `previous_stable_snapshot`. Brak regionów zmian przy istniejących kartach nie jest już interpretowany jako pusty stół; pipeline zachowuje poprzedni layout i nie inkrementuje `empty_snapshot_streak`. Usunięcie kart pozostaje osobnym stanem (`removed_only`) obsługiwanym przez `roi_hints=[]` i dotychczasową ścieżkę potwierdzania pustych snapshotów.
+
 ## Kolejne kroki
 
 1. Implementować event-first background diff wyłącznie według zaktualizowanego głównego planu `2026-06-02-event-first-background-diff-implementation-plan.md`.

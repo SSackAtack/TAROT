@@ -490,11 +490,49 @@ $env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest discover -s app
 
 Wynik: PASS, 291 testów.
 
+### Event-first Task 4 Supervisor fix
+
+#### RED
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_pipelines_contract.TestPipelinesContract.test_snapshot_pipeline_holds_previous_state_on_global_shift -v
+```
+
+Wynik: FAIL przed poprawką. `global_shift=True` nie był obsłużony jako hold-state.
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_pipelines_contract.TestPipelinesContract.test_snapshot_pipeline_preserves_cards_when_no_added_or_removed_regions -v
+```
+
+Wynik: FAIL przed poprawką. Brak regionów zmian przy istniejących kartach uruchamiał analizę i mógł prowadzić do czyszczenia layoutu.
+
+#### GREEN
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_pipelines_contract.TestPipelinesContract.test_snapshot_pipeline_holds_previous_state_on_global_shift app_cv.tests.test_pipelines_contract.TestPipelinesContract.test_snapshot_pipeline_preserves_cards_when_no_added_or_removed_regions -v
+```
+
+Wynik: PASS, 2 testy.
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_pipelines_contract app_cv.tests.test_main_static_audit -v
+```
+
+Wynik: PASS, 22 testy.
+
+```text
+$env:PYTHONDONTWRITEBYTECODE='1'; python -B -m py_compile app_cv\tarotvision\pipelines\snapshot_first.py
+```
+
+Wynik: PASS.
+
+#### Full backend verification
+
 ```text
 $env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest discover -s app_cv\tests -v
 ```
 
-Wynik: PASS, 275 testow.
+Wynik: PASS, 293 testy.
 
 ```text
 Browser QA: http://127.0.0.1:5174/?studio=1

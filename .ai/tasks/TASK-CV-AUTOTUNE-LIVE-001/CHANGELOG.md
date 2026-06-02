@@ -159,3 +159,11 @@
 - Dodano metryki runtime: `change_region_count`, `change_mask_ratio`, `change_global_shift`, `change_ignored_small_count`, `change_ignored_large_count`, `change_added_count`, `change_removed_count`.
 - Zachowano semantykę bezpieczeństwa: gdy event-first działa i nie ma regionów `added_or_moved`, pipeline przekazuje `roi_hints=[]`, a nie `None`.
 - Dodano testy kontraktowe dla przekazania ROI, pustej listy ROI bez globalnego fallbacku oraz statycznego wiring `ChangeDetector` w `main.py`.
+
+## 2026-06-02 Event-first Task 4 Supervisor fix
+
+- Poprawiono dwa krytyczne problemy wskazane w review `CHANGES_REQUESTED_BY_CHATGPT_SUPERVISOR`.
+- Przy `change_result.global_shift=True` pipeline nie wywołuje `SnapshotAnalyzer`, zachowuje poprzedni layout, ustawia `snapshot_reject_reason=global_shift_detected` i nie nadpisuje `previous_stable_snapshot`.
+- Przy braku regionów `added_or_moved` i `removed` pipeline traktuje snapshot jako `no_change_hold_previous`, zachowuje `last_snapshot_cards`, zeruje `empty_snapshot_streak` i nie uruchamia globalnego fallbacku.
+- `previous_stable_snapshot` aktualizuje się tylko dla bezpiecznych stanów: nowy opublikowany layout, potwierdzone usunięcie kart albo no-change bez global shift.
+- Dodano testy regresji dla `global_shift -> hold previous state` oraz `no_change with existing cards -> preserve layout`.

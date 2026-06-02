@@ -158,57 +158,81 @@ class SnapshotFirstPipeline(VisionPipeline):
                     self.runtime_metrics.add("snapshot_analysis_warped", 0)
 
                 roi_hints = None
+                hold_previous_state = False
+                hold_reason = None
+                update_previous_stable_snapshot = False
                 if self.change_detector is not None and self.previous_stable_snapshot is not None:
                     change_result = self.change_detector.detect(
                         self.previous_stable_snapshot,
                         analysis_frame,
                         empty_reference=self.background_model,
                     )
+                    added_regions = [
+                        region for region in change_result.regions
+                        if region.kind == "added_or_moved"
+                    ]
+                    removed_regions = [
+                        region for region in change_result.regions
+                        if region.kind == "removed"
+                    ]
                     self.runtime_metrics.add("change_region_count", len(change_result.regions))
                     self.runtime_metrics.add("change_mask_ratio", change_result.mask_nonzero_ratio)
                     self.runtime_metrics.add("change_global_shift", 1 if change_result.global_shift else 0)
                     self.runtime_metrics.add("change_ignored_small_count", change_result.ignored_small_count)
                     self.runtime_metrics.add("change_ignored_large_count", change_result.ignored_large_count)
-                    self.runtime_metrics.add(
-                        "change_added_count",
-                        sum(1 for region in change_result.regions if region.kind == "added_or_moved"),
-                    )
-                    self.runtime_metrics.add(
-                        "change_removed_count",
-                        sum(1 for region in change_result.regions if region.kind == "removed"),
-                    )
-                    if not change_result.global_shift:
-                        roi_hints = [
-                            region.bbox for region in change_result.regions
-                            if region.kind == "added_or_moved"
-                        ]
+                    self.runtime_metrics.add("change_added_count", len(added_regions))
+                    self.runtime_metrics.add("change_removed_count", len(removed_regions))
+                    if change_result.global_shift:
+                        hold_previous_state = True
+                        hold_reason = "global_shift_detected"
+                    elif not added_regions and not removed_regions:
+                        hold_previous_state = True
+                        hold_reason = "no_change_hold_previous"
+                        update_previous_stable_snapshot = True
+                    else:
+                        roi_hints = [region.bbox for region in added_regions]
 
-                analysis_start = time.perf_counter()
-                result = self.snapshot_analyzer.analyze(analysis_frame, roi_hints=roi_hints)
-                diagnostics = result.diagnostics if isinstance(result.diagnostics, dict) else {}
-                self.runtime_metrics.add("snapshot_quads_found", diagnostics.get("quads_found", 0))
-                self.runtime_metrics.add("snapshot_recognition_attempts", diagnostics.get("recognition_attempts", 0))
-                self.runtime_metrics.add("snapshot_recognition_rejections", diagnostics.get("recognition_rejections", 0))
-                self.runtime_metrics.add("snapshot_candidate_validation_rejections", diagnostics.get("candidate_validation_rejections", 0))
-                self.runtime_metrics.add("recognition_score", diagnostics.get("recognition_score", 0.0))
-                self.runtime_metrics.add("snapshot_recognition_score", diagnostics.get("recognition_score", 0.0))
-                for metric_name, metric_value in summarize_detection_diagnostics(
-                        diagnostics.get("detection")).items():
-                    self.runtime_metrics.add(metric_name, metric_value)
-                analysis_ms = (time.perf_counter() - analysis_start) * 1000.0
-                self.runtime_metrics.add("snapshot_analysis_ms", analysis_ms)
+                analysis_ms = 0.0
+                diagnostics = {}
+                result = None
+                if hold_previous_state:
+                    self.empty_snapshot_streak = 0
+                    self.snapshot_gate.mark_rejected()
+                    layout_snapshot["snapshot_reject_reason"] = hold_reason
+                    self.runtime_metrics.add("snapshot_rejected_count", 1)
+                    self.runtime_metrics.add("snapshot_analysis_ms", analysis_ms)
+                else:
+                    analysis_start = time.perf_counter()
+                    result = self.snapshot_analyzer.analyze(analysis_frame, roi_hints=roi_hints)
+                    diagnostics = result.diagnostics if isinstance(result.diagnostics, dict) else {}
+                    self.runtime_metrics.add("snapshot_quads_found", diagnostics.get("quads_found", 0))
+                    self.runtime_metrics.add("snapshot_recognition_attempts", diagnostics.get("recognition_attempts", 0))
+                    self.runtime_metrics.add("snapshot_recognition_rejections", diagnostics.get("recognition_rejections", 0))
+                    self.runtime_metrics.add("snapshot_candidate_validation_rejections", diagnostics.get("candidate_validation_rejections", 0))
+                    self.runtime_metrics.add("recognition_score", diagnostics.get("recognition_score", 0.0))
+                    self.runtime_metrics.add("snapshot_recognition_score", diagnostics.get("recognition_score", 0.0))
+                    for metric_name, metric_value in summarize_detection_diagnostics(
+                            diagnostics.get("detection")).items():
+                        self.runtime_metrics.add(metric_name, metric_value)
+                    analysis_ms = (time.perf_counter() - analysis_start) * 1000.0
+                    self.runtime_metrics.add("snapshot_analysis_ms", analysis_ms)
                 self.runtime_metrics.add("snapshot_quality_score", selected.quality.quality_score)
-                autotune_recorder_result = self._record_autotune_sample(
-                    diagnostics=diagnostics,
-                    accepted_count=result.card_count,
-                    analysis_ms=analysis_ms,
-                    quality_score=selected.quality.quality_score,
-                )
+                autotune_recorder_result = None
+                if not hold_previous_state:
+                    autotune_recorder_result = self._record_autotune_sample(
+                        diagnostics=diagnostics,
+                        accepted_count=result.card_count,
+                        analysis_ms=analysis_ms,
+                        quality_score=selected.quality.quality_score,
+                    )
 
-                if result.card_count > 0:
+                if hold_previous_state:
+                    pass
+                elif result.card_count > 0:
                     self.empty_snapshot_streak = 0
                     self.snapshot_layout_id += 1
                     self.last_snapshot_cards = result.cards
+                    update_previous_stable_snapshot = True
                     self.snapshot_gate.mark_published(
                         layout_id=self.snapshot_layout_id,
                         now_ms=int(time.time() * 1000),
@@ -233,6 +257,7 @@ class SnapshotFirstPipeline(VisionPipeline):
                         layout_snapshot["snapshot_reject_reason"] = "cards_removed_confirmed"
                         self.runtime_metrics.add("cards_removed_count", 1)
                         self.runtime_metrics.add("layout_changed", 1)
+                        update_previous_stable_snapshot = True
 
                 if (
                         isinstance(autotune_recorder_result, dict)
@@ -246,7 +271,8 @@ class SnapshotFirstPipeline(VisionPipeline):
                     "quality_score": selected.quality.quality_score,
                     "card_count": len(self.last_snapshot_cards),
                 })
-                self.previous_stable_snapshot = analysis_frame.copy()
+                if update_previous_stable_snapshot:
+                    self.previous_stable_snapshot = analysis_frame.copy()
 
         metrics_snapshot = self.runtime_metrics.snapshot()
         runtime_snapshot = {
