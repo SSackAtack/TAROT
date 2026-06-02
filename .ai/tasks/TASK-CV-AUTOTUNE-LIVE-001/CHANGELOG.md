@@ -29,3 +29,10 @@
 - Dodano renderowanie stanu i rekomendacji z `operator.calibration.autotune`.
 - Dodano style panelu zgodne z istniejącą diagnostyką Studio/CV Explain.
 - Rozszerzono statyczny test UI o kontrakt panelu Auto Tune.
+
+## 2026-06-02 Codex Task 8
+
+- Rozszerzono `ProfileStore` o `save_autotune_recommendation()` zapisujące profil z polami `name`, `parameters`, `source`, `score` i `confidence`.
+- Dodano `load_parameters()`, aby `profile_apply` obsługiwał zarówno stare surowe profile, jak i nowe profile z metadanymi.
+- Podłączono `autotune_save` w `main.py` do zapisu rekomendacji z metadanymi zamiast surowej mapy parametrów.
+- Dodano testy zapisu rekomendacji autotuningu, walidacji parametrów i statycznego kontraktu `main.py`.

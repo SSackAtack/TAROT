@@ -124,5 +124,14 @@ class TestMainStaticAudit(unittest.TestCase):
         self.assertIn("set_recommendation", source)
         self.assertNotIn("auto_apply_recommendation", source)
 
+    def test_main_saves_autotune_recommendation_with_metadata(self):
+        """autotune_save powinien zapisywać rekomendację z metadanymi, nie surową mapę parametrów."""
+        source = self._read_main_source()
+
+        self.assertIn('message.type == "autotune_save"', source)
+        self.assertIn("save_autotune_recommendation", source)
+        self.assertIn("load_parameters", source)
+        self.assertNotIn('profile_store.save(message.name, autotune_session.recommendation["profile"])', source)
+
 if __name__ == '__main__':
     unittest.main()

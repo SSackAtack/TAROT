@@ -170,7 +170,7 @@ def handle_control_message(message, camera_session):
         return
 
     if message.type == "profile_apply":
-        values = profile_store.load(message.name)
+        values = profile_store.load_parameters(message.name)
         for param_name, value in values.items():
             runtime_config.update(param_name, value)
         config_session.commit_stable()
@@ -251,7 +251,7 @@ def handle_control_message(message, camera_session):
         if autotune_session is None or not autotune_session.recommendation:
             add_operator_warning("Brak rekomendacji autotuningu do zapisania")
             return
-        profile_store.save(message.name, autotune_session.recommendation["profile"])
+        profile_store.save_autotune_recommendation(message.name, autotune_session.recommendation)
         active_tuning_profile = message.name
         add_operator_warning(f"Zapisano rekomendacje autotuningu jako profil {message.name}")
         return

@@ -99,3 +99,19 @@ cmd /c "npm --prefix E:\Antigravity\Projekty\TAROT\app_ar run build"
 ```
 
 Wynik: PASS. Vite zgłosił ostrzeżenia o dużym chunku oraz nieskutecznym dynamicznym imporcie `textureCache.js`.
+
+### Task 8 profile save/apply RED
+
+```text
+cmd /c "set PYTHONPATH=C:\tmp\tarot_pydeps;app_cv&& python -m unittest app_cv.tests.test_profile_store app_cv.tests.test_main_static_audit -v"
+```
+
+Wynik: FAIL. Nowe testy oczekiwały `ProfileStore.save_autotune_recommendation()`, `load_parameters()` i użycia zapisu rekomendacji z metadanymi w `main.py`.
+
+### Task 8 profile save/apply GREEN
+
+```text
+cmd /c "set PYTHONPATH=C:\tmp\tarot_pydeps;app_cv&& python -m unittest app_cv.tests.test_profile_store app_cv.tests.test_main_static_audit -v"
+```
+
+Wynik: PASS, 12 testów.
