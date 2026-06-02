@@ -52,6 +52,10 @@ Po uwadze operatorskiej o pomieszaniu aktywnych talii z diagnostyką Codex uporz
 
 Codex wdrożył minimalny workflow operatorski Auto Tune zgodny z intencją Michała: scenariusze `Pusta mata`, `1 karta` i `3 karty` zwracają jawny wynik etapu `COLLECTING`/`PASS`/`FAIL`, a `Skalibruj` jest osobną komendą uruchamiającą rekomendację po komplecie próbek. Dodano trwały logger sesji do `logs/autotune_sessions/autotune_*.json`, przyciski `Skalibruj` i `Save Profile` w Studio oraz automatyczną nazwę zapisywanego profilu `studio_live_YYYYMMDD_HHMMSS`. Weryfikacja automatyczna: 275 testów backend PASS, frontend build PASS, Browser QA PASS. Manualny live smoke z fizyczną kamerą nadal pozostaje wymagany przed oznaczeniem taska jako `DONE`.
 
+## Session Status (2026-06-02 Codex preview controls visibility)
+
+Po uwadze Michała o niewidocznych ustawieniach obrazu Codex otworzył domyślnie sekcję `Widok podglądu`, ignoruje wcześniejszy zapis localStorage zwijający tę sekcję i zmienił etykietę trybu `table` na `Wirtualny stół`. Weryfikacja: statyczne testy UI PASS, frontend build PASS, Browser QA PASS bez błędów konsoli.
+
 ## Decyzja strategiczna
 
 Po nowych funkcjach rozpoznawania nie wolno implementowac autotuningu jako "znajdz najlepsze Canny/min_area". To byloby lokalne minimum: system moglby idealnie wykrywac prostokaty, ale nadal odrzucac karty przez ORB, homografie, threshold lub konflikt aktywnych talii.

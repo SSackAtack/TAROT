@@ -81,3 +81,9 @@
 - Dodano komende WebSocket `autotune_calibrate`.
 - Zmieniono backend tak, aby rekomendacja powstawala po jawnej komendzie `autotune_calibrate`, a nie automatycznie po zebraniu probek.
 - Panel Studio pokazuje wynik etapu i ma nowe przyciski `Skalibruj` oraz `Save Profile`.
+
+## 2026-06-02 Codex preview controls visibility
+
+- Sekcja `Widok podgladu` jest teraz domyslnie otwarta w prawym panelu Studio.
+- Stary zapis localStorage zwijajacy sekcje `preview` jest ignorowany, aby operator od razu widzial przelaczniki obrazu.
+- Przycisk trybu `table` ma czytelniejsza etykiete `Wirtualny stol`.

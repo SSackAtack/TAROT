@@ -19,7 +19,7 @@ let isDecksApplying = false
 let studioPreviewMode = 'pip'
 let studioPipSize = Number(localStorage.getItem('studio:pipSize') || 30)
 const studioSidebarCollapsedStorageKey = 'studio:sidebarCollapsedSections'
-const studioSidebarDefaultOpenSections = new Set(['transport', 'autotune', 'cv-diagnostics'])
+const studioSidebarDefaultOpenSections = new Set(['transport', 'preview', 'autotune', 'cv-diagnostics'])
 let studioSidebarCollapsedSections = loadStudioSidebarCollapsedSections()
 
 const studioCameraLabels = {
@@ -107,7 +107,9 @@ function loadStudioSidebarCollapsedSections() {
     try {
         const rawValue = localStorage.getItem(studioSidebarCollapsedStorageKey)
         const parsed = rawValue ? JSON.parse(rawValue) : []
-        return new Set(Array.isArray(parsed) ? parsed : [])
+        const collapsedSections = new Set(Array.isArray(parsed) ? parsed : [])
+        collapsedSections.delete('preview')
+        return collapsedSections
     } catch {
         return new Set()
     }
@@ -627,7 +629,7 @@ export function createStudioConsole() {
             <div class="studio-preview-mode-panel" id="studio-preview-mode-panel">
                 <div class="studio-preview-mode-label">Widok</div>
                 <div class="studio-preview-mode-actions">
-                    <button type="button" class="studio-preview-mode-btn" data-preview-mode="table">Stół</button>
+                    <button type="button" class="studio-preview-mode-btn" data-preview-mode="table">Wirtualny stół</button>
                     <button type="button" class="studio-preview-mode-btn" data-preview-mode="camera">Kamera</button>
                     <button type="button" class="studio-preview-mode-btn studio-preview-mode-btn--active" data-preview-mode="pip">PiP</button>
                 </div>

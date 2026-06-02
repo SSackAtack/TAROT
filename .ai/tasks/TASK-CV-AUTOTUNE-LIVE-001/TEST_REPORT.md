@@ -306,3 +306,23 @@ Browser QA: http://127.0.0.1:5174/?studio=1
 ```
 
 Wynik: PASS. Panel Auto Tune renderuje przyciski `Pusta mata`, `1 karta`, `3 karty`, `Skalibruj`, `Apply`, `Save Profile`, `Cancel`; konsola przegladarki nie zglosila bledow. Nie klikano akcji live, aby nie mieszac w aktywnej sesji operatora.
+
+### Preview controls visibility
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_camera_controls_static -v
+```
+
+Wynik: PASS, 7 testow.
+
+```text
+npm --prefix E:\Antigravity\Projekty\TAROT\app_ar run build
+```
+
+Wynik: PASS. Vite zglosil te same istniejace ostrzezenia: duzy chunk po minifikacji oraz nieskuteczny dynamiczny import `src/renderer/textureCache.js`.
+
+```text
+Browser QA: http://127.0.0.1:5174/?studio=1
+```
+
+Wynik: PASS. Sekcja `Widok podgladu` jest rozwinieta, przyciski `Wirtualny stol`, `Kamera`, `PiP` oraz suwak rozmiaru PiP sa widoczne; konsola przegladarki bez bledow.
