@@ -2,11 +2,11 @@
 
 ## Status
 
-DONE
+APPROVED
 
 ## Branch
 
-`codex/operator-cv-explainability`
+`master`
 
 ## Stan aktualny
 
@@ -16,8 +16,11 @@ Dodano backendowy builder `operator.explainability` oraz panel `CV Explain` w St
 
 Codex wdrożył zaakceptowany wariant B po visual companion: prowadzona diagnostyka z przyczynami i następnym krokiem.
 
+## Session Status (2026-06-02)
+
+Codex przygotował zadanie do merge: odświeżono lokalne zależności Python w `C:\tmp\tarot_pydeps`, powtórzono pełną weryfikację backendu i build frontendu. Wynik: backend 234/234 PASS, Vite build PASS. Zadanie zatwierdzone do scalenia z `master`.
+
 ## Kolejne kroki
 
-1. Review zmian.
-2. Lokalny smoke test Studio z kamerą.
-3. Po akceptacji merge do `master`.
+1. Po merge wykonać opcjonalny live smoke test Studio z kamerą.
+2. Kontynuować kolejne małe zadania stabilizacyjne zgodnie z `.ai/TASKS_INDEX.md`.

@@ -61,3 +61,19 @@ cmd /c "set PYTHONPATH=app_cv && python -m unittest app_cv.tests.test_camera_con
 ```
 
 Wynik: PASS, 4 testy.
+
+## 2026-06-02
+
+### Pre-merge verification
+
+```text
+cmd /c "cd /d E:\Antigravity\Projekty\TAROT && set PYTHONPATH=C:\tmp\tarot_pydeps;app_cv && python -m unittest discover -s app_cv\tests -v"
+```
+
+Wynik: PASS, 234 testy.
+
+```text
+cmd.exe /c npm --prefix E:\Antigravity\Projekty\TAROT\app_ar run build
+```
+
+Wynik: PASS. Vite ponownie zgłosił istniejące ostrzeżenia o dużym chunku oraz nieskutecznym dynamicznym imporcie `textureCache.js`.
