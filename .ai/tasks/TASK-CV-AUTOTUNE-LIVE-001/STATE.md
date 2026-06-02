@@ -64,8 +64,12 @@ Po dyskusji z Michalem o uzyciu pustej maty jako stalej referencji oraz kolejnyc
 
 Doprecyzowano architekturę: autotuning jest procedurą kalibracyjną przed sesją, a event-first background diff jest właściwym runtime pipeline podczas nagrywania. Empty reference powstaje w kalibracji i jest używany w runtime. Global card detection po udanej kalibracji nie jest główną ścieżką roboczą.
 
+## Session Status (2026-06-02 Event-first plan amendment 001)
+
+ChatGPT Supervisor dopisał obowiązkową erratę planu: `docs/superpowers/plans/2026-06-02-event-first-background-diff-plan-amendment-001.md`. Errata blokuje implementację do czasu uwzględnienia dwóch zasad: `roi_hints=[]` nie może uruchamiać globalnej detekcji, a walidacja `empty_reference` musi porównywać bieżący pusty frame z referencją przez `BackgroundModel.changed_ratio()` lub równoważny mechanizm, nie `analysis_frame` z samym sobą.
+
 ## Kolejne kroki
 
-1. Wykonać manualny live smoke z kamerą: Auto Tune `empty`, `one_card`, `three_cards`, potem `Apply` i zapis profilu.
-2. W live smoke sprawdzić, czy `recognition_score`, `candidate_validation_rejections` oraz `CV Explain` odpowiadają realnej liczbie kart w kadrze, zwlaszcza przy odblasku na pustej czesci maty.
-3. Jeśli smoke będzie GREEN, oznaczyć task jako `DONE` i przygotować review/merge branchu `codex/live-autotuning-foundation`.
+1. Przed implementacją event-first background diff uwzględnić `event-first-background-diff-plan-amendment-001.md` jako obowiązkowy dodatek do planu.
+2. Następny bezpieczny task implementacyjny: `Task 1: Stable Empty Reference`.
+3. Manualny live smoke z kamerą pozostaje wymagany dla obecnego `TASK-CV-AUTOTUNE-LIVE-001` przed oznaczeniem go jako `DONE`.
