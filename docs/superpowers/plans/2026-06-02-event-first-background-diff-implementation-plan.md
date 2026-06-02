@@ -19,12 +19,54 @@
 - Auto Tune po ostatnich poprawkach potrafi wymusic `3/3` probek i zapisac `sample_collected` oraz `stage_completed`.
 - Live obserwacja: etap `Pusta mata` zakonczyl sie `FAIL`, bo system wykryl false positives: `candidate_count` 1-2, `accepted_count` 1.
 
+## Architectural Clarification: Autotune vs Runtime
+
+Autotune / Calibration tworzy i waliduje referencje.
+Runtime / Recording Pipeline używa referencji do pracy podczas sesji.
+
+Autotuning nie jest wlasciwym pipeline nagraniowym. Jest procedura przygotowania sesji: wybor aktywnej talii, sprawdzenie kamery i swiatla, sprawdzenie ArUco, zebranie pustej maty, utworzenie `empty_reference`, test 1 karty, test 3 kart i zapis profilu sesji. Probki autotuningu nie powinny byc mieszane z roboczym stanem sesji nagraniowej.
+
+Runtime / Recording Pipeline dziala podczas wlasciwego nagrania. Czeka na ruch przez motion gate, robi snapshot po ustaniu ruchu, warpuje go do przestrzeni maty, porownuje `current_snapshot` z `previous_stable_snapshot` i `empty_reference`, klasyfikuje zmiany, przekazuje ROI do `SnapshotAnalyzer`, rozpoznaje karte przez ORB tylko w ROI, aktualizuje stan kart i publikuje wynik do Studio / AR.
+
+Po udanej kalibracji `empty_reference` globalne szukanie kart na calej macie nie jest glowna sciezka runtime. Global detection moze pozostac tylko fallbackiem diagnostycznym albo trybem awaryjnym, gdy nie ma aktywnej referencji pustej maty.
+
+## Runtime Assumptions
+
+- Nagrania odbywaja sie w kontrolowanym pomieszczeniu.
+- Zrodlo swiatla jest stale.
+- Kamera ma docelowo wylaczone auto focus / auto exposure / auto white balance, jesli sterownik na to pozwala.
+- Kamera i mata nie zmieniaja pozycji w trakcie sesji.
+- Po ustaniu ruchu znaczaca zmiana miedzy stabilnymi snapshotami oznacza dodanie, usuniecie albo przesuniecie karty.
+- Reka i cien reki nie sa normalnym wejsciem do CV, bo motion gate ma opoznic analize do momentu stabilizacji sceny.
+- Glownej sciezki runtime nie projektujemy pod losowe pojawianie sie obcych ksztaltow lub nowych odblaskow na pustej macie. Takie przypadki sa obslugiwane jako ostrzezenia awaryjne, nie jako centralne zalozenie architektury.
+
+## Empty Reference Bootstrap
+
+Pierwsze utworzenie `empty_reference` nie moze zalezec od starego wyniku globalnej detekcji kart. Obecny problem polega wlasnie na tym, ze stara detekcja potrafi widziec false positives na pustej macie.
+
+Docelowa sekwencja:
+
+1. Operator uruchamia etap `Pusta mata`.
+2. System zbiera 3-5 stabilnych snapshotow pustej maty po motion gate / manualnym request sample.
+3. System tworzy median `empty_reference` z tych snapshotow.
+4. Dopiero po utworzeniu referencji system wykonuje walidacje, czy pusta mata jest stabilna i nie generuje regionow zmian.
+5. Jezeli walidacja przejdzie, profil sesji moze uzyc tej referencji w runtime.
+6. Jezeli walidacja nie przejdzie, Studio pokazuje operatorowi problem: niestabilne swiatlo, global shift, zbyt duzy szum albo false positive region.
+
+## Safety Rules for Runtime
+
+1. Jesli `empty_reference` jest aktywny i `ChangeDetector` nie zwraca `added_or_moved`, runtime nie powinien uruchamiac globalnej detekcji kart jako podstawowej sciezki.
+2. Jesli `ChangeDetector` zwraca `ignored_global_shift`, pipeline powinien zachowac poprzedni dobry stan i pokazac ostrzezenie operatora.
+3. Jesli nie ma `empty_reference`, system moze dzialac w fallback mode, ale Studio powinno jasno pokazac, ze pracuje bez pelnej kalibracji.
+4. Jesli ROI jest zbyt male albo niepewne, pipeline powinien uzyc paddingu i diagnostyki, a nie publikowac przypadkowe karty.
+5. ORB / recognition nadal pozostaje finalna walidacja tozsamosci karty.
+
 ## Projekt Docelowy
 
 ### Referencje
 
 1. `empty_reference`
-   - Zapisany po etapie `Pusta mata`.
+   - Tworzony przez Calibration / Autotune Mode po zebraniu 3-5 stabilnych snapshotow pustej maty.
    - Najlepiej w przestrzeni sprostowanej przez ArUco (`warped_frame`), bo wtedy piksele sa porownywalne miedzy snapshotami.
    - Sluzy do odpowiedzi: "co nie jest mata?".
 
@@ -49,6 +91,33 @@
 ### Zasada Bezpieczenstwa
 
 ROI hints maja ograniczac i priorytetyzowac detekcje, ale w pierwszej iteracji nie moga bezwarunkowo kasowac wszystkich kart ze stanu. Jesli detektor zmian zwroci `ignored_global_shift` albo brak wiarygodnych ROI przy istniejacych kartach, pipeline powinien zachowac poprzedni stan i dodac ostrzezenie operatora.
+
+### Podzial Trybow
+
+Calibration / Autotune Mode:
+
+- wybiera aktywna talie,
+- sprawdza stabilnosc kamery i swiatla,
+- sprawdza ArUco / obszar roboczy maty,
+- zbiera kilka stabilnych snapshotow pustej maty,
+- tworzy median `empty_reference`,
+- waliduje test 1 karty,
+- waliduje test 3 kart,
+- dobiera podstawowe progi change detection, jesli bedzie to potrzebne,
+- zapisuje profil sesji.
+
+Runtime / Recording Pipeline:
+
+- czeka na ruch przez motion gate,
+- wykonuje snapshot dopiero po ustaniu ruchu,
+- warpuje snapshot do przestrzeni maty, jesli ArUco jest skalibrowane,
+- porownuje `current_snapshot` z `previous_stable_snapshot`,
+- porownuje `current_snapshot` z `empty_reference`,
+- klasyfikuje zmiany jako `added_or_moved`, `removed`, `ignored_small`, `ignored_global_shift`,
+- przekazuje ROI tylko dla realnych regionow zmian do `SnapshotAnalyzer`,
+- rozpoznaje karte przez ORB tylko w ROI,
+- aktualizuje stan kart,
+- publikuje stan do Studio / AR.
 
 ---
 
@@ -101,7 +170,39 @@ ROI hints maja ograniczac i priorytetyzowac detekcje, ale w pierwszej iteracji n
 
 ---
 
-## Task 1: Rozszerz BackgroundModel o stabilna referencje pustej maty
+## Task 0: Clarify architecture
+
+**Files:**
+- Modify: `docs/superpowers/plans/2026-06-02-event-first-background-diff-implementation-plan.md`
+
+- [x] **Step 1: Doprecyzuj Autotune vs Runtime**
+
+W planie musi byc jawna zasada:
+
+```text
+Autotune / Calibration tworzy i waliduje referencje.
+Runtime / Recording Pipeline używa referencji do pracy podczas sesji.
+```
+
+- [x] **Step 2: Dopisz runtime assumptions**
+
+W planie musza byc zapisane kontrolowane zalozenia sesji: stale swiatlo, stabilna kamera/mata, docelowo wylaczone auto focus / auto exposure / auto white balance, motion gate czekajacy na ustanie ruchu.
+
+- [x] **Step 3: Dopisz bootstrap empty_reference**
+
+Pierwsze `empty_reference` musi powstac z 3-5 stabilnych snapshotow pustej maty przed walidacja, a nie na podstawie starej globalnej detekcji kart.
+
+- [x] **Step 4: Dopisz safety rules**
+
+Po udanej kalibracji global detection nie jest glowna sciezka runtime. Jest fallbackiem diagnostycznym albo trybem awaryjnym bez aktywnej referencji.
+
+- [x] **Step 5: Zaktualizuj task breakdown**
+
+Kolejnosc implementacji musi byc: Task 1 `Stable Empty Reference`, Task 2 `ChangeDetector`, Task 3 `SnapshotAnalyzer ROI Hints`, Task 4 `Runtime Pipeline Integration`, Task 5 `Autotune Creates Session Reference`, Task 6 `CV Explain and Diagnostics`, Task 7 `Live Smoke`.
+
+---
+
+## Task 1: Stable Empty Reference
 
 **Files:**
 - Modify: `app_cv/tarotvision/background_model.py`
@@ -228,7 +329,7 @@ git commit -m "feat: ustabilizuj model pustej maty"
 
 ---
 
-## Task 2: Dodaj ChangeDetector dla roznic miedzy snapshotami
+## Task 2: ChangeDetector
 
 **Files:**
 - Create: `app_cv/tarotvision/change_detection.py`
@@ -461,7 +562,7 @@ git commit -m "feat: dodaj detekcje zmian miedzy snapshotami"
 
 ---
 
-## Task 3: Dodaj ROI hints do SnapshotAnalyzer
+## Task 3: SnapshotAnalyzer ROI Hints
 
 **Files:**
 - Modify: `app_cv/tarotvision/snapshot_analyzer.py`
@@ -577,10 +678,12 @@ git commit -m "feat: ogranicz analize snapshotu do regionow zmian"
 
 ---
 
-## Task 4: Podlacz ChangeDetector do SnapshotFirstPipeline
+## Task 4: Runtime Pipeline Integration
 
 **Files:**
+- Modify: `app_cv/main.py`
 - Modify: `app_cv/tarotvision/pipelines/snapshot_first.py`
+- Test: `app_cv/tests/test_main_static_audit.py`
 - Test: `app_cv/tests/test_pipelines_contract.py`
 
 - [ ] **Step 1: Write failing test**
@@ -677,7 +780,29 @@ $env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.te
 
 Expected: FAIL because `SnapshotFirstPipeline.__init__` does not accept `change_detector`.
 
-- [ ] **Step 3: Implement pipeline wiring**
+- [ ] **Step 3: Add main.py static wiring test**
+
+Add to `app_cv/tests/test_main_static_audit.py`:
+
+```python
+    def test_main_wires_change_detector_into_snapshot_pipeline(self):
+        source = self._read_main_source()
+
+        self.assertIn("from tarotvision.change_detection import ChangeDetector", source)
+        self.assertIn("change_detector = ChangeDetector", source)
+        self.assertIn("change_detector=change_detector", source)
+        self.assertIn("background_model=background_model", source)
+```
+
+Run:
+
+```powershell
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_main_static_audit.TestMainStaticAudit.test_main_wires_change_detector_into_snapshot_pipeline -v
+```
+
+Expected: FAIL because `ChangeDetector` is not imported/wired.
+
+- [ ] **Step 4: Implement pipeline wiring**
 
 Modify `SnapshotFirstPipeline.__init__`:
 
@@ -735,62 +860,13 @@ with:
                 result = self.snapshot_analyzer.analyze(analysis_frame, roi_hints=roi_hints)
 ```
 
-After `layout_snapshot.update(...)`, update previous stable:
+After the `layout_snapshot.update({ ... })` block that writes `layout_id`, `state`, `analysis_ms`, `quality_score` and `card_count`, update previous stable:
 
 ```python
                 self.previous_stable_snapshot = analysis_frame.copy()
 ```
 
-- [ ] **Step 4: Verify GREEN**
-
-Run:
-
-```powershell
-$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_pipelines_contract -v
-```
-
-Expected: PASS.
-
-- [ ] **Step 5: Commit**
-
-```powershell
-git add app_cv/tarotvision/pipelines/snapshot_first.py app_cv/tests/test_pipelines_contract.py
-git commit -m "feat: uzyj regionow zmian w snapshot-first"
-```
-
----
-
-## Task 5: Podlacz ChangeDetector w main.py i publikuj metryki operatora
-
-**Files:**
-- Modify: `app_cv/main.py`
-- Test: `app_cv/tests/test_main_static_audit.py`
-
-- [ ] **Step 1: Write failing static test**
-
-Add to `app_cv/tests/test_main_static_audit.py`:
-
-```python
-    def test_main_wires_change_detector_into_snapshot_pipeline(self):
-        source = self._read_main_source()
-
-        self.assertIn("from tarotvision.change_detection import ChangeDetector", source)
-        self.assertIn("change_detector = ChangeDetector", source)
-        self.assertIn("change_detector=change_detector", source)
-        self.assertIn("background_model=background_model", source)
-```
-
-- [ ] **Step 2: Verify RED**
-
-Run:
-
-```powershell
-$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_main_static_audit.TestMainStaticAudit.test_main_wires_change_detector_into_snapshot_pipeline -v
-```
-
-Expected: FAIL because `ChangeDetector` is not imported/wired.
-
-- [ ] **Step 3: Implement main.py wiring**
+- [ ] **Step 5: Implement main.py wiring**
 
 In `app_cv/main.py`, add import:
 
@@ -804,33 +880,33 @@ Near `background_model = BackgroundModel()` add:
 change_detector = ChangeDetector()
 ```
 
-In `SnapshotFirstPipeline(...)` constructor call add:
+In the existing `SnapshotFirstPipeline(` constructor call in `app_cv/main.py`, add:
 
 ```python
     change_detector=change_detector,
     background_model=background_model,
 ```
 
-- [ ] **Step 4: Verify GREEN**
+- [ ] **Step 6: Verify GREEN**
 
 Run:
 
 ```powershell
-$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_main_static_audit -v
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_pipelines_contract app_cv.tests.test_main_static_audit -v
 ```
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 7: Commit**
 
 ```powershell
-git add app_cv/main.py app_cv/tests/test_main_static_audit.py
-git commit -m "feat: podlacz detektor zmian do glownego pipeline"
+git add app_cv/main.py app_cv/tarotvision/pipelines/snapshot_first.py app_cv/tests/test_main_static_audit.py app_cv/tests/test_pipelines_contract.py
+git commit -m "feat: uzyj regionow zmian w snapshot-first"
 ```
 
 ---
 
-## Task 6: Uzyj pustej maty z Auto Tune jako empty_reference
+## Task 5: Autotune Creates Session Reference
 
 **Files:**
 - Modify: `app_cv/main.py`
@@ -838,12 +914,14 @@ git commit -m "feat: podlacz detektor zmian do glownego pipeline"
 - Test: `app_cv/tests/test_main_static_audit.py`
 - Test: `app_cv/tests/test_pipelines_contract.py`
 
+**Important:** Ten task nie moze uzywac starego wyniku globalnej detekcji kart jako warunku utworzenia pierwszego `empty_reference`. Najpierw powstaje median reference z kilku stabilnych snapshotow pustej maty. Dopiero potem system waliduje, czy referencja jest stabilna i czy nie generuje regionow zmian.
+
 - [ ] **Step 1: Write failing tests**
 
 Add static test:
 
 ```python
-    def test_autotune_empty_stage_captures_background_reference(self):
+    def test_autotune_empty_stage_bootstraps_reference_before_validation(self):
         source = self._read_main_source()
         autotune_start_index = source.index('if message.type == "autotune_start"')
         autotune_start_block = source[
@@ -852,26 +930,46 @@ Add static test:
 
         self.assertIn('message.scenario == "empty"', autotune_start_block)
         self.assertIn("background_model.clear()", autotune_start_block)
+        self.assertIn("empty_reference_bootstrap", source)
+        self.assertIn("capture_many", source)
 ```
 
 Add pipeline contract test:
 
 ```python
-    def test_snapshot_pipeline_captures_empty_reference_after_empty_autotune_pass(self):
-        # Use a MagicMock background_model and autotune_sample_recorder returning capture_empty_reference.
-        # Expected: background_model.capture(analysis_frame) called once after analyzing empty snapshot.
-```
-
-Implement this test fully like existing pipeline tests:
-
-```python
+    def test_snapshot_pipeline_collects_empty_reference_frames_before_validation(self):
         background_model = MagicMock()
-        recorder = MagicMock(return_value={"capture_empty_reference": True})
-        ...
-        pipeline = SnapshotFirstPipeline(..., background_model=background_model, autotune_sample_recorder=recorder)
-        ...
-        background_model.capture.assert_called_once()
+        recorder = MagicMock(side_effect=[
+            {"collect_empty_reference_frame": True},
+            {"collect_empty_reference_frame": True},
+            {"collect_empty_reference_frame": True, "finalize_empty_reference": True},
+        ])
+
+        pipeline = SnapshotFirstPipeline(
+            camera_session=camera_session,
+            opencv_preview=opencv_preview,
+            status_store=status_store,
+            diagnostics_writer=diagnostics_writer,
+            snapshot_gate=snapshot_gate,
+            snapshot_analyzer=snapshot_analyzer,
+            table_calibration=table_calibration,
+            runtime_metrics=runtime_metrics,
+            runtime_config=runtime_config,
+            build_operator_snapshot_fn=MagicMock(return_value={}),
+            operator_warnings=[],
+            log_dir="dummy",
+            runtime_profile="default",
+            background_model=background_model,
+            autotune_sample_recorder=recorder,
+        )
+
+        # Process three forced empty snapshots.
+        # Expected: background_model.capture_many(frames) is called only after the third frame,
+        # not after a global detector PASS.
+        background_model.capture_many.assert_called_once()
 ```
+
+Implement this test fully like existing pipeline tests in `app_cv/tests/test_pipelines_contract.py`; do not leave ellipses in committed test code.
 
 - [ ] **Step 2: Verify RED**
 
@@ -883,27 +981,12 @@ $env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.te
 
 Expected: FAIL for missing clear/capture behavior.
 
-- [ ] **Step 3: Implement capture signal**
+- [ ] **Step 3: Implement bootstrap state in main.py**
 
-In `record_autotune_sample_from_snapshot(sample)` add:
-
-```python
-    if scenario == "empty" and autotune_session.ready_to_score():
-        result = autotune_session.stage_result()
-        if result["state"] == "PASS":
-            return {"capture_empty_reference": True}
-```
-
-But preserve existing `stage_completed` logging. The final shape should be:
+Add a small bootstrap buffer near existing autotune globals:
 
 ```python
-    if autotune_session.ready_to_score():
-        result = autotune_session.stage_result()
-        write_autotune_log("stage_completed")
-        add_operator_warning(...)
-        if scenario == "empty" and result["state"] == "PASS":
-            return {"capture_empty_reference": True}
-        return None
+empty_reference_bootstrap = []
 ```
 
 In `autotune_start` block:
@@ -911,20 +994,82 @@ In `autotune_start` block:
 ```python
         if message.scenario == "empty":
             background_model.clear()
+            empty_reference_bootstrap.clear()
 ```
+
+In `record_autotune_sample_from_snapshot(sample)`, return bootstrap signals for empty scenario:
+
+```python
+    if scenario == "empty":
+        if autotune_session.ready_to_score():
+            return {
+                "collect_empty_reference_frame": True,
+                "finalize_empty_reference": True,
+            }
+        return {
+            "collect_empty_reference_frame": True,
+            "request_next_sample": True,
+        }
+```
+
+Preserve existing `stage_completed` logging. The final ready block should be shaped like:
+
+```python
+    if autotune_session.ready_to_score():
+        result = autotune_session.stage_result()
+        write_autotune_log("stage_completed")
+        add_operator_warning(
+            f"Autotuning {scenario}: {result['state']} - {result['message']}"
+        )
+        if scenario == "empty":
+            return {
+                "collect_empty_reference_frame": True,
+                "finalize_empty_reference": True,
+            }
+        return None
+```
+
+- [ ] **Step 4: Implement capture_many in pipeline**
 
 In pipeline after recorder result:
 
 ```python
                 if (
                         isinstance(autotune_recorder_result, dict)
-                        and autotune_recorder_result.get("capture_empty_reference")
+                        and autotune_recorder_result.get("collect_empty_reference_frame")):
+                    self.empty_reference_frames.append(analysis_frame.copy())
+
+                if (
+                        isinstance(autotune_recorder_result, dict)
+                        and autotune_recorder_result.get("finalize_empty_reference")
                         and self.background_model is not None):
-                    self.background_model.capture(analysis_frame)
+                    self.background_model.capture_many(self.empty_reference_frames)
                     self.runtime_metrics.add("background_reference_captured", 1)
+                    self.empty_reference_frames = []
 ```
 
-- [ ] **Step 4: Verify GREEN**
+Add `self.empty_reference_frames = []` to `SnapshotFirstPipeline.__init__`.
+
+- [ ] **Step 5: Validate reference after bootstrap**
+
+After `background_model.capture_many(self.empty_reference_frames)`, perform validation with `ChangeDetector` using the new reference and the last empty frame:
+
+```python
+                if (
+                        self.change_detector is not None
+                        and self.background_model is not None
+                        and self.background_model.active):
+                    validation = self.change_detector.detect(
+                        analysis_frame,
+                        analysis_frame,
+                        empty_reference=self.background_model,
+                    )
+                    self.runtime_metrics.add("background_reference_validation_regions", len(validation.regions))
+```
+
+This validation is expected to report zero regions for a stable empty reference. If it reports regions, Studio/CV Explain should surface the issue in Task 6.
+
+- [ ] **Step 6: Verify GREEN**
 
 Run:
 
@@ -934,7 +1079,7 @@ $env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.te
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 7: Commit**
 
 ```powershell
 git add app_cv/main.py app_cv/tarotvision/pipelines/snapshot_first.py app_cv/tests/test_main_static_audit.py app_cv/tests/test_pipelines_contract.py
@@ -943,7 +1088,7 @@ git commit -m "feat: zapisz pusta mate jako referencje tła"
 
 ---
 
-## Task 7: Dodaj diagnostyke zmian do CV Explain i logow
+## Task 6: CV Explain and Diagnostics
 
 **Files:**
 - Modify: `app_cv/tarotvision/operator_explainability.py`
@@ -1019,7 +1164,7 @@ git commit -m "feat: wyjasnij regiony zmian w cv explain"
 
 ---
 
-## Task 8: Pelna weryfikacja i live smoke
+## Task 7: Live Smoke
 
 **Files:**
 - Modify: `.ai/tasks/TASK-CV-AUTOTUNE-LIVE-001/STATE.md`
@@ -1118,6 +1263,10 @@ git commit -m "docs: zapisz weryfikacje event-first background diff"
 - Po ruchu system porownuje `current_snapshot` z `previous_stable_snapshot`.
 - Regiony zmian sa filtrowane po rozmiarze; drobne zmiany nie uruchamiaja rozpoznawania kart.
 - `SnapshotAnalyzer` przyjmuje `roi_hints` i ogranicza detekcje do tych obszarow.
+- Po aktywnej kalibracji `empty_reference` global card detection nie jest glowna sciezka robocza; moze dzialac tylko jako fallback diagnostyczny albo tryb awaryjny.
+- Gdy `ChangeDetector` nie zwraca `added_or_moved`, runtime nie publikuje przypadkowych kart z globalnego skanu.
+- Gdy `ChangeDetector` zwraca `ignored_global_shift`, pipeline zachowuje poprzedni dobry stan i publikuje ostrzezenie operatora.
+- Gdy nie ma aktywnego `empty_reference`, Studio jasno pokazuje fallback mode bez pelnej kalibracji.
 - Runtime metrics publikuja `change_region_count`, `change_mask_ratio`, `change_global_shift`, `change_added_count`, `change_removed_count`.
 - CV Explain pokazuje, czy problem lezy w braku regionow zmian, globalnej zmianie obrazu czy false positives detektora.
 - Pelny backend test suite przechodzi.
@@ -1129,7 +1278,7 @@ git commit -m "docs: zapisz weryfikacje event-first background diff"
 - Autoekspozycja kamery moze generowac globalne roznice. Mitigacja: `global_shift_ratio` i ostrzezenie zamiast publikacji nowego stanu.
 - Zly warp ArUco moze przesuwac cala mate. Mitigacja: porownywac tylko gdy `table.calibrated == True`; inaczej fallback do globalnej detekcji z ostrzezeniem.
 - Karta przesunieta o kilka pikseli moze dac obwodke zamiast pelnego regionu. Mitigacja: morfologia close + padding ROI.
-- Karta lezaca od poczatku przed capture pustej maty zostanie uznana za tlo. Mitigacja: `Pusta mata PASS` wymaga `candidate_count=0` i `accepted_count=0`; UI musi mowic operatorowi, zeby zdjal wszystkie karty.
+- Karta lezaca od poczatku przed capture pustej maty zostanie uznana za tlo. Mitigacja: UI musi jasno mowic operatorowi, zeby zdjal wszystkie karty; po utworzeniu median `empty_reference` test 1 karty musi wykazac region `added_or_moved` o rozmiarze zblizonym do karty.
 - Zbyt agresywne ROI moze ukryc prawdziwa karte. Mitigacja w pierwszej iteracji: ROI ogranicza tylko przy wiarygodnych regionach; przy `global_shift` albo braku referencji fallback do dotychczasowej analizy.
 
 ## Kolejnosc Integracji
@@ -1137,9 +1286,9 @@ git commit -m "docs: zapisz weryfikacje event-first background diff"
 1. Najpierw stabilny `BackgroundModel`.
 2. Potem niezalezny `ChangeDetector`.
 3. Potem ROI hints w `SnapshotAnalyzer`.
-4. Potem wiring w `SnapshotFirstPipeline`.
-5. Potem `main.py` i Auto Tune empty reference.
-6. Na koncu CV Explain, logi i live smoke.
+4. Potem wiring runtime w `SnapshotFirstPipeline` i `main.py`.
+5. Potem Auto Tune empty reference jako procedura kalibracyjna.
+6. Potem CV Explain i diagnostyka.
+7. Na koncu live smoke.
 
 Ta kolejnosc jest celowa: najpierw budujemy czyste, testowalne moduly bez kamery, dopiero pozniej podpinamy je do runtime.
-

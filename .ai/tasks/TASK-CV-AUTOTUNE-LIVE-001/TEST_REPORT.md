@@ -247,6 +247,20 @@ Plik planu:
 docs/superpowers/plans/2026-06-02-event-first-background-diff-implementation-plan.md
 ```
 
+### Event-first plan clarification
+
+PLAN ONLY. Nie uruchamiano testów kodu, ponieważ zmieniono wyłącznie dokumentację planistyczną. Zweryfikowano ręcznie diff dokumentacji.
+
+Zweryfikowany zakres:
+
+```text
+docs/superpowers/plans/2026-06-02-event-first-background-diff-implementation-plan.md
+.ai/tasks/TASK-CV-AUTOTUNE-LIVE-001/STATE.md
+.ai/tasks/TASK-CV-AUTOTUNE-LIVE-001/CHANGELOG.md
+.ai/tasks/TASK-CV-AUTOTUNE-LIVE-001/TEST_REPORT.md
+.ai/TASKS_INDEX.md
+```
+
 ### Continuation manual live smoke
 
 Wynik: NOT RUN w tej sesji. Nadal wymagany jest test z fizyczna kamera i stolem: `empty`, `one_card`, `three_cards`, rekomendacja, `Apply`, zapis profilu w `logs/calibration_profiles/` oraz kontrola `CV Explain` przy realnym odblasku.

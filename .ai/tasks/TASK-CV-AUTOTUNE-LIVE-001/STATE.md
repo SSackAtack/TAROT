@@ -60,6 +60,10 @@ Po live obserwacji Michala: klikniecie `Pusta mata` tworzylo log `stage_started`
 
 Po dyskusji z Michalem o uzyciu pustej maty jako stalej referencji oraz kolejnych stabilnych snapshotow jako referencji zdarzen Codex przygotowal szczegolowy plan implementacyjny: `docs/superpowers/plans/2026-06-02-event-first-background-diff-implementation-plan.md`. Plan opisuje przejscie z globalnego szukania kart na model `empty_reference` + `previous_stable_snapshot` + ROI z regionow zmian. Kod nie zostal zmieniony w tej sesji planistycznej.
 
+## Session Status (2026-06-02 Event-first plan clarification)
+
+Doprecyzowano architekturę: autotuning jest procedurą kalibracyjną przed sesją, a event-first background diff jest właściwym runtime pipeline podczas nagrywania. Empty reference powstaje w kalibracji i jest używany w runtime. Global card detection po udanej kalibracji nie jest główną ścieżką roboczą.
+
 ## Kolejne kroki
 
 1. Wykonać manualny live smoke z kamerą: Auto Tune `empty`, `one_card`, `three_cards`, potem `Apply` i zapis profilu.

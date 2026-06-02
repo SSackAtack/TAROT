@@ -108,3 +108,11 @@
 - Dodano plan wykonawczy `docs/superpowers/plans/2026-06-02-event-first-background-diff-implementation-plan.md`.
 - Plan definiuje docelowy model `empty_reference`, `previous_stable_snapshot` i ROI hints dla `SnapshotAnalyzer`.
 - Plan rozbija implementacje na testowalne taski dla `BackgroundModel`, `ChangeDetector`, `SnapshotAnalyzer`, `SnapshotFirstPipeline`, `main.py`, CV Explain i live smoke.
+
+## 2026-06-02 Event-first plan clarification
+
+- Doprecyzowano w planie rozdzial `Autotune / Calibration Mode` vs `Runtime / Recording Pipeline`.
+- Dodano zalozenia kontrolowanego runtime: stale swiatlo, stabilna kamera/mata, motion gate przed analiza oraz docelowo wylaczone auto focus / auto exposure / auto white balance.
+- Poprawiono bootstrap `empty_reference`: referencja powstaje z 3-5 stabilnych snapshotow pustej maty przed walidacja, bez polegania na starej globalnej detekcji kart.
+- Dodano safety rules: global detection po udanej kalibracji nie jest glowna sciezka, `ignored_global_shift` zachowuje poprzedni stan, brak referencji oznacza jawny fallback mode.
+- Zaktualizowano breakdown do Task 0-7 zgodnie z handoffem Supervisor.

@@ -34,6 +34,7 @@ Ten plik stanowi centralny rejestr wszystkich zadań (Tasks) realizowanych w pro
 | **TASK-CV-RECT-001** | `APPROVED` | `master` | Gemini | Parametryzacja detekcji prostokątów kart pod autotuning | 2026-06-02 | Approved as autotuning foundation |
 | **TASK-CV-AUTOTUNE-001** | `APPROVED` | `master` | Gemini | Prototyp offline autotunera detekcji prostokąta karty | 2026-06-02 | Approved as offline foundation |
 | **TASK-CV-AUTOTUNE-LIVE-001** | `IN_PROGRESS` | `codex/live-autotuning-foundation` | Codex/Gemini | Live autotuning jako rekomendacja profilu z apply/rollback i zapisem profilu | 2026-06-02 | Automated verification + recognition diagnostics + glare false-positive guard done; pending manual live smoke |
+| **TASK-CV-EVENT-FIRST-PLAN-001** | `DONE` | `task/cv-event-first-plan-001-clarify-autotune-runtime` | Codex | Doprecyzowanie planu event-first background diff: Autotune vs Runtime | 2026-06-02 | Pending Supervisor Review |
 | **TASK-CV-SNAPSHOT-001** | `APPROVED` | `master` | Codex | Usunięcie legacy state-first i utrwalenie snapshot-first jako jedynego pipeline CV | 2026-06-01 | APPROVED BY CHATGPT SUPERVISOR (PR #14 + master smoke) |
 | **TASK-CV-SNAPSHOT-002** | `APPROVED` | `master` | Codex | Unicode-safe image I/O i reference loader poza main.py | 2026-06-01 | APPROVED BY CHATGPT SUPERVISOR (PR #14 + master smoke) |
 | **TASK-CV-SNAPSHOT-003** | `APPROVED` | `master` | Codex | Analiza snapshotu na klatce sprostowanej przez ArUco | 2026-06-01 | APPROVED BY CHATGPT SUPERVISOR (PR #14 + master smoke) |
