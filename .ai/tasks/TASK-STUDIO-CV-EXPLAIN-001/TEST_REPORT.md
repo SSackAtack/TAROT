@@ -77,3 +77,13 @@ cmd.exe /c npm --prefix E:\Antigravity\Projekty\TAROT\app_ar run build
 ```
 
 Wynik: PASS. Vite ponownie zgłosił istniejące ostrzeżenia o dużym chunku oraz nieskutecznym dynamicznym imporcie `textureCache.js`.
+
+### Post-merge live smoke
+
+```text
+Manual live smoke: start_tarotvision_studio.bat + Studio Console z fizyczną kamerą
+```
+
+Wynik: GREEN. Kamera działała, ArUco skalibrowało stół, snapshot osiągnął `holding_last_good`, kandydaci kart byli wykrywani, rozpoznanie zaakceptowało 2 karty, a panel `CV Explain` pokazał `OK` oraz następny krok „Można prowadzić sesję.”
+
+Uwagi: Na stole widoczne były 3 karty, ale zaakceptowane rozpoznania wyniosły 2. To nie blokuje `TASK-STUDIO-CV-EXPLAIN-001`, ale wymaga kolejnego małego zadania diagnostycznego: panel powinien wyjaśniać operatorowi różnicę między kandydatami kart a zaakceptowanymi rozpoznaniami.
