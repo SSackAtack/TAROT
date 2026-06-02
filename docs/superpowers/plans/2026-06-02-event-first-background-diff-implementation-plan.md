@@ -740,7 +740,7 @@ git commit -m "feat: ogranicz analize snapshotu do regionow zmian"
 - Test: `app_cv/tests/test_main_static_audit.py`
 - Test: `app_cv/tests/test_pipelines_contract.py`
 
-- [ ] **Step 1: Write failing test**
+- [x] **Step 1: Write failing test**
 
 Add to `app_cv/tests/test_pipelines_contract.py`:
 
@@ -824,7 +824,7 @@ Add to `app_cv/tests/test_pipelines_contract.py`:
         runtime_metrics.add.assert_any_call("change_mask_ratio", 0.08)
 ```
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 Run:
 
@@ -834,7 +834,7 @@ $env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.te
 
 Expected: FAIL because `SnapshotFirstPipeline.__init__` does not accept `change_detector`.
 
-- [ ] **Step 3: Add main.py static wiring test**
+- [x] **Step 3: Add main.py static wiring test**
 
 Add to `app_cv/tests/test_main_static_audit.py`:
 
@@ -856,7 +856,7 @@ $env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.te
 
 Expected: FAIL because `ChangeDetector` is not imported/wired.
 
-- [ ] **Step 4: Implement pipeline wiring**
+- [x] **Step 4: Implement pipeline wiring**
 
 Modify `SnapshotFirstPipeline.__init__`:
 
@@ -932,7 +932,7 @@ After the `layout_snapshot.update({ ... })` block that writes `layout_id`, `stat
                 self.previous_stable_snapshot = analysis_frame.copy()
 ```
 
-- [ ] **Step 5: Implement main.py wiring**
+- [x] **Step 5: Implement main.py wiring**
 
 In `app_cv/main.py`, add import:
 

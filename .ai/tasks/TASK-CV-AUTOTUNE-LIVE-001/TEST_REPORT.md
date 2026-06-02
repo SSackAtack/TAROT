@@ -434,6 +434,62 @@ $env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest discover -s app
 
 Wynik: PASS, 288 testów.
 
+### Event-first Task 4 Runtime Pipeline Integration
+
+#### RED
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_pipelines_contract.TestPipelinesContract.test_snapshot_pipeline_passes_change_rois_to_analyzer -v
+```
+
+Wynik: FAIL zgodnie z oczekiwaniem. `SnapshotFirstPipeline.__init__()` nie przyjmował `change_detector`.
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_main_static_audit.TestMainStaticAudit.test_main_wires_change_detector_into_snapshot_pipeline -v
+```
+
+Wynik: FAIL zgodnie z oczekiwaniem. `main.py` nie importował ani nie przekazywał `ChangeDetector`.
+
+#### GREEN
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_pipelines_contract.TestPipelinesContract.test_snapshot_pipeline_passes_change_rois_to_analyzer -v
+```
+
+Wynik: PASS, 1 test.
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_main_static_audit.TestMainStaticAudit.test_main_wires_change_detector_into_snapshot_pipeline -v
+```
+
+Wynik: PASS, 1 test.
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_pipelines_contract.TestPipelinesContract.test_snapshot_pipeline_passes_empty_roi_list_without_global_fallback -v
+```
+
+Wynik: PASS, 1 test.
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_pipelines_contract app_cv.tests.test_main_static_audit -v
+```
+
+Wynik: PASS, 20 testów.
+
+```text
+$env:PYTHONDONTWRITEBYTECODE='1'; python -B -m py_compile app_cv\main.py app_cv\tarotvision\pipelines\snapshot_first.py
+```
+
+Wynik: PASS.
+
+#### Full backend verification
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest discover -s app_cv\tests -v
+```
+
+Wynik: PASS, 291 testów.
+
 ```text
 $env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest discover -s app_cv\tests -v
 ```

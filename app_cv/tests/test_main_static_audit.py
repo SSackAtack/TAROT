@@ -176,5 +176,13 @@ class TestMainStaticAudit(unittest.TestCase):
         self.assertIn('write_autotune_log(', source)
         self.assertIn('"saved"', source)
 
+    def test_main_wires_change_detector_into_snapshot_pipeline(self):
+        source = self._read_main_source()
+
+        self.assertIn("from tarotvision.change_detection import ChangeDetector", source)
+        self.assertIn("change_detector = ChangeDetector", source)
+        self.assertIn("change_detector=change_detector", source)
+        self.assertIn("background_model=background_model", source)
+
 if __name__ == '__main__':
     unittest.main()

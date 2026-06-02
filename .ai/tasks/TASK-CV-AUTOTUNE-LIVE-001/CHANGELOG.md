@@ -151,3 +151,11 @@
 - Przy `roi_hints == []` analyzer nie wykonuje globalnej detekcji i zwraca zero kart, zgodnie z erratą bezpieczeństwa.
 - Przy niepustej liście ROI analyzer szuka quadów wyłącznie w cropach ROI i przesuwa punkty z powrotem do współrzędnych pełnego frame.
 - Dodano testy regresji dla ograniczenia analizy do ROI oraz zakazu fallbacku globalnego przy pustej liście ROI.
+
+## 2026-06-02 Event-first Task 4 Runtime Pipeline Integration
+
+- Podłączono `ChangeDetector` do `SnapshotFirstPipeline` oraz `main.py`.
+- Pipeline utrzymuje `previous_stable_snapshot`, uruchamia detekcję zmian po przygotowaniu `analysis_frame` i przekazuje ROI do `SnapshotAnalyzer`.
+- Dodano metryki runtime: `change_region_count`, `change_mask_ratio`, `change_global_shift`, `change_ignored_small_count`, `change_ignored_large_count`, `change_added_count`, `change_removed_count`.
+- Zachowano semantykę bezpieczeństwa: gdy event-first działa i nie ma regionów `added_or_moved`, pipeline przekazuje `roi_hints=[]`, a nie `None`.
+- Dodano testy kontraktowe dla przekazania ROI, pustej listy ROI bez globalnego fallbacku oraz statycznego wiring `ChangeDetector` w `main.py`.

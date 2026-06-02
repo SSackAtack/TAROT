@@ -25,6 +25,8 @@ class SnapshotFirstPipeline(VisionPipeline):
         log_dir,
         runtime_profile="default",
         autotune_sample_recorder=None,
+        change_detector=None,
+        background_model=None,
     ):
         self.camera_session = camera_session
         self.opencv_preview = opencv_preview
@@ -40,9 +42,12 @@ class SnapshotFirstPipeline(VisionPipeline):
         self.log_dir = log_dir
         self.runtime_profile = runtime_profile
         self.autotune_sample_recorder = autotune_sample_recorder
+        self.change_detector = change_detector
+        self.background_model = background_model
 
         # Zmienne stanu rurociągu
         self.last_snapshot_cards = []
+        self.previous_stable_snapshot = None
         self.snapshot_layout_id = 0
         self.last_motion_started_ms = None
         self.last_diagnostics_time = 0.0
@@ -152,8 +157,34 @@ class SnapshotFirstPipeline(VisionPipeline):
                 else:
                     self.runtime_metrics.add("snapshot_analysis_warped", 0)
 
+                roi_hints = None
+                if self.change_detector is not None and self.previous_stable_snapshot is not None:
+                    change_result = self.change_detector.detect(
+                        self.previous_stable_snapshot,
+                        analysis_frame,
+                        empty_reference=self.background_model,
+                    )
+                    self.runtime_metrics.add("change_region_count", len(change_result.regions))
+                    self.runtime_metrics.add("change_mask_ratio", change_result.mask_nonzero_ratio)
+                    self.runtime_metrics.add("change_global_shift", 1 if change_result.global_shift else 0)
+                    self.runtime_metrics.add("change_ignored_small_count", change_result.ignored_small_count)
+                    self.runtime_metrics.add("change_ignored_large_count", change_result.ignored_large_count)
+                    self.runtime_metrics.add(
+                        "change_added_count",
+                        sum(1 for region in change_result.regions if region.kind == "added_or_moved"),
+                    )
+                    self.runtime_metrics.add(
+                        "change_removed_count",
+                        sum(1 for region in change_result.regions if region.kind == "removed"),
+                    )
+                    if not change_result.global_shift:
+                        roi_hints = [
+                            region.bbox for region in change_result.regions
+                            if region.kind == "added_or_moved"
+                        ]
+
                 analysis_start = time.perf_counter()
-                result = self.snapshot_analyzer.analyze(analysis_frame)
+                result = self.snapshot_analyzer.analyze(analysis_frame, roi_hints=roi_hints)
                 diagnostics = result.diagnostics if isinstance(result.diagnostics, dict) else {}
                 self.runtime_metrics.add("snapshot_quads_found", diagnostics.get("quads_found", 0))
                 self.runtime_metrics.add("snapshot_recognition_attempts", diagnostics.get("recognition_attempts", 0))
@@ -215,6 +246,7 @@ class SnapshotFirstPipeline(VisionPipeline):
                     "quality_score": selected.quality.quality_score,
                     "card_count": len(self.last_snapshot_cards),
                 })
+                self.previous_stable_snapshot = analysis_frame.copy()
 
         metrics_snapshot = self.runtime_metrics.snapshot()
         runtime_snapshot = {

@@ -19,6 +19,7 @@ from tarotvision.calibration_session import choose_best_candidate
 from tarotvision.table_calibration import TableCalibration
 from tarotvision.card_recognition import recognize_card_crop, recognize_card_crop_with_debug
 from tarotvision.background_model import BackgroundModel
+from tarotvision.change_detection import ChangeDetector
 from tarotvision.reference_loader import load_active_reference_cards
 from tarotvision.card_detection_profiles import find_card_quads_multi_profile
 from tarotvision.snapshot_gate import SnapshotGate, SnapshotGateConfig
@@ -67,6 +68,7 @@ profile_store = ProfileStore(os.path.join(LOG_DIR, "calibration_profiles"))
 autotune_session_log = AutotuneSessionLog(os.path.join(LOG_DIR, "autotune_sessions"))
 active_tuning_profile = "default"
 background_model = BackgroundModel()
+change_detector = ChangeDetector()
 pending_background_capture = False
 autotune_session = None
 autotune_candidate_profiles = []
@@ -692,6 +694,8 @@ snapshot_pipeline = SnapshotFirstPipeline(
     log_dir=LOG_DIR,
     runtime_profile=RUNTIME_PROFILE,
     autotune_sample_recorder=record_autotune_sample_from_snapshot,
+    change_detector=change_detector,
+    background_model=background_model,
 )
 snapshot_pipeline.snapshot_sample_count = SNAPSHOT_SAMPLE_COUNT
 snapshot_pipeline.snapshot_sample_interval_ms = SNAPSHOT_SAMPLE_INTERVAL_MS
