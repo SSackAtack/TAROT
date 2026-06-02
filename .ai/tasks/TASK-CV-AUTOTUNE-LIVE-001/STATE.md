@@ -36,6 +36,10 @@ Commity na branchu:
 
 Po live obserwacji operatora: przy jednej karcie na macie silny odblask byl przepuszczany jako kandydat, a rozpoznawanie dobieralo dla niego najlepszy wzorzec. Codex dodal walidacje cropa kandydata przed ORB, ktora odrzuca gladkie/jasne cropy bez tekstury, krawedzi i sladow granicy karty. `SnapshotAnalyzer` publikuje teraz `candidate_validation_rejections`, `SnapshotFirstPipeline` przekazuje te dane do metryk i probek autotuningu, a `CV Explain` komunikuje przypadek jako odrzucony kandydat wygladajacy jak odblask albo tlo.
 
+## Session Status (2026-06-02 Codex continuation verification)
+
+Codex wznowil prace na czystym branchu `codex/live-autotuning-foundation` i potwierdzil, ze pozostaly zakres taska nie wymaga kolejnej zmiany produkcyjnej przed live smoke. Swieza weryfikacja automatyczna przeszla: pelny backend test suite `267 tests` PASS oraz frontend `npm --prefix app_ar run build` PASS z istniejacymi ostrzezeniami Vite o duzym chunku i nieskutecznym dynamicznym imporcie `textureCache.js`. Status pozostaje `IN_PROGRESS`, bo manualny live smoke z fizyczna kamera nie zostal wykonany w tej sesji.
+
 ## Kolejne kroki
 
 1. Wykonać manualny live smoke z kamerą: Auto Tune `empty`, `one_card`, `three_cards`, potem `Apply` i zapis profilu.

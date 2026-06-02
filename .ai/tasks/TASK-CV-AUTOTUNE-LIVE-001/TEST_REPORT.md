@@ -222,3 +222,21 @@ npm --prefix E:\Antigravity\Projekty\TAROT\app_ar run build
 ```
 
 Wynik: PASS. Vite zglosil istniejace ostrzezenia o duzym chunku oraz nieskutecznym dynamicznym imporcie `textureCache.js`.
+
+### Continuation verification
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest discover -s app_cv\tests -v
+```
+
+Wynik: PASS, 267 testow.
+
+```text
+npm --prefix E:\Antigravity\Projekty\TAROT\app_ar run build
+```
+
+Wynik: PASS. Vite zglosil te same istniejace ostrzezenia: duzy chunk po minifikacji oraz nieskuteczny dynamiczny import `src/renderer/textureCache.js`.
+
+### Continuation manual live smoke
+
+Wynik: NOT RUN w tej sesji. Nadal wymagany jest test z fizyczna kamera i stolem: `empty`, `one_card`, `three_cards`, rekomendacja, `Apply`, zapis profilu w `logs/calibration_profiles/` oraz kontrola `CV Explain` przy realnym odblasku.
