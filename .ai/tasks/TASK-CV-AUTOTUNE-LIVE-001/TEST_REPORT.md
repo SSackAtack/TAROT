@@ -402,6 +402,38 @@ $env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest discover -s app
 
 Wynik: PASS, 286 testów.
 
+### Event-first Task 3 SnapshotAnalyzer ROI Hints
+
+#### RED
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_snapshot_analyzer -v
+```
+
+Wynik: FAIL zgodnie z oczekiwaniem. `SnapshotAnalyzer.analyze()` nie przyjmował argumentu `roi_hints`.
+
+#### GREEN
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_snapshot_analyzer -v
+```
+
+Wynik: PASS, 13 testów.
+
+```text
+$env:PYTHONDONTWRITEBYTECODE='1'; python -B -m py_compile app_cv\tarotvision\snapshot_analyzer.py
+```
+
+Wynik: PASS.
+
+#### Full backend verification
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest discover -s app_cv\tests -v
+```
+
+Wynik: PASS, 288 testów.
+
 ```text
 $env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest discover -s app_cv\tests -v
 ```

@@ -80,8 +80,12 @@ Codex wykonał Task 1 z planu event-first background diff. `BackgroundModel` pot
 
 Codex wykonał Task 2 z planu event-first background diff. Dodano niezależny moduł `ChangeDetector`, który klasyfikuje regiony zmian między stabilnymi snapshotami jako `added_or_moved` lub `removed`, raportuje `mask_nonzero_ratio`, `global_shift`, `ignored_small_count` i `ignored_large_count`. Moduł nie jest jeszcze podłączony do `SnapshotFirstPipeline`; integracja runtime pozostaje zakresem Task 4.
 
+## Session Status (2026-06-02 Event-first Task 3 SnapshotAnalyzer ROI Hints)
+
+Codex wykonał Task 3 z planu event-first background diff. `SnapshotAnalyzer.analyze()` przyjmuje teraz `roi_hints`; `None` zachowuje dotychczasowy global fallback, pusta lista `[]` oznacza aktywny event-first bez regionów i nie uruchamia globalnej detekcji, a niepusta lista ogranicza detekcję do ROI. Runtime nadal nie przekazuje ROI, bo integracja `ChangeDetector` z `SnapshotFirstPipeline` jest zakresem Task 4.
+
 ## Kolejne kroki
 
 1. Implementować event-first background diff wyłącznie według zaktualizowanego głównego planu `2026-06-02-event-first-background-diff-implementation-plan.md`.
-2. Następny bezpieczny task implementacyjny: `Task 3: SnapshotAnalyzer ROI Hints`.
+2. Następny bezpieczny task implementacyjny: `Task 4: Runtime Pipeline Integration`.
 3. Manualny live smoke z kamerą pozostaje wymagany dla obecnego `TASK-CV-AUTOTUNE-LIVE-001` przed oznaczeniem go jako `DONE`.

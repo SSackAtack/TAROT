@@ -1,6 +1,7 @@
 import unittest
 import math
 
+import cv2
 import numpy as np
 
 from tarotvision.card_detection_profiles import MultiProfileDetectionResult
@@ -226,6 +227,48 @@ class SnapshotAnalyzerTest(unittest.TestCase):
 
         self.assertEqual(result.card_count, 1)
         self.assertIs(result.diagnostics["detection"], debug)
+
+    def test_analyze_limits_detection_to_roi_hints(self):
+        frame = np.zeros((200, 300, 3), dtype=np.uint8)
+        cv2.rectangle(frame, (20, 40), (80, 140), (255, 255, 255), -1)
+        cv2.rectangle(frame, (190, 40), (250, 140), (255, 255, 255), -1)
+
+        def find_quads(crop):
+            return [np.array([[10, 10], [50, 10], [50, 90], [10, 90]], dtype=np.float32)]
+
+        analyzer = SnapshotAnalyzer(
+            find_quads=find_quads,
+            recognize_crop=lambda crop: {"name": "Gilded_01", "confidence": 0.9},
+            validate_candidate_crop=None,
+        )
+
+        result = analyzer.analyze(frame, roi_hints=[(180, 30, 90, 130)])
+
+        self.assertEqual(result.card_count, 1)
+        self.assertGreater(result.cards[0]["x"], 0)
+        self.assertTrue(result.diagnostics["roi_limited"])
+        self.assertEqual(result.diagnostics["roi_count"], 1)
+
+    def test_analyze_with_empty_roi_hints_does_not_fallback_to_global_detection(self):
+        frame = np.zeros((200, 300, 3), dtype=np.uint8)
+        calls = []
+
+        def find_quads(_frame):
+            calls.append(_frame.shape)
+            return [np.array([[10, 10], [50, 10], [50, 90], [10, 90]], dtype=np.float32)]
+
+        analyzer = SnapshotAnalyzer(
+            find_quads=find_quads,
+            recognize_crop=lambda crop: {"name": "Gilded_01", "confidence": 0.9},
+            validate_candidate_crop=None,
+        )
+
+        result = analyzer.analyze(frame, roi_hints=[])
+
+        self.assertEqual(calls, [])
+        self.assertEqual(result.card_count, 0)
+        self.assertTrue(result.diagnostics["roi_limited"])
+        self.assertEqual(result.diagnostics["roi_count"], 0)
 
 
 if __name__ == "__main__":

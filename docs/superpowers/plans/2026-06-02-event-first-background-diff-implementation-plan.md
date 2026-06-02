@@ -594,7 +594,7 @@ git commit -m "feat: dodaj detekcje zmian miedzy snapshotami"
 - Modify: `app_cv/tarotvision/snapshot_analyzer.py`
 - Test: `app_cv/tests/test_snapshot_analyzer.py`
 
-- [ ] **Step 1: Write failing test**
+- [x] **Step 1: Write failing test**
 
 Add to `app_cv/tests/test_snapshot_analyzer.py`:
 
@@ -642,7 +642,7 @@ Add to `app_cv/tests/test_snapshot_analyzer.py`:
         self.assertEqual(result.diagnostics["roi_count"], 0)
 ```
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 Run:
 
@@ -652,7 +652,7 @@ $env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.te
 
 Expected: FAIL because `analyze()` does not accept `roi_hints`.
 
-- [ ] **Step 3: Implement ROI support**
+- [x] **Step 3: Implement ROI support**
 
 Modify `SnapshotAnalyzer.analyze` signature:
 
@@ -713,7 +713,7 @@ def _clamp_bbox(bbox, frame_width, frame_height):
     return x1, y1, max(0, x2 - x1), max(0, y2 - y1)
 ```
 
-- [ ] **Step 4: Verify GREEN**
+- [x] **Step 4: Verify GREEN**
 
 Run:
 
@@ -723,7 +723,7 @@ $env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.te
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
 git add app_cv/tarotvision/snapshot_analyzer.py app_cv/tests/test_snapshot_analyzer.py

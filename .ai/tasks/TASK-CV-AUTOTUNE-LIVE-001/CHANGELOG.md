@@ -142,3 +142,12 @@
 - `ChangeDetector.detect()` porównuje `previous_frame` z `current_frame`, filtruje małe/duże regiony, wykrywa global shift i klasyfikuje region jako `added_or_moved` albo `removed` względem `empty_reference`.
 - Dodano testy syntetyczne dla dodania karty, usunięcia karty, ignorowania drobnej zmiany i globalnej zmiany obrazu.
 - Oznaczono Task 2 w głównym planie jako wykonany; kolejnym krokiem implementacyjnym jest Task 3 `SnapshotAnalyzer ROI Hints`.
+
+## 2026-06-02 Event-first Task 3 SnapshotAnalyzer ROI Hints
+
+- Rozszerzono `SnapshotAnalyzer.analyze()` o parametr `roi_hints=None`.
+- Dodano diagnostykę `roi_limited` i `roi_count`.
+- Przy `roi_hints is None` dotychczasowy global fallback pozostaje dozwolony.
+- Przy `roi_hints == []` analyzer nie wykonuje globalnej detekcji i zwraca zero kart, zgodnie z erratą bezpieczeństwa.
+- Przy niepustej liście ROI analyzer szuka quadów wyłącznie w cropach ROI i przesuwa punkty z powrotem do współrzędnych pełnego frame.
+- Dodano testy regresji dla ograniczenia analizy do ROI oraz zakazu fallbacku globalnego przy pustej liście ROI.

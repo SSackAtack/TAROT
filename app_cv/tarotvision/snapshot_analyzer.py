@@ -36,7 +36,7 @@ class SnapshotAnalyzer:
     def _find_quads_default(self, frame):
         return find_card_quads_multi_profile(frame, background_model=self.background_model).quads
 
-    def analyze(self, frame):
+    def analyze(self, frame, roi_hints=None):
         cards = []
         diagnostics = {
             "quads_found": 0,
@@ -45,11 +45,32 @@ class SnapshotAnalyzer:
             "candidate_validation_rejections": 0,
             "recognition_candidates": [],
             "recognition_score": 0.0,
+            "roi_limited": roi_hints is not None,
+            "roi_count": len(roi_hints or []),
         }
         frame_height, frame_width = frame.shape[:2]
         recognition_score_total = 0.0
 
-        if self.find_quads_with_debug is not None:
+        if roi_hints is not None:
+            quads = []
+            detection_debug = {"roi_hints": []}
+            for bbox in roi_hints:
+                x, y, w, h = _clamp_bbox(bbox, frame_width, frame_height)
+                if w <= 0 or h <= 0:
+                    continue
+                crop_frame = frame[y:y + h, x:x + w]
+                crop_quads = self.find_quads(crop_frame)
+                for crop_quad in crop_quads:
+                    points = _quad_points(crop_quad).copy()
+                    points[:, 0] += x
+                    points[:, 1] += y
+                    quads.append(points)
+                detection_debug["roi_hints"].append({
+                    "bbox": [x, y, w, h],
+                    "quads": len(crop_quads),
+                })
+            diagnostics["detection"] = detection_debug
+        elif self.find_quads_with_debug is not None:
             detection_result = self.find_quads_with_debug(frame)
             quads = detection_result.quads
             diagnostics["detection"] = detection_result.debug
@@ -140,6 +161,15 @@ class SnapshotAnalyzer:
 
 def _quad_points(quad):
     return np.asarray(quad, dtype=np.float32).reshape(4, 2)
+
+
+def _clamp_bbox(bbox, frame_width, frame_height):
+    x, y, w, h = [int(v) for v in bbox]
+    x1 = max(0, x)
+    y1 = max(0, y)
+    x2 = min(frame_width, x + max(0, w))
+    y2 = min(frame_height, y + max(0, h))
+    return x1, y1, max(0, x2 - x1), max(0, y2 - y1)
 
 
 def _quad_center(quad):
