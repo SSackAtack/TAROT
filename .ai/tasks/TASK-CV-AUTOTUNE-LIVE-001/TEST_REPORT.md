@@ -39,3 +39,19 @@ cmd.exe /c npm --prefix E:\Antigravity\Projekty\TAROT\app_ar run build
 ```
 
 Wynik: PASS. Vite zgłosił istniejące ostrzeżenia o dużym chunku oraz nieskutecznym dynamicznym imporcie `textureCache.js`.
+
+### Task 5 protocol RED
+
+```text
+cmd /c "cd /d E:\Antigravity\Projekty\TAROT && set PYTHONPATH=C:\tmp\tarot_pydeps;app_cv && python -m unittest app_cv.tests.test_tuning_protocol -v"
+```
+
+Wynik: FAIL. Parser odrzucał `autotune_start`, `autotune_apply`, `autotune_save` i `autotune_cancel` jako unsupported message type.
+
+### Task 5 protocol GREEN
+
+```text
+cmd /c "cd /d E:\Antigravity\Projekty\TAROT && set PYTHONPATH=C:\tmp\tarot_pydeps;app_cv && python -m unittest app_cv.tests.test_tuning_protocol -v"
+```
+
+Wynik: PASS, 39 testów.

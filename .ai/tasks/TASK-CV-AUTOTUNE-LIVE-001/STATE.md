@@ -10,7 +10,7 @@ IN_PROGRESS
 
 ## Stan aktualny
 
-Codex rozpoczął wdrożenie od fundamentów bezpiecznych dla Gemini do kontynuacji. Zaimplementowano Task 0-4 z finalnego planu: zatwierdzenie fundamentu offline, diagnostyka kandydaci vs zaakceptowane, scoring live autotuningu, bezpieczne profile kandydackie i stan sesji live autotuningu.
+Codex rozpoczął wdrożenie od fundamentów bezpiecznych dla Gemini do kontynuacji. Zaimplementowano Task 0-5 z finalnego planu: zatwierdzenie fundamentu offline, diagnostyka kandydaci vs zaakceptowane, scoring live autotuningu, bezpieczne profile kandydackie, stan sesji live autotuningu i protokół WebSocket dla komend autotuningu.
 
 ## Session Status (2026-06-02 Codex)
 
@@ -24,7 +24,6 @@ Commity na branchu:
 
 ## Kolejne kroki
 
-1. Kontynuować od Task 5 planu: `WebSocket protocol for autotune`.
-2. Następnie Task 6: backend orchestration w `main.py`.
-3. Potem Task 7: panel Auto Tune w Studio.
-4. Po integracji uruchomić pełne testy backendu, build frontendu i live smoke z kamerą.
+1. Kontynuować od Task 6 planu: backend orchestration w `main.py`.
+2. Potem Task 7: panel Auto Tune w Studio.
+3. Po integracji uruchomić pełne testy backendu, build frontendu i live smoke z kamerą.
