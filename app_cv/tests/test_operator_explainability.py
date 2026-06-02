@@ -56,6 +56,23 @@ class OperatorExplainabilityTest(unittest.TestCase):
         self.assertEqual(result["severity"], "ok")
         self.assertEqual(result["next_action"], "Mozna prowadzic sesje.")
 
+    def test_candidate_gap_explains_rejected_cards(self):
+        result = build_cv_explainability(
+            cards=[{"id": "gilded_01"}, {"id": "gilded_02"}],
+            metrics={"snapshot_quads_found": 3},
+            runtime={"aruco_calibrated": True, "aruco_markers": 4, "candidate_count": 3},
+            layout={"state": "holding_last_good"},
+            operator={"active_decks": ["gilded"]},
+            warnings=[],
+        )
+
+        recognition_step = next(step for step in result["steps"] if step["id"] == "recognition")
+        self.assertEqual(recognition_step["state"], "warn")
+        self.assertIn("2/3", recognition_step["value"])
+        self.assertIn("1", recognition_step["message"])
+        self.assertEqual(result["severity"], "warn")
+        self.assertIn("jedna karta", result["next_action"].lower())
+
 
 if __name__ == "__main__":
     unittest.main()

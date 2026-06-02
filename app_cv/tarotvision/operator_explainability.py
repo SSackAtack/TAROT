@@ -24,6 +24,10 @@ def build_cv_explainability(cards, metrics, runtime, layout, operator, warnings)
     candidate_count = runtime.get("candidate_count", metrics.get("snapshot_quads_found"))
     if candidate_count is None:
         candidate_count = len(cards)
+    candidate_count = int(candidate_count)
+    accepted_count = len(cards)
+    rejected_count = max(0, candidate_count - accepted_count)
+    has_candidate_gap = candidate_count > accepted_count and accepted_count > 0
 
     steps = [
         _step(
@@ -59,9 +63,13 @@ def build_cv_explainability(cards, metrics, runtime, layout, operator, warnings)
         _step(
             "recognition",
             "Rozpoznanie",
-            "ok" if cards else "wait",
-            str(len(cards)),
-            "Karty zaakceptowane" if cards else "Czeka na rozpoznanie",
+            "warn" if has_candidate_gap else ("ok" if cards else "wait"),
+            f"{accepted_count}/{candidate_count}" if candidate_count else str(accepted_count),
+            (
+                f"Zaakceptowano {accepted_count}, odrzucono {rejected_count}"
+                if has_candidate_gap
+                else ("Karty zaakceptowane" if cards else "Czeka na rozpoznanie")
+            ),
         ),
     ]
 
@@ -80,6 +88,9 @@ def build_cv_explainability(cards, metrics, runtime, layout, operator, warnings)
     elif candidate_count < 1 and not cards:
         severity = "warn"
         next_action = "Popraw swiatlo, kontrast albo polozenie kart."
+    elif has_candidate_gap:
+        severity = "warn"
+        next_action = "Jedna karta wymaga poprawy rozpoznania: popraw swiatlo, kontrast albo odsun karte od innych."
     elif cards:
         severity = "ok"
         next_action = "Mozna prowadzic sesje."
