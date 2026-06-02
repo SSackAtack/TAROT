@@ -76,6 +76,10 @@ class CameraControlsStaticTest(unittest.TestCase):
         self.assertIn('data-preview-mode="camera"', source)
         self.assertIn('data-preview-mode="pip"', source)
         self.assertIn("studio-preview-mode-btn--active", source)
+        self.assertIn("setStudioPipSize", source)
+        self.assertIn('id="studio-pip-size-slider"', source)
+        self.assertIn("--studio-pip-width", source)
+        self.assertIn("studio:pipSize", source)
 
 
 if __name__ == "__main__":

@@ -165,7 +165,7 @@ body.studio-mode-active {
 }
 
 .studio-preview-overlay[data-preview-mode="pip"] .studio-camera-preview {
-    width: min(30%, 380px);
+    width: min(var(--studio-pip-width, 30%), 560px);
     min-width: 260px;
     border-color: rgba(214, 125, 62, 0.48);
     box-shadow: 0 12px 34px rgba(0, 0, 0, 0.62);
@@ -302,6 +302,28 @@ body.studio-mode-active {
     border-color: #d67d3e;
     background: rgba(214, 125, 62, 0.2);
     color: #ffffff;
+}
+
+.studio-pip-size-control {
+    display: grid;
+    grid-template-columns: 52px minmax(0, 1fr) 34px;
+    align-items: center;
+    gap: 7px;
+    color: #94a3b8;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+}
+
+.studio-pip-size-control input[type="range"] {
+    accent-color: #d67d3e;
+    min-width: 0;
+}
+
+.studio-pip-size-control output {
+    color: #f1c6a6;
+    font-family: 'Consolas', 'Courier New', Courier, monospace;
+    text-align: right;
 }
 
 /* Prawy pasek boczny (Sidebar) */

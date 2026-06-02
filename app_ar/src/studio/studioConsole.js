@@ -17,6 +17,7 @@ let loadedDecksList = []
 let activeDecksState = []
 let isDecksApplying = false
 let studioPreviewMode = 'pip'
+let studioPipSize = Number(localStorage.getItem('studio:pipSize') || 30)
 
 const studioCameraLabels = {
     CAP_PROP_FOCUS: 'Ostrość',
@@ -110,6 +111,29 @@ function setStudioPreviewMode(mode) {
     sidebarEl.querySelectorAll('[data-preview-mode]').forEach((button) => {
         button.classList.toggle('studio-preview-mode-btn--active', button.dataset.previewMode === studioPreviewMode)
     })
+}
+
+function setStudioPipSize(value, shouldPersist = true) {
+    const numericValue = Number(value)
+    const nextSize = Number.isFinite(numericValue) ? Math.min(45, Math.max(20, numericValue)) : 30
+    studioPipSize = nextSize
+    const overlay = document.querySelector('.studio-preview-overlay')
+    if (overlay) {
+        overlay.style.setProperty('--studio-pip-width', `${studioPipSize}%`)
+    }
+    if (sidebarEl) {
+        const slider = sidebarEl.querySelector('#studio-pip-size-slider')
+        const valueEl = sidebarEl.querySelector('#studio-pip-size-value')
+        if (slider && document.activeElement !== slider) {
+            slider.value = String(studioPipSize)
+        }
+        if (valueEl) {
+            valueEl.textContent = `${studioPipSize}%`
+        }
+    }
+    if (shouldPersist) {
+        localStorage.setItem('studio:pipSize', String(studioPipSize))
+    }
 }
 
 function getCvExplainabilityFallback(data) {
@@ -446,6 +470,7 @@ export function createStudioConsole() {
     const previewOverlay = document.createElement('div')
     previewOverlay.className = 'studio-preview-overlay'
     previewOverlay.dataset.previewMode = studioPreviewMode
+    previewOverlay.style.setProperty('--studio-pip-width', `${studioPipSize}%`)
     previewOverlay.innerHTML = `
         <div class="studio-preview-label">CAMERA / TABLE PREVIEW</div>
         <div class="studio-camera-preview">
@@ -506,6 +531,11 @@ export function createStudioConsole() {
                     <button type="button" class="studio-preview-mode-btn" data-preview-mode="camera">Kamera</button>
                     <button type="button" class="studio-preview-mode-btn studio-preview-mode-btn--active" data-preview-mode="pip">PiP</button>
                 </div>
+                <label class="studio-pip-size-control">
+                    <span>PiP size</span>
+                    <input type="range" min="20" max="45" step="1" value="${studioPipSize}" id="studio-pip-size-slider">
+                    <output id="studio-pip-size-value">${studioPipSize}%</output>
+                </label>
             </div>
         </div>
 
@@ -719,8 +749,15 @@ function initStudioConsoleEvents() {
             if (!button) return
             setStudioPreviewMode(button.dataset.previewMode)
         })
+        const pipSizeSlider = previewModePanel.querySelector('#studio-pip-size-slider')
+        if (pipSizeSlider) {
+            pipSizeSlider.addEventListener('input', () => {
+                setStudioPipSize(pipSizeSlider.value)
+            })
+        }
     }
     setStudioPreviewMode(studioPreviewMode)
+    setStudioPipSize(studioPipSize, false)
 
     const autotunePanel = sidebarEl.querySelector('#studio-autotune-panel')
     if (autotunePanel) {
