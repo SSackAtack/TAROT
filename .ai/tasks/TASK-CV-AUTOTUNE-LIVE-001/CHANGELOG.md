@@ -65,3 +65,10 @@
 - Rozszerzono diagnostykę kandydatów o `candidate_validation` i licznik `candidate_validation_rejections`.
 - `SnapshotFirstPipeline` zapisuje `snapshot_candidate_validation_rejections` w metrykach runtime oraz w próbkach autotuningu.
 - `CV Explain` pokazuje ostrzeżenie „bez cech karty” i kieruje operatora na odblask/tło, gdy luka kandydatów wynika z walidacji cropa.
+
+## 2026-06-02 Codex Studio sidebar accordion
+
+- Uporządkowano prawy panel Studio jako zestaw rozwijanych sekcji.
+- Oddzielono `Auto Tune` od `Aktywnych Talii`, aby wybór talii nie mieszał się z diagnostyką i kalibracją.
+- Dodano zapamiętywanie zwiniętych sekcji w `localStorage` pod kluczem `studio:sidebarCollapsedSections`.
+- Dodano statyczny test kontraktu UI dla osobnych sekcji i akordeonów.

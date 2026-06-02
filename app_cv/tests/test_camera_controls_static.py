@@ -66,6 +66,18 @@ class CameraControlsStaticTest(unittest.TestCase):
         self.assertIn("autotune_apply", source)
         self.assertIn("autotune_cancel", source)
 
+    def test_studio_sidebar_uses_collapsible_separate_sections(self):
+        source = self._read_frontend_file(
+            os.path.join("app_ar", "src", "studio", "studioConsole.js")
+        )
+
+        self.assertIn('data-studio-section="decks"', source)
+        self.assertIn('data-studio-section="autotune"', source)
+        self.assertIn('data-studio-section="cv-diagnostics"', source)
+        self.assertIn("initializeStudioSidebarAccordions", source)
+        self.assertIn("studio:sidebarCollapsedSections", source)
+        self.assertIn("data-studio-accordion-toggle", source)
+
     def test_studio_preview_modes_support_table_camera_and_pip(self):
         source = self._read_frontend_file(
             os.path.join("app_ar", "src", "studio", "studioConsole.js")

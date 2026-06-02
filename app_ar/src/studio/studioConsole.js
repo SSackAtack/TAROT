@@ -18,6 +18,9 @@ let activeDecksState = []
 let isDecksApplying = false
 let studioPreviewMode = 'pip'
 let studioPipSize = Number(localStorage.getItem('studio:pipSize') || 30)
+const studioSidebarCollapsedStorageKey = 'studio:sidebarCollapsedSections'
+const studioSidebarDefaultOpenSections = new Set(['transport', 'autotune', 'cv-diagnostics'])
+let studioSidebarCollapsedSections = loadStudioSidebarCollapsedSections()
 
 const studioCameraLabels = {
     CAP_PROP_FOCUS: 'Ostrość',
@@ -98,6 +101,75 @@ function updateStudioActiveDecksStatus(selectedIds = activeDecksState) {
     const names = selectedIds.map(getStudioDeckDisplayName).join(', ')
     statusEl.textContent = `Aktywne teraz: ${names}`
     statusEl.classList.remove('studio-active-decks-status--warning')
+}
+
+function loadStudioSidebarCollapsedSections() {
+    try {
+        const rawValue = localStorage.getItem(studioSidebarCollapsedStorageKey)
+        const parsed = rawValue ? JSON.parse(rawValue) : []
+        return new Set(Array.isArray(parsed) ? parsed : [])
+    } catch {
+        return new Set()
+    }
+}
+
+function saveStudioSidebarCollapsedSections() {
+    localStorage.setItem(
+        studioSidebarCollapsedStorageKey,
+        JSON.stringify(Array.from(studioSidebarCollapsedSections))
+    )
+}
+
+function isStudioSidebarSectionCollapsed(sectionId) {
+    if (studioSidebarCollapsedSections.has(sectionId)) return true
+    return !studioSidebarDefaultOpenSections.has(sectionId)
+}
+
+function setStudioSidebarSectionCollapsed(section, collapsed) {
+    const sectionId = section.dataset.studioSection
+    if (!sectionId) return
+
+    section.dataset.collapsed = collapsed ? 'true' : 'false'
+    const toggle = section.querySelector('.studio-card__toggle')
+    if (toggle) {
+        toggle.textContent = collapsed ? '+' : '-'
+        toggle.setAttribute('aria-label', collapsed ? 'Rozwiń sekcję' : 'Zwiń sekcję')
+    }
+
+    if (collapsed) {
+        studioSidebarCollapsedSections.add(sectionId)
+    } else {
+        studioSidebarCollapsedSections.delete(sectionId)
+    }
+    saveStudioSidebarCollapsedSections()
+}
+
+function initializeStudioSidebarAccordions() {
+    if (!sidebarEl) return
+    sidebarEl.querySelectorAll('.studio-card[data-studio-section]').forEach((section) => {
+        const sectionId = section.dataset.studioSection
+        setStudioSidebarSectionCollapsed(section, isStudioSidebarSectionCollapsed(sectionId))
+    })
+
+    sidebarEl.addEventListener('click', (event) => {
+        const header = event.target.closest('.studio-card__header[data-studio-accordion-toggle]')
+        if (!header || !sidebarEl.contains(header)) return
+        const section = header.closest('.studio-card[data-studio-section]')
+        if (!section) return
+        const collapsed = section.dataset.collapsed === 'true'
+        setStudioSidebarSectionCollapsed(section, !collapsed)
+    })
+
+    sidebarEl.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return
+        const header = event.target.closest('.studio-card__header[data-studio-accordion-toggle]')
+        if (!header || !sidebarEl.contains(header)) return
+        event.preventDefault()
+        const section = header.closest('.studio-card[data-studio-section]')
+        if (!section) return
+        const collapsed = section.dataset.collapsed === 'true'
+        setStudioSidebarSectionCollapsed(section, !collapsed)
+    })
 }
 
 function setStudioPreviewMode(mode) {
@@ -487,11 +559,13 @@ export function createStudioConsole() {
     sidebar.className = 'studio-sidebar'
     sidebar.innerHTML = `
         <!-- Sekcja 1: Nagrywanie -->
-        <div class="studio-card">
-            <div class="studio-card__header">
+        <div class="studio-card" data-studio-section="transport">
+            <div class="studio-card__header" data-studio-accordion-toggle role="button" tabindex="0">
                 <div class="studio-card__title">Transport i Nagrywanie</div>
                 <div class="studio-card__subtitle" id="studio-rec-state">OFFLINE</div>
+                <span class="studio-card__toggle" aria-label="Zwiń sekcję">-</span>
             </div>
+            <div class="studio-card__body">
             <div class="studio-rec-info">
                 <div class="studio-rec-item">
                     <div class="studio-rec-item__label">Elapsed Time</div>
@@ -510,20 +584,33 @@ export function createStudioConsole() {
                 </div>
                 <div class="studio-path-status" id="studio-path-status">Stan: Brak walidacji</div>
             </div>
+            </div>
         </div>
 
         <!-- Sekcja 1b: Kamera sprzętowa -->
-        <div class="studio-card">
-            <div class="studio-card__header">
-                <div class="studio-card__title">Kamera sprzętowo</div>
+        <div class="studio-card" data-studio-section="camera">
+            <div class="studio-card__header" data-studio-accordion-toggle role="button" tabindex="0">
+                <div class="studio-card__title">Kamera sprzętowa</div>
                 <div class="studio-card__subtitle">Focus / Exposure</div>
+                <span class="studio-card__toggle" aria-label="Rozwiń sekcję">+</span>
             </div>
+            <div class="studio-card__body">
             <div class="studio-camera-controls" id="studio-camera-controls">
                 Brak danych z kamery. Kliknij odczyt.
             </div>
             <button class="studio-btn-action" id="studio-camera-probe-btn" style="width: 100%; justify-content: center; height: 32px;">
                 Odczyt kamery
             </button>
+            </div>
+        </div>
+
+        <div class="studio-card" data-studio-section="preview">
+            <div class="studio-card__header" data-studio-accordion-toggle role="button" tabindex="0">
+                <div class="studio-card__title">Widok podglądu</div>
+                <div class="studio-card__subtitle">Table / Camera / PiP</div>
+                <span class="studio-card__toggle" aria-label="Rozwiń sekcję">+</span>
+            </div>
+            <div class="studio-card__body">
             <div class="studio-preview-mode-panel" id="studio-preview-mode-panel">
                 <div class="studio-preview-mode-label">Widok</div>
                 <div class="studio-preview-mode-actions">
@@ -537,14 +624,17 @@ export function createStudioConsole() {
                     <output id="studio-pip-size-value">${studioPipSize}%</output>
                 </label>
             </div>
+            </div>
         </div>
 
         <!-- Sekcja 2: Reżyser / Sceny -->
-        <div class="studio-card">
-            <div class="studio-card__header">
+        <div class="studio-card" data-studio-section="director">
+            <div class="studio-card__header" data-studio-accordion-toggle role="button" tabindex="0">
                 <div class="studio-card__title">Tryb Reżysera i Kadr</div>
                 <div class="studio-card__subtitle">Director Mode</div>
+                <span class="studio-card__toggle" aria-label="Rozwiń sekcję">+</span>
             </div>
+            <div class="studio-card__body">
             <div class="studio-scenes-grid">
                 <button class="studio-scene-btn studio-scene-btn--active" data-scene="table">
                     <span class="icon">🎴</span><span>Stół</span>
@@ -562,14 +652,17 @@ export function createStudioConsole() {
                     <span class="icon">🤖</span><span>Automatyczny Reżyser (Auto)</span>
                 </button>
             </div>
+            </div>
         </div>
 
         <!-- Sekcja 3: Mikser Audio -->
-        <div class="studio-card">
-            <div class="studio-card__header">
+        <div class="studio-card" data-studio-section="audio">
+            <div class="studio-card__header" data-studio-accordion-toggle role="button" tabindex="0">
                 <div class="studio-card__title">Mikser Audio (Offline Mixer)</div>
                 <div class="studio-card__subtitle">Audio Levels</div>
+                <span class="studio-card__toggle" aria-label="Rozwiń sekcję">+</span>
             </div>
+            <div class="studio-card__body">
             <div class="studio-audio-mixer">
                 <!-- Kanał Mic -->
                 <div class="studio-audio-channel">
@@ -600,17 +693,36 @@ export function createStudioConsole() {
                     <button class="studio-audio-channel__mute-btn" id="mute-master">🔊</button>
                 </div>
             </div>
+            </div>
         </div>
  
         <!-- Sekcja 4: Aktywne Talie (Active Decks Selection) -->
-        <div class="studio-card">
-            <div class="studio-card__header">
+        <div class="studio-card" data-studio-section="decks">
+            <div class="studio-card__header" data-studio-accordion-toggle role="button" tabindex="0">
                 <div class="studio-card__title">Aktywne Talie (Active Decks)</div>
                 <div class="studio-card__subtitle" id="studio-decks-count">Wybierz 1-3 talie</div>
+                <span class="studio-card__toggle" aria-label="Rozwiń sekcję">+</span>
             </div>
+            <div class="studio-card__body">
             <div class="studio-active-decks-status studio-active-decks-status--warning" id="studio-active-decks-status">
                 Wybierz 1-3 talie przed kalibracją
             </div>
+            <div class="studio-decks-list" id="studio-decks-list" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;">
+                <div style="font-size: 11px; color: rgba(255,255,255,0.4); text-align: center; padding: 8px;">Ładowanie listy talii...</div>
+            </div>
+            <button class="studio-btn-action" id="studio-decks-apply-btn" style="width: 100%; justify-content: center; height: 32px;" disabled>
+                Zastosuj Wybór (Apply)
+            </button>
+            </div>
+        </div>
+
+        <div class="studio-card" data-studio-section="autotune">
+            <div class="studio-card__header" data-studio-accordion-toggle role="button" tabindex="0">
+                <div class="studio-card__title">Auto Tune</div>
+                <div class="studio-card__subtitle">Kalibracja warunków</div>
+                <span class="studio-card__toggle" aria-label="Zwiń sekcję">-</span>
+            </div>
+            <div class="studio-card__body">
             <div class="studio-autotune-panel" id="studio-autotune-panel" data-state="idle">
                 <div class="studio-autotune-header">
                     <span class="studio-autotune-title">Auto Tune</span>
@@ -625,20 +737,17 @@ export function createStudioConsole() {
                 </div>
                 <div class="studio-autotune-result" id="studio-autotune-result">Brak rekomendacji.</div>
             </div>
-            <div class="studio-decks-list" id="studio-decks-list" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;">
-                <div style="font-size: 11px; color: rgba(255,255,255,0.4); text-align: center; padding: 8px;">Ładowanie listy talii...</div>
             </div>
-            <button class="studio-btn-action" id="studio-decks-apply-btn" style="width: 100%; justify-content: center; height: 32px;" disabled>
-                Zastosuj Wybór (Apply)
-            </button>
         </div>
 
         <!-- Sekcja 5: Diagnostyka CV -->
-        <div class="studio-card">
-            <div class="studio-card__header">
+        <div class="studio-card" data-studio-section="cv-diagnostics">
+            <div class="studio-card__header" data-studio-accordion-toggle role="button" tabindex="0">
                 <div class="studio-card__title">Diagnostyka CV Health</div>
                 <div class="studio-card__subtitle">Engine status</div>
+                <span class="studio-card__toggle" aria-label="Zwiń sekcję">-</span>
             </div>
+            <div class="studio-card__body">
             <div class="studio-cv-grid">
                 <div class="studio-cv-item">
                     <span class="studio-cv-item__label">FPS:</span>
@@ -672,10 +781,12 @@ export function createStudioConsole() {
                     <span class="studio-cv-explain-next" id="studio-cv-explain-next">Czekam na dane CV.</span>
                 </div>
             </div>
+            </div>
         </div>
     `
     hudContainer.appendChild(sidebar)
     sidebarEl = sidebar
+    initializeStudioSidebarAccordions()
 
     // 7. Stwórz dolny pasek transportu (Bottombar)
     const bottombar = document.createElement('div')

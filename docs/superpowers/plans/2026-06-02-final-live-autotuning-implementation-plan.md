@@ -44,6 +44,10 @@ Po obserwacji live z jedną kartą i odblaskiem na macie wykryto trzecią lukę:
 
 Weryfikacja automatyczna: 267 testów backend PASS oraz `npm --prefix app_ar run build` PASS. Manualny live smoke z fizyczną kamerą nadal pozostaje wymagany przed zamknięciem taska.
 
+## Session Status (2026-06-02 Codex Studio sidebar accordion)
+
+Po uwadze operatorskiej o pomieszaniu aktywnych talii z diagnostyką Codex uporządkował prawy panel Studio. `Auto Tune` jest teraz osobną rozwijaną sekcją, `Aktywne Talie` zawiera tylko wybór talii, a pozostałe grupy bocznego panelu działają jako akordeony z lokalnym zapamiętywaniem zwinięcia. Weryfikacja: 268 testów backend PASS, `npm --prefix app_ar run build` PASS oraz Browser QA lokalnego Studio PASS bez błędów konsoli. Manualny live smoke z fizyczną kamerą nadal pozostaje wymagany przed oznaczeniem taska jako `DONE`.
+
 ## Decyzja strategiczna
 
 Po nowych funkcjach rozpoznawania nie wolno implementowac autotuningu jako "znajdz najlepsze Canny/min_area". To byloby lokalne minimum: system moglby idealnie wykrywac prostokaty, ale nadal odrzucac karty przez ORB, homografie, threshold lub konflikt aktywnych talii.

@@ -40,6 +40,10 @@ Po live obserwacji operatora: przy jednej karcie na macie silny odblask byl prze
 
 Codex wznowil prace na czystym branchu `codex/live-autotuning-foundation` i potwierdzil, ze pozostaly zakres taska nie wymaga kolejnej zmiany produkcyjnej przed live smoke. Swieza weryfikacja automatyczna przeszla: pelny backend test suite `267 tests` PASS oraz frontend `npm --prefix app_ar run build` PASS z istniejacymi ostrzezeniami Vite o duzym chunku i nieskutecznym dynamicznym imporcie `textureCache.js`. Status pozostaje `IN_PROGRESS`, bo manualny live smoke z fizyczna kamera nie zostal wykonany w tej sesji.
 
+## Session Status (2026-06-02 Codex Studio sidebar accordion)
+
+Po uwagach Michala o pomieszaniu aktywnych talii z diagnostyka Codex uporzadkowal prawy panel Studio. Sekcje `Transport`, `Kamera`, `Widok`, `Rezyser`, `Audio`, `Aktywne Talie`, `Auto Tune` i `CV Health` sa teraz osobnymi rozwijanymi szufladami z zapamietaniem stanu w `localStorage`. `Auto Tune` zostal oddzielony od wyboru talii, a domyslnie otwarte zostaja sekcje operacyjne: `Transport`, `Auto Tune` i `CV Health`. Manualny live smoke z fizyczna kamera nadal pozostaje wymagany przed zamknieciem taska.
+
 ## Kolejne kroki
 
 1. Wykonać manualny live smoke z kamerą: Auto Tune `empty`, `one_card`, `three_cards`, potem `Apply` i zapis profilu.

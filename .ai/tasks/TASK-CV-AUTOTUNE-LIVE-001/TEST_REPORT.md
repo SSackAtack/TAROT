@@ -240,3 +240,29 @@ Wynik: PASS. Vite zglosil te same istniejace ostrzezenia: duzy chunk po minifika
 ### Continuation manual live smoke
 
 Wynik: NOT RUN w tej sesji. Nadal wymagany jest test z fizyczna kamera i stolem: `empty`, `one_card`, `three_cards`, rekomendacja, `Apply`, zapis profilu w `logs/calibration_profiles/` oraz kontrola `CV Explain` przy realnym odblasku.
+
+### Studio sidebar accordion
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_camera_controls_static -v
+```
+
+Wynik: PASS, 7 testow.
+
+```text
+npm --prefix E:\Antigravity\Projekty\TAROT\app_ar run build
+```
+
+Wynik: PASS. Vite zglosil te same istniejace ostrzezenia: duzy chunk po minifikacji oraz nieskuteczny dynamiczny import `src/renderer/textureCache.js`.
+
+```text
+Browser QA: http://127.0.0.1:5174/?studio=1
+```
+
+Wynik: PASS. Studio renderuje osobne sekcje akordeonu, `Aktywne Talie` rozwija sie po kliknieciu, `Auto Tune` pozostaje osobna sekcja i konsola przegladarki nie zglosila bledow.
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest discover -s app_cv\tests -v
+```
+
+Wynik: PASS, 268 testow.
