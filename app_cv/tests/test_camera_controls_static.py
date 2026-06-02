@@ -43,6 +43,17 @@ class CameraControlsStaticTest(unittest.TestCase):
         self.assertIn("Aktywne teraz:", source)
         self.assertIn("Wybierz 1-3 talie przed kalibracją", source)
 
+    def test_studio_cv_explainability_panel_renders_next_action(self):
+        source = self._read_frontend_file(
+            os.path.join("app_ar", "src", "studio", "studioConsole.js")
+        )
+
+        self.assertIn("CV Explain", source)
+        self.assertIn("renderCvExplainability", source)
+        self.assertIn("operator?.explainability", source)
+        self.assertIn('id="studio-cv-explain-next"', source)
+        self.assertIn("studio-cv-explain-step--", source)
+
 
 if __name__ == "__main__":
     unittest.main()
