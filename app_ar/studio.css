@@ -154,6 +154,32 @@ body.studio-mode-active {
     justify-content: center;
 }
 
+.studio-preview-overlay[data-preview-mode="table"] .studio-camera-preview {
+    display: none;
+}
+
+.studio-preview-overlay[data-preview-mode="pip"] {
+    align-items: flex-end;
+    justify-content: flex-end;
+    padding: 0 28px 28px 0;
+}
+
+.studio-preview-overlay[data-preview-mode="pip"] .studio-camera-preview {
+    width: min(30%, 380px);
+    min-width: 260px;
+    border-color: rgba(214, 125, 62, 0.48);
+    box-shadow: 0 12px 34px rgba(0, 0, 0, 0.62);
+}
+
+.studio-preview-overlay[data-preview-mode="pip"] .studio-safe-guides,
+.studio-preview-overlay[data-preview-mode="table"] .studio-safe-guides {
+    display: none;
+}
+
+.studio-preview-overlay[data-preview-mode="table"] .studio-preview-label {
+    color: #94a3b8;
+}
+
 .studio-camera-preview {
     width: min(92%, 1180px);
     aspect-ratio: 16 / 9;
@@ -228,6 +254,54 @@ body.studio-mode-active {
     color: #d67d3e;
     letter-spacing: 0.1em;
     text-transform: uppercase;
+}
+
+.studio-preview-mode-panel {
+    border-top: 1px solid rgba(148, 163, 184, 0.12);
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    margin-top: 10px;
+    padding-top: 10px;
+}
+
+.studio-preview-mode-label {
+    color: #94a3b8;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.studio-preview-mode-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.studio-preview-mode-btn {
+    min-height: 30px;
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    border-radius: 6px;
+    background: rgba(13, 18, 28, 0.65);
+    color: #cbd5e1;
+    cursor: pointer;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.studio-preview-mode-btn:hover {
+    border-color: rgba(214, 125, 62, 0.35);
+    background: rgba(214, 125, 62, 0.1);
+    color: #ffffff;
+}
+
+.studio-preview-mode-btn--active {
+    border-color: #d67d3e;
+    background: rgba(214, 125, 62, 0.2);
+    color: #ffffff;
 }
 
 /* Prawy pasek boczny (Sidebar) */

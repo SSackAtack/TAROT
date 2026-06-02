@@ -16,6 +16,7 @@ let isDecksInitialized = false
 let loadedDecksList = []
 let activeDecksState = []
 let isDecksApplying = false
+let studioPreviewMode = 'pip'
 
 const studioCameraLabels = {
     CAP_PROP_FOCUS: 'Ostrość',
@@ -96,6 +97,19 @@ function updateStudioActiveDecksStatus(selectedIds = activeDecksState) {
     const names = selectedIds.map(getStudioDeckDisplayName).join(', ')
     statusEl.textContent = `Aktywne teraz: ${names}`
     statusEl.classList.remove('studio-active-decks-status--warning')
+}
+
+function setStudioPreviewMode(mode) {
+    const allowedModes = new Set(['table', 'camera', 'pip'])
+    studioPreviewMode = allowedModes.has(mode) ? mode : 'pip'
+    const overlay = document.querySelector('.studio-preview-overlay')
+    if (overlay) {
+        overlay.dataset.previewMode = studioPreviewMode
+    }
+    if (!sidebarEl) return
+    sidebarEl.querySelectorAll('[data-preview-mode]').forEach((button) => {
+        button.classList.toggle('studio-preview-mode-btn--active', button.dataset.previewMode === studioPreviewMode)
+    })
 }
 
 function getCvExplainabilityFallback(data) {
@@ -431,8 +445,9 @@ export function createStudioConsole() {
     // 5. Stwórz centralny preview overlay z safe guides
     const previewOverlay = document.createElement('div')
     previewOverlay.className = 'studio-preview-overlay'
+    previewOverlay.dataset.previewMode = studioPreviewMode
     previewOverlay.innerHTML = `
-        <div class="studio-preview-label">LIVE CAMERA PREVIEW</div>
+        <div class="studio-preview-label">CAMERA / TABLE PREVIEW</div>
         <div class="studio-camera-preview">
             <img id="studio-camera-preview-img" src="http://localhost:8766/video_feed.mjpg" alt="Podgląd kamery CV">
         </div>
@@ -484,6 +499,14 @@ export function createStudioConsole() {
             <button class="studio-btn-action" id="studio-camera-probe-btn" style="width: 100%; justify-content: center; height: 32px;">
                 Odczyt kamery
             </button>
+            <div class="studio-preview-mode-panel" id="studio-preview-mode-panel">
+                <div class="studio-preview-mode-label">Widok</div>
+                <div class="studio-preview-mode-actions">
+                    <button type="button" class="studio-preview-mode-btn" data-preview-mode="table">Stół</button>
+                    <button type="button" class="studio-preview-mode-btn" data-preview-mode="camera">Kamera</button>
+                    <button type="button" class="studio-preview-mode-btn studio-preview-mode-btn--active" data-preview-mode="pip">PiP</button>
+                </div>
+            </div>
         </div>
 
         <!-- Sekcja 2: Reżyser / Sceny -->
@@ -688,6 +711,16 @@ function initStudioConsoleEvents() {
             sendControlMessage({ type: 'camera_probe' })
         })
     }
+
+    const previewModePanel = sidebarEl.querySelector('#studio-preview-mode-panel')
+    if (previewModePanel) {
+        previewModePanel.addEventListener('click', (event) => {
+            const button = event.target.closest('[data-preview-mode]')
+            if (!button) return
+            setStudioPreviewMode(button.dataset.previewMode)
+        })
+    }
+    setStudioPreviewMode(studioPreviewMode)
 
     const autotunePanel = sidebarEl.querySelector('#studio-autotune-panel')
     if (autotunePanel) {

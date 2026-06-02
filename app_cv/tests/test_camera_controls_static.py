@@ -66,6 +66,17 @@ class CameraControlsStaticTest(unittest.TestCase):
         self.assertIn("autotune_apply", source)
         self.assertIn("autotune_cancel", source)
 
+    def test_studio_preview_modes_support_table_camera_and_pip(self):
+        source = self._read_frontend_file(
+            os.path.join("app_ar", "src", "studio", "studioConsole.js")
+        )
+
+        self.assertIn("setStudioPreviewMode", source)
+        self.assertIn('data-preview-mode="table"', source)
+        self.assertIn('data-preview-mode="camera"', source)
+        self.assertIn('data-preview-mode="pip"', source)
+        self.assertIn("studio-preview-mode-btn--active", source)
+
 
 if __name__ == "__main__":
     unittest.main()
