@@ -96,6 +96,10 @@ Po review ChatGPT Supervisor z decyzją `CHANGES_REQUESTED` Codex poprawił runt
 
 Codex wykonał Task 5 z planu event-first background diff. Etap Auto Tune `Pusta mata` czyści poprzedni `BackgroundModel`, zbiera stabilne snapshoty pustej maty, buduje median `empty_reference` przez `BackgroundModel.capture_many()` i waliduje ostatnią pustą klatkę przez `BackgroundModel.changed_ratio(frame, threshold=20)`. Walidacja nie porównuje już klatki z samą sobą ani nie zależy od globalnego wyniku detekcji kart. Następny bezpieczny task: Task 6 `CV Explain and Diagnostics`.
 
+## Session Status (2026-06-02 Event-first Task 5 Supervisor fix)
+
+Po review ChatGPT Supervisor z decyzją `CHANGES_REQUESTED` Codex zabezpieczył interakcję Task 5 z `hold_previous_state` z Task 4. `Pusta mata` ustawia teraz `empty_reference_capture_active`, dzięki czemu recorder zbiera próbki empty również wtedy, gdy aktywny `ChangeDetector` i istniejący `previous_stable_snapshot` dają `no_change_hold_previous`. Pipeline nadal nie uruchamia `SnapshotAnalyzer` w hold-state, więc nie wraca do globalnej detekcji; zapisuje pustą próbkę `0/0`, a po komplecie ramek wykonuje `capture_many()` i `changed_ratio()`.
+
 ## Kolejne kroki
 
 1. Implementować event-first background diff wyłącznie według zaktualizowanego głównego planu `2026-06-02-event-first-background-diff-implementation-plan.md`.

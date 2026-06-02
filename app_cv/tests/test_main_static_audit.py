@@ -195,6 +195,7 @@ class TestMainStaticAudit(unittest.TestCase):
         self.assertIn('message.scenario == "empty"', autotune_start_block)
         self.assertIn("background_model.clear()", autotune_start_block)
         self.assertIn("snapshot_pipeline.empty_reference_frames.clear()", autotune_start_block)
+        self.assertIn("snapshot_pipeline.empty_reference_capture_active = True", autotune_start_block)
         self.assertIn("collect_empty_reference_frame", source)
         self.assertIn("finalize_empty_reference", source)
 

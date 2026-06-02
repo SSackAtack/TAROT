@@ -45,6 +45,7 @@ class SnapshotFirstPipeline(VisionPipeline):
         self.change_detector = change_detector
         self.background_model = background_model
         self.empty_reference_frames = []
+        self.empty_reference_capture_active = False
 
         # Zmienne stanu rurociągu
         self.last_snapshot_cards = []
@@ -219,10 +220,11 @@ class SnapshotFirstPipeline(VisionPipeline):
                     self.runtime_metrics.add("snapshot_analysis_ms", analysis_ms)
                 self.runtime_metrics.add("snapshot_quality_score", selected.quality.quality_score)
                 autotune_recorder_result = None
-                if not hold_previous_state:
+                if not hold_previous_state or self.empty_reference_capture_active:
+                    accepted_count = 0 if result is None else result.card_count
                     autotune_recorder_result = self._record_autotune_sample(
                         diagnostics=diagnostics,
-                        accepted_count=result.card_count,
+                        accepted_count=accepted_count,
                         analysis_ms=analysis_ms,
                         quality_score=selected.quality.quality_score,
                     )
@@ -289,6 +291,7 @@ class SnapshotFirstPipeline(VisionPipeline):
                         1 if validation_ratio > 0.01 else 0,
                     )
                     self.empty_reference_frames = []
+                    self.empty_reference_capture_active = False
 
                 layout_snapshot.update({
                     "layout_id": self.snapshot_layout_id,

@@ -175,3 +175,11 @@
 - `SnapshotFirstPipeline` zbiera stabilne snapshoty pustej maty do `empty_reference_frames` i dopiero przy finalizacji wywołuje `BackgroundModel.capture_many()`.
 - Po zbudowaniu referencji pipeline waliduje ostatnią pustą klatkę przez `BackgroundModel.changed_ratio(frame, threshold=20)` i publikuje metryki `background_reference_validation_ratio` oraz `background_reference_validation_warning`.
 - Dodano testy RED/GREEN dla bootstrapu pustej maty, opóźnionego `capture_many()` oraz walidacji reference-vs-current.
+
+## 2026-06-02 Event-first Task 5 Supervisor fix
+
+- Dodano `SnapshotFirstPipeline.empty_reference_capture_active`, włączane przy `autotune_start empty`.
+- Recorder autotuningu może teraz zapisać próbkę pustej maty także wtedy, gdy `ChangeDetector` zwraca `no_change` i pipeline trzyma poprzedni layout przez `no_change_hold_previous`.
+- Zachowano bezpieczeństwo runtime: przy hold-state analyzer nadal nie jest wywoływany, a próbka empty ma `accepted_count=0`, `candidate_count=0` i `analysis_ms=0.0`.
+- Po finalizacji `capture_many()` i walidacji przez `changed_ratio()` pipeline czyści `empty_reference_frames` oraz wyłącza `empty_reference_capture_active`.
+- Dodano regresję dla aktywnego `change_detector`, istniejącego `previous_stable_snapshot` i trzech pustych próbek z finalizacją referencji.

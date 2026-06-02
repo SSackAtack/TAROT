@@ -268,7 +268,43 @@ Wynik: PASS.
 $env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest discover -s app_cv\tests -v
 ```
 
+Wynik: PASS, 297 testow.
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest discover -s app_cv\tests -v
+```
+
 Wynik: PASS, 296 testow.
+
+### Event-first Task 5 Supervisor fix
+
+#### RED
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_pipelines_contract.TestPipelinesContract.test_empty_reference_capture_records_frames_when_change_detector_reports_no_change -v
+```
+
+Wynik: FAIL oczekiwany. Przy aktywnym `change_detector`, istniejącym `previous_stable_snapshot` i `no_change_hold_previous` recorder nie był wywoływany (`0 != 3`), więc `capture_many()` nie mógł powstać.
+
+#### GREEN
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_pipelines_contract.TestPipelinesContract.test_empty_reference_capture_records_frames_when_change_detector_reports_no_change -v
+```
+
+Wynik: PASS.
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_main_static_audit app_cv.tests.test_pipelines_contract -v
+```
+
+Wynik: PASS, 26 testow.
+
+```text
+$env:PYTHONDONTWRITEBYTECODE='1'; python -B -m py_compile app_cv\main.py app_cv\tarotvision\pipelines\snapshot_first.py
+```
+
+Wynik: PASS.
 
 ### Event-first background diff plan
 

@@ -849,5 +849,92 @@ class TestPipelinesContract(unittest.TestCase):
         runtime_metrics.add.assert_any_call("background_reference_validation_ratio", 0.0)
         runtime_metrics.add.assert_any_call("background_reference_validation_warning", 0)
 
+    def test_empty_reference_capture_records_frames_when_change_detector_reports_no_change(self):
+        camera_session = MagicMock()
+        camera_session.frame_width = 300
+        camera_session.frame_height = 200
+        camera_session.camera_index = 0
+
+        opencv_preview = MagicMock()
+        opencv_preview.handle_keyboard.return_value = None
+        status_store = MagicMock()
+        diagnostics_writer = MagicMock()
+        snapshot_gate = MagicMock()
+        gate_decision = MagicMock()
+        gate_decision.state = "sampling_snapshots"
+        gate_decision.stable_for_ms = 700
+        gate_decision.should_sample = True
+        snapshot_gate.update.return_value = gate_decision
+
+        snapshot_analyzer = MagicMock()
+        table_calibration = MagicMock()
+        table_calibration.calibrated = False
+        table_calibration.status.return_value = {"calibrated": False, "marker_ids": []}
+
+        runtime_metrics = MagicMock()
+        runtime_metrics.snapshot.return_value = {}
+        runtime_config = MagicMock()
+        runtime_config.values = {}
+
+        background_model = MagicMock()
+        background_model.changed_ratio.return_value = 0.0
+        change_detector = MagicMock()
+        change_detector.detect.return_value.regions = []
+        change_detector.detect.return_value.mask_nonzero_ratio = 0.0
+        change_detector.detect.return_value.global_shift = False
+        change_detector.detect.return_value.ignored_small_count = 0
+        change_detector.detect.return_value.ignored_large_count = 0
+        recorder = MagicMock(side_effect=[
+            {"collect_empty_reference_frame": True, "request_next_sample": True},
+            {"collect_empty_reference_frame": True, "request_next_sample": True},
+            {"collect_empty_reference_frame": True, "finalize_empty_reference": True},
+        ])
+
+        pipeline = SnapshotFirstPipeline(
+            camera_session=camera_session,
+            opencv_preview=opencv_preview,
+            status_store=status_store,
+            diagnostics_writer=diagnostics_writer,
+            snapshot_gate=snapshot_gate,
+            snapshot_analyzer=snapshot_analyzer,
+            table_calibration=table_calibration,
+            runtime_metrics=runtime_metrics,
+            runtime_config=runtime_config,
+            build_operator_snapshot_fn=MagicMock(return_value={}),
+            operator_warnings=[],
+            log_dir="dummy",
+            runtime_profile="default",
+            background_model=background_model,
+            change_detector=change_detector,
+            autotune_sample_recorder=recorder,
+        )
+        pipeline.empty_reference_capture_active = True
+        pipeline.previous_stable_snapshot = self._readable_frame(value=64)[0:200, 0:300]
+        pipeline.last_snapshot_cards = [{"name": "17_star"}]
+
+        motion_result = MagicMock()
+        motion_result.motion_detected = False
+        motion_result.changed_ratio = 0.0
+
+        for value in (80, 96, 128):
+            pipeline.process_frame(
+                frame=self._readable_frame(value=value)[0:200, 0:300],
+                motion_result=motion_result,
+                frame_width=300,
+                frame_height=200,
+                frame_loop_start=12345.67,
+            )
+
+        snapshot_analyzer.analyze.assert_not_called()
+        self.assertEqual(recorder.call_count, 3)
+        self.assertEqual(
+            [call.args[0]["accepted_count"] for call in recorder.call_args_list],
+            [0, 0, 0],
+        )
+        background_model.capture_many.assert_called_once()
+        background_model.changed_ratio.assert_called_once()
+        self.assertEqual(pipeline.empty_reference_frames, [])
+        self.assertFalse(pipeline.empty_reference_capture_active)
+
 if __name__ == '__main__':
     unittest.main()
