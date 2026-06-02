@@ -73,6 +73,38 @@ class OperatorExplainabilityTest(unittest.TestCase):
         self.assertEqual(result["severity"], "warn")
         self.assertIn("jedna karta", result["next_action"].lower())
 
+    def test_aruco_step_counts_marker_ids_from_table_status(self):
+        result = build_cv_explainability(
+            cards=[{"id": "gilded_01"}],
+            metrics={},
+            runtime={"table": {"calibrated": True, "marker_ids": [10, 11, 12, 13]}},
+            layout={"state": "holding_last_good"},
+            operator={"active_decks": ["gilded"]},
+            warnings=[],
+        )
+
+        aruco_step = next(step for step in result["steps"] if step["id"] == "aruco")
+        self.assertEqual(aruco_step["state"], "ok")
+        self.assertEqual(aruco_step["value"], "4/4")
+        self.assertEqual(aruco_step["message"], "Stol skalibrowany")
+
+    def test_aruco_step_warns_when_using_cached_calibration_without_visible_markers(self):
+        result = build_cv_explainability(
+            cards=[{"id": "gilded_01"}],
+            metrics={},
+            runtime={"table": {"calibrated": True, "marker_ids": []}},
+            layout={"state": "holding_last_good"},
+            operator={"active_decks": ["gilded"]},
+            warnings=[],
+        )
+
+        aruco_step = next(step for step in result["steps"] if step["id"] == "aruco")
+        self.assertEqual(aruco_step["state"], "warn")
+        self.assertEqual(aruco_step["value"], "0/4")
+        self.assertIn("ostatniej kalibracji", aruco_step["message"])
+        self.assertEqual(result["severity"], "warn")
+        self.assertEqual(result["next_action"], "Pokaz wszystkie markery ArUco w kadrze.")
+
 
 if __name__ == "__main__":
     unittest.main()

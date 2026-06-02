@@ -8,6 +8,15 @@ def _step(step_id, label, state, value, message):
     }
 
 
+def _current_aruco_marker_count(runtime, table_status):
+    if "aruco_markers" in runtime:
+        return int(runtime.get("aruco_markers") or 0)
+    marker_ids = table_status.get("marker_ids")
+    if isinstance(marker_ids, list):
+        return len(marker_ids)
+    return int(table_status.get("markers_detected", 0) or 0)
+
+
 def build_cv_explainability(cards, metrics, runtime, layout, operator, warnings):
     cards = cards or []
     metrics = metrics or {}
@@ -19,8 +28,16 @@ def build_cv_explainability(cards, metrics, runtime, layout, operator, warnings)
     active_decks = operator.get("active_decks") or []
     layout_state = layout.get("state") or "unknown"
     table_status = runtime.get("table") if isinstance(runtime.get("table"), dict) else {}
-    aruco_markers = runtime.get("aruco_markers", table_status.get("markers_detected", 0)) or 0
+    aruco_markers = _current_aruco_marker_count(runtime, table_status)
     aruco_calibrated = bool(runtime.get("aruco_calibrated", table_status.get("calibrated", False)))
+    aruco_fully_visible = aruco_markers >= 4
+    aruco_step_state = "ok" if aruco_calibrated and aruco_fully_visible else "warn"
+    if aruco_calibrated and aruco_fully_visible:
+        aruco_message = "Stol skalibrowany"
+    elif aruco_calibrated:
+        aruco_message = "Uzywam ostatniej kalibracji; pokaz markery ArUco"
+    else:
+        aruco_message = "Pokaz markery ArUco w kadrze"
     candidate_count = runtime.get("candidate_count", metrics.get("snapshot_quads_found"))
     if candidate_count is None:
         candidate_count = len(cards)
@@ -40,9 +57,9 @@ def build_cv_explainability(cards, metrics, runtime, layout, operator, warnings)
         _step(
             "aruco",
             "ArUco",
-            "ok" if aruco_calibrated else "warn",
+            aruco_step_state,
             f"{aruco_markers}/4",
-            "Stol skalibrowany" if aruco_calibrated else "Pokaz markery ArUco w kadrze",
+            aruco_message,
         ),
         _step(
             "snapshot",
@@ -79,7 +96,7 @@ def build_cv_explainability(cards, metrics, runtime, layout, operator, warnings)
     elif layout_state == "no_camera":
         severity = "error"
         next_action = "Sprawdz kamere i launcher CV."
-    elif not aruco_calibrated:
+    elif not aruco_calibrated or not aruco_fully_visible:
         severity = "warn"
         next_action = "Pokaz wszystkie markery ArUco w kadrze."
     elif layout_state in {"settling", "sampling_snapshots", "analyzing_snapshot"}:
