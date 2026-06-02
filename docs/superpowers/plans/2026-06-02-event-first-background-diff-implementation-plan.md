@@ -963,7 +963,7 @@ $env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.te
 
 Expected: PASS.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```powershell
 git add app_cv/main.py app_cv/tarotvision/pipelines/snapshot_first.py app_cv/tests/test_main_static_audit.py app_cv/tests/test_pipelines_contract.py
@@ -1243,7 +1243,7 @@ git commit -m "feat: wyjasnij regiony zmian w cv explain"
 - Modify: `.ai/tasks/TASK-CV-AUTOTUNE-LIVE-001/CHANGELOG.md`
 - Modify: `.ai/tasks/TASK-CV-AUTOTUNE-LIVE-001/TEST_REPORT.md`
 
-- [ ] **Step 1: Run targeted tests**
+- [x] **Step 1: Run targeted tests**
 
 ```powershell
 $env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_background_model app_cv.tests.test_change_detection app_cv.tests.test_snapshot_analyzer app_cv.tests.test_pipelines_contract app_cv.tests.test_operator_explainability -v
@@ -1251,7 +1251,7 @@ $env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.te
 
 Expected: PASS.
 
-- [ ] **Step 2: Run full backend suite**
+- [x] **Step 2: Run full backend suite**
 
 ```powershell
 $env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest discover -s app_cv\tests -v
@@ -1259,7 +1259,7 @@ $env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest discover -s app
 
 Expected: PASS.
 
-- [ ] **Step 3: Run frontend build**
+- [x] **Step 3: Run frontend build**
 
 ```powershell
 npm --prefix E:\Antigravity\Projekty\TAROT\app_ar run build
@@ -1282,7 +1282,7 @@ Start or restart Studio backend/frontend, then in `http://127.0.0.1:5174/?studio
 9. Remove the card.
 10. Expected: `change_removed_count >= 1`, state eventually clears card.
 
-- [ ] **Step 5: Inspect logs**
+- [x] **Step 5: Inspect logs**
 
 Check latest files:
 
@@ -1301,7 +1301,7 @@ change_added_count
 change_removed_count
 ```
 
-- [ ] **Step 6: Update docs**
+- [x] **Step 6: Update docs**
 
 Append Polish session status to:
 
@@ -1325,6 +1325,14 @@ Kolejne kroki: <co zostaje>.
 git add .ai/tasks/TASK-CV-AUTOTUNE-LIVE-001 docs/superpowers/plans/2026-06-02-event-first-background-diff-implementation-plan.md
 git commit -m "docs: zapisz weryfikacje event-first background diff"
 ```
+
+## Session Status (2026-06-03 Event-first Task 7 Live Smoke)
+
+Stan aktualny: **RED live smoke**. Automatyczna weryfikacja przeszła: targeted event-first suite `47` testów PASS, full backend suite `300` testów PASS, frontend build PASS z istniejącymi ostrzeżeniami Vite.
+
+Co zostało zrobione: uruchomiono świeży backend z bieżącego branchu po wykryciu, że stary proces na portach `8765/8766` nie publikował pól Task 6. Payload WebSocket potwierdził kroki CV Explain `empty_reference` i `change_detection` oraz pola `background_reference_active`, `empty_reference_capture_active`, `empty_reference_frame_count`. Po komendzie `autotune_start empty` stan zmienił się na `empty_reference_capture_active=True`, ale etap `Pusta mata` pozostał na `0/3`; `empty_reference_frame_count=0`, `background_reference_active=False`, a w `logs/autotune_sessions/` powstał tylko plik `empty_stage_started`. `cv_metrics.jsonl` pokazał powtarzalne `snapshot_samples_taken=1.0`, `snapshot_rejected_count=1.0`, `stable_for_ms=0.0` i później `marker_ids=[]`.
+
+Kolejne kroki: nie uznawać Task 7 za ukończony. Najpierw zdiagnozować, dlaczego pusty etap live nie dostaje zaakceptowanych snapshotów w bieżących warunkach kamery/ArUco, następnie powtórzyć pełny smoke: `empty`, jedna karta, trzy karty, no-change, usunięcie karty i global shift.
 
 ---
 

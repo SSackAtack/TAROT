@@ -716,3 +716,69 @@ npm --prefix E:\Antigravity\Projekty\TAROT\app_ar run build
 ```
 
 Wynik: PASS. Vite zglosil te same istniejace ostrzezenia: duzy chunk po minifikacji oraz nieskuteczny dynamiczny import `src/renderer/textureCache.js`.
+
+### Event-first Task 7 Live Smoke
+
+#### Targeted event-first suite
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_background_model app_cv.tests.test_change_detection app_cv.tests.test_snapshot_analyzer app_cv.tests.test_pipelines_contract app_cv.tests.test_operator_explainability -v
+```
+
+Wynik: PASS, 47 testów.
+
+#### Full backend suite
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest discover -s app_cv\tests -v
+```
+
+Wynik: PASS, 300 testów.
+
+#### Frontend build
+
+```text
+npm --prefix E:\Antigravity\Projekty\TAROT\app_ar run build
+```
+
+Wynik: PASS. Vite zgłosił istniejące ostrzeżenia: nieskuteczny dynamiczny import `src/renderer/textureCache.js` oraz chunk większy niż 500 kB.
+
+#### Current backend payload check
+
+Wynik: PASS diagnostyczny. Stary proces backendu CV na portach `8765/8766` nie publikował pól Task 6, więc został zatrzymany. Po uruchomieniu backendu z bieżącego branchu payload WebSocket zawierał:
+
+```text
+background_reference_active=false
+empty_reference_capture_active=false
+empty_reference_frame_count=0
+operator_explainability_steps=decks, aruco, snapshot, empty_reference, change_detection, candidates, recognition
+```
+
+#### Live smoke: Pusta mata
+
+```text
+WebSocket command: {"type":"autotune_start","scenario":"empty"}
+```
+
+Wynik: RED. Po starcie `empty_reference_capture_active=true`, ale etap pozostał na `empty 0/3`; `empty_reference_frame_count=0`, `background_reference_active=false`, `background_reference_validation_ratio=null`.
+
+Najnowszy log sesji autotuningu:
+
+```text
+logs/autotune_sessions/autotune_20260603_000944_1780438184277849800_empty_stage_started.json
+```
+
+Nie powstały pliki `sample_collected` ani `stage_completed` dla tej próby.
+
+Metryki `logs/cv_metrics.jsonl` po starcie pokazują:
+
+```text
+empty_reference_capture_active=true
+empty_reference_frame_count=0
+snapshot_samples_taken=1.0
+snapshot_rejected_count=1.0
+stable_for_ms=0.0
+table.marker_ids=[]
+```
+
+Wniosek: Task 7 nie spełnia kryterium akceptacji "`Pusta mata` nie wisi na `0/3`". Scenariusze jedna karta, trzy karty, no-change, removal i global shift nie zostały uruchomione, bo pustej referencji nie udało się zbudować.

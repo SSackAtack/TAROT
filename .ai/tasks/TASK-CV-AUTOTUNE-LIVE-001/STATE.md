@@ -6,7 +6,7 @@ IN_PROGRESS
 
 ## Branch
 
-`codex/live-autotuning-foundation`
+`task/cv-event-first-plan-001-clarify-autotune-runtime`
 
 ## Stan aktualny
 
@@ -104,8 +104,16 @@ Po review ChatGPT Supervisor z decyzją `CHANGES_REQUESTED` Codex zabezpieczył 
 
 Codex wykonał Task 6 z planu event-first background diff. CV Explain pokazuje teraz stan pustej referencji (`inactive`, aktywna, zbieranie `N/3`, warning walidacji) oraz stan change detection: brak regionów zmian, global shift albo liczby regionów `added`/`removed` z `mask ratio`. Pipeline publikuje wyłącznie minimalne pola diagnostyczne potrzebne UI: `background_reference_active`, `empty_reference_capture_active`, `empty_reference_frame_count`; logika detekcji nie została zmieniona.
 
+## Session Status (2026-06-03 Event-first Task 7 Live Smoke)
+
+Stan aktualny: **RED live smoke**. Automatyczna weryfikacja Task 7 przeszła (`47` testów targeted, `300` testów full backend, frontend build PASS), a backend uruchomiony z bieżącego kodu publikuje nowe pola Task 6 (`background_reference_active`, `empty_reference_capture_active`, `empty_reference_frame_count`) oraz kroki CV Explain `empty_reference` i `change_detection`.
+
+Co zostało zrobione: zrestartowano stary backend CV, uruchomiono świeży `SnapshotFirstPipeline` z `TAROTVISION_SNAPSHOT_FIRST=1`, potwierdzono początkowo skalibrowany stół ArUco i wysłano komendę `autotune_start` dla scenariusza `empty`. Po starcie `empty_reference_capture_active=True`, ale etap `Pusta mata` pozostał na `0/3`; `empty_reference_frame_count=0`, `background_reference_active=False`, a w `logs/autotune_sessions/` powstał tylko plik `empty_stage_started`. Metryki `logs/cv_metrics.jsonl` pokazują powtarzalne `snapshot_samples_taken=1.0`, `snapshot_rejected_count=1.0`, `stable_for_ms` spadające do `0.0` oraz później brak widocznych markerów ArUco (`marker_ids: []`).
+
+Kolejne kroki: nie przechodzić do merge ani kolejnego taska runtime. Następny bezpieczny krok to mała diagnoza/fix przed ponowieniem Task 7: ustalić, dlaczego live `Pusta mata` nie zbiera zaakceptowanych snapshotów w obecnych warunkach kamery, mimo aktywnego `empty_reference_capture_active`, i dopiero potem powtórzyć pełny smoke (`empty`, jedna karta, trzy karty, no-change, removal, global shift).
+
 ## Kolejne kroki
 
-1. Implementować event-first background diff wyłącznie według zaktualizowanego głównego planu `2026-06-02-event-first-background-diff-implementation-plan.md`.
-2. Następny bezpieczny task implementacyjny: `Task 7: Live Smoke`.
+1. Zdiagnozować RED live smoke z 2026-06-03: `Pusta mata` pozostaje na `0/3`, `empty_reference_capture_active=True`, `empty_reference_frame_count=0`.
+2. Po poprawce albo korekcie warunków kamery powtórzyć pełny `Task 7: Live Smoke`.
 3. Manualny live smoke z kamerą pozostaje wymagany dla obecnego `TASK-CV-AUTOTUNE-LIVE-001` przed oznaczeniem go jako `DONE`.

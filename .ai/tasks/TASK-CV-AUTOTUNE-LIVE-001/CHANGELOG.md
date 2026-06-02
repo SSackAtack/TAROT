@@ -190,3 +190,12 @@
 - Dodano krok CV Explain `Zmiana`, który pokazuje brak regionów zmian, global shift albo liczby `added`/`removed` i `mask ratio`.
 - `SnapshotFirstPipeline` publikuje minimalne pola runtime: `background_reference_active`, `empty_reference_capture_active`, `empty_reference_frame_count`.
 - Dodano testy dla braku regionów zmian, globalnej zmiany obrazu oraz statusu zbierania pustej referencji z ostrzeżeniem walidacji.
+
+## 2026-06-03 Event-first Task 7 Live Smoke
+
+- Uruchomiono targeted event-first suite: `test_background_model`, `test_change_detection`, `test_snapshot_analyzer`, `test_pipelines_contract`, `test_operator_explainability`.
+- Uruchomiono pełny backend suite oraz frontend build `app_ar`.
+- Zatrzymano stary backend CV na portach `8765/8766`, który nie publikował jeszcze pól Task 6, i uruchomiono backend z bieżącego branchu.
+- Potwierdzono w payloadzie WebSocket obecność diagnostyki Task 6: `background_reference_active`, `empty_reference_capture_active`, `empty_reference_frame_count`, kroki CV Explain `empty_reference` oraz `change_detection`.
+- Rozpoczęto live smoke dla scenariusza `empty`; wynik RED: etap `Pusta mata` pozostał na `0/3`, nie utworzył `empty_reference`, a log sesji zawiera tylko `empty_stage_started`.
+- Nie wykonano scenariuszy jedna karta, trzy karty, no-change, usunięcie i global shift, ponieważ bootstrap pustej referencji nie przeszedł pierwszego kroku.
