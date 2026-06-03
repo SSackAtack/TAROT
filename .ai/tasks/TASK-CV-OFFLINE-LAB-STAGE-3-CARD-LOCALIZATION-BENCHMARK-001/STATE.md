@@ -54,3 +54,40 @@ logs/offline_replay/stage3_card_localization/hybrid_edge_plus_contour/*/card_geo
 ```
 
 Po akceptacji Supervisora mozna zatwierdzic Stage 3 jako wejscie do kolejnego etapu. Nie rozpoczynac Stage 4 przed manual review.
+
+## TASK-CV-OFFLINE-LAB-STAGE-3-MANUAL-REVIEW-PACK-001
+
+### Summary
+
+Prepared local manual review pack for Stage 3 `hybrid_edge_plus_contour` geometry overlays.
+
+### Files prepared locally
+
+- `logs/offline_replay/stage3_manual_review_pack/hybrid_edge_plus_contour/01_empty_to_empty_card_geometry_overlay.png`
+- `logs/offline_replay/stage3_manual_review_pack/hybrid_edge_plus_contour/02_empty_to_one_card_card_geometry_overlay.png`
+- `logs/offline_replay/stage3_manual_review_pack/hybrid_edge_plus_contour/03_empty_to_three_cards_card_geometry_overlay.png`
+- `logs/offline_replay/stage3_manual_review_pack/hybrid_edge_plus_contour/04_one_card_to_three_cards_card_geometry_overlay.png`
+- `logs/offline_replay/stage3_manual_review_pack/hybrid_edge_plus_contour/05_one_card_to_empty_card_geometry_overlay.png`
+- `logs/offline_replay/stage3_manual_review_pack/hybrid_edge_plus_contour/06_three_cards_to_empty_card_geometry_overlay.png`
+- `logs/offline_replay/stage3_manual_review_pack/README_FOR_SUPERVISOR.md`
+- `logs/offline_replay/stage3_manual_review_pack_hybrid_edge_plus_contour.zip`
+
+### Tests
+
+No algorithmic tests required. Packaging only.
+
+Verification:
+
+- confirmed all 6 PNG files exist
+- confirmed README exists
+- confirmed ZIP exists
+
+### Decision
+
+Stage 3 still `PROVISIONAL_RECOMMENDED`.
+
+Waiting for Supervisor visual review.
+
+### Required next action
+
+Michal uploads the six PNG overlays to ChatGPT Supervisor for manual Stage 3 review.
