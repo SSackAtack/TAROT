@@ -1380,6 +1380,14 @@ Ryzyko do obserwacji: rolling metrics change detection pokazały mieszany sygna�
 
 Kolejne kroki: kontynuować Task 7 do scenariusza trzech kart, a potem no-change i removal.
 
+## Session Status (2026-06-03 Event-first Task 7 Three Cards Smoke)
+
+Stan aktualny: **RED dla scenariusza trzech kart**. Po dołożeniu do trzech fizycznych kart backend pozostał przy jednym opublikowanym rozpoznaniu (`cards_len=1`, `Gilded_50`).
+
+Co zostało zaobserwowane: ArUco i referencja tła pozostały aktywne (`marker_ids=[10,11,12,13]`, `background_reference_active=True`). Change detection widzi wiele regionów (`change_region_count=3.5`, `change_added_count=3.5`, `change_mask_ratio=0.311`), ale finalny layout nie zawiera trzech kart. Metryki wskazują dużo kandydatów i odrzuceń w dalszej ścieżce: `snapshot_quads_found=10.111`, `snapshot_recognition_attempts=6.222`, `snapshot_recognition_rejections=4.778`, `snapshot_candidate_validation_rejections=3.889`, `snapshot_detection_quads_final=0.444`.
+
+Kolejne kroki: nie uznawać Task 7 za green. Następny mały task powinien zbadać przetwarzanie wielu ROI i odrzucenia kandydatów/rozpoznań przy trzech kartach. Nie stroić starego detektora pustej maty.
+
 ---
 
 ## Kryteria Akceptacji

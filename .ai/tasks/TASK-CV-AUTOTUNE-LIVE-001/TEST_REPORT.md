@@ -1065,3 +1065,58 @@ layout_changed=1.0
 ```
 
 Wniosek: scenariusz jednej karty przeszedł funkcjonalnie (`cards_len=1`, brak dodatkowych kart), ale diagnostyka change detection nie jest jeszcze idealnie czysta, bo rolling metrics pokazują część próbek jako `global_shift`. Obserwować to przy trzech kartach, no-change i removal.
+
+### Event-first Task 7 Three Cards Smoke
+
+Warunek wejściowy:
+
+```text
+background_reference_active=true
+table.calibrated=true
+marker_ids=[10, 11, 12, 13]
+trzy karty fizycznie położone na macie
+```
+
+Wynik: RED.
+
+Pierwszy odczyt live, 15 sekund:
+
+```text
+samples=79
+max_cards_len=1
+selected.cards_len=1
+selected.card.name=Gilded_50
+selected.card.confidence=0.5
+selected.card.orientation=upright
+background_reference_active=true
+```
+
+Drugi odczyt live, 10 sekund:
+
+```text
+max_cards_len=1
+last_detected=true
+last_cards_len=1
+last_cards=[Gilded_50]
+table.calibrated=true
+marker_ids=[10, 11, 12, 13]
+background_reference_active=true
+```
+
+Metryki rolling z `logs/cv_metrics.jsonl` w trakcie scenariusza:
+
+```text
+change_region_count=3.5
+change_added_count=3.5
+change_removed_count=0.0
+change_global_shift=0.25
+change_mask_ratio=0.311
+snapshot_quads_found=10.111
+snapshot_recognition_attempts=6.222
+snapshot_recognition_rejections=4.778
+snapshot_candidate_validation_rejections=3.889
+snapshot_detection_quads_final=0.444
+layout_publish_count=1.0
+```
+
+Wniosek: event-first wykrywa regiony zmian dla wielu kart, ale finalny layout publikuje tylko jedną kartę. Problem jest po stronie analizy/rozpoznawania wielu ROI albo walidacji kandydatów, nie po stronie tworzenia pustej referencji.

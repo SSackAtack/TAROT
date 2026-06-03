@@ -152,6 +152,14 @@ Co zostało zaobserwowane: payload live pokazał `detected=true`, `cards_len=1`,
 
 Kolejne kroki: kontynuować smoke do trzech kart, a potem szczególnie sprawdzić no-change i removal. Jeśli global shift będzie stale pojawiał się przy normalnym dodawaniu kart, zapisać osobny mały task diagnostyczny dla progu/global-shift klasyfikacji w `ChangeDetector`, bez strojenia starego detektora pustej maty.
 
+## Session Status (2026-06-03 Event-first Task 7 Three Cards Smoke)
+
+Stan aktualny: **RED dla scenariusza trzech kart**. Po dołożeniu kart do trzech fizycznych kart na macie backend przez dwa odczyty live nie opublikował układu trzech kart. Maksymalny zaobserwowany layout miał `cards_len=1`.
+
+Co zostało zaobserwowane: `table.calibrated=True`, `marker_ids=[10,11,12,13]`, `background_reference_active=True`, `detected=True`, ale layout zawierał tylko `Gilded_50` (`confidence=0.5`, `orientation=upright`). Metryki z `cv_metrics.jsonl` pokazują, że event-first widział wiele regionów zmian (`change_region_count=3.5`, `change_added_count=3.5`, `change_mask_ratio=0.311`), więc problem nie wygląda na brak detekcji zmiany. Wąskim gardłem jest downstream analiza/rozpoznanie ROI: `snapshot_quads_found=10.111`, `snapshot_recognition_attempts=6.222`, `snapshot_recognition_rejections=4.778`, `snapshot_candidate_validation_rejections=3.889`, a finalnie `snapshot_detection_quads_final=0.444` i `cards_len=1`.
+
+Kolejne kroki: zatrzymać Task 7 przed oznaczeniem jako green. Następny mały task powinien zbadać, dlaczego przy wielu regionach event-first rozpoznaje tylko jedną z trzech kart: ROI sizing/merge, walidacja kandydatów albo rozpoznawanie wielu ROI. Nie wracać do strojenia starego detektora pustej maty.
+
 ## Kolejne kroki
 
 1. Kontynuować pełny `Task 7: Live Smoke` przy widocznych 4 markerach ArUco: jedna karta, trzy karty, no-change, removal i global shift.
