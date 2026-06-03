@@ -97,3 +97,11 @@ Stage 2 bbox = candidate object/card region, not final card geometry or crop.
 Next stage:
 
 TASK-CV-RESEARCH-STAGE-3-CARD-LOCALIZATION-001
+
+## Session Status (2026-06-03 Codex Stage 3 Research Gate)
+
+Stan aktualny: Stage 1 approved: `gray_absdiff_gaussian`. Stage 2 approved: `contour_external`. Next gate: Stage 3 Card Localization research.
+
+Co zostało zrobione: utworzono `TASK-CV-RESEARCH-STAGE-3-CARD-LOCALIZATION-001` i zapisano shortlistę metod Card Localization / Geometry Extraction do decyzji Supervisora. Nie zmieniono `tools/cv_detection_lab/`, runtime, Studio ani frontendu.
+
+Kolejne kroki: Stage 3 benchmark must not begin until Supervisor accepts TEST_NOW shortlist. Po akceptacji należy utworzyć `TASK-CV-OFFLINE-LAB-STAGE-3-CARD-LOCALIZATION-BENCHMARK-001`.
