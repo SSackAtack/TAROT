@@ -9,8 +9,8 @@ Stage 1 approved: gray_absdiff_gaussian.
 Stage 2 approved: contour_external.
 ```
 
-Next gate: Stage 3 Card Localization research.
-Stage 3 benchmark must not begin until Supervisor accepts TEST_NOW shortlist.
+Next gate: Supervisor manual review of Stage 3 overlays.
+Stage 4 must not begin until Supervisor accepts Stage 3 geometry output.
 
 ## Session Status (2026-06-03 Codex)
 
@@ -20,6 +20,14 @@ Co zostało zrobione: zapisano macierz kandydatów w `.ai/tasks/TASK-CV-RESEARCH
 
 Kolejne kroki: Supervisor powinien zaakceptować albo skorygować shortlistę `TEST_NOW`.
 
+## Session Status (2026-06-03 Codex Stage 3 Benchmark)
+
+Stan aktualny: zaimplementowano i uruchomiono izolowany offline benchmark Stage 3 Card Localization / Geometry Extraction.
+
+Co zostało zrobione: dodano `card_localization_methods.py`, `stage3_card_localization_benchmark.py` oraz testy `test_cv_detection_lab_stage3.py`. Benchmark korzysta z `gray_absdiff_gaussian` i `contour_external`, generuje `matrix.csv`, `report.json`, `report.md` oraz overlay/debug per metoda i para fixture.
+
+Kolejne kroki: Supervisor powinien recznie sprawdzic overlaye rekomendowanej metody `hybrid_edge_plus_contour` w `logs/offline_replay/stage3_card_localization/hybrid_edge_plus_contour/*/card_geometry_overlay.png`. Nie rozpoczynac Stage 4 przed akceptacja.
+
 ## Co zostało zrobione
 
 - [x] Potwierdzono wejście ze Stage 1: `gray_absdiff_gaussian`.
@@ -27,11 +35,15 @@ Kolejne kroki: Supervisor powinien zaakceptować albo skorygować shortlistę `T
 - [x] Zidentyfikowano ograniczenie Stage 2: bbox regionu kandydata nie jest finalną geometrią karty.
 - [x] Przeanalizowano kontury, `approxPolyDP`, `minAreaRect`, edge-supported bbox, Hough/LSD lines, corner evidence i scoring borderów.
 - [x] Wskazano shortlistę `TEST_NOW`.
+- [x] Zaimplementowano benchmark Stage 3 w izolowanym `tools/cv_detection_lab/`.
+- [x] Zweryfikowano pary `removed` na klatce `previous`.
+- [x] Wygenerowano raport benchmarku i overlaye diagnostyczne.
+- [x] Wybrano prowizoryczna rekomendacje `hybrid_edge_plus_contour`.
 
 ## Taski
 
 - [x] `TASK-CV-RESEARCH-STAGE-3-CARD-LOCALIZATION-001`: Research Gate Stage 3 Card Localization / Geometry Extraction.
-- [ ] `TASK-CV-OFFLINE-LAB-STAGE-3-CARD-LOCALIZATION-BENCHMARK-001`: implementacja benchmarku po akceptacji shortlisty.
+- [x] `TASK-CV-OFFLINE-LAB-STAGE-3-CARD-LOCALIZATION-BENCHMARK-001`: implementacja benchmarku po akceptacji shortlisty.
 
 ## Shortlista TEST_NOW
 
@@ -48,4 +60,10 @@ Kolejne kroki: Supervisor powinien zaakceptować albo skorygować shortlistę `T
 
 ## Kolejne kroki
 
-Natychmiastowy następny krok dla kolejnego modelu: przekazać shortlistę `TEST_NOW` Supervisorowi. Po akceptacji dopiero wtedy utworzyć i zaimplementować offline benchmark Stage 3 w izolowanym `tools/cv_detection_lab/`, bez zmian runtime.
+Natychmiastowy następny krok dla kolejnego modelu: wykonac manual review overlayow rekomendowanej metody `hybrid_edge_plus_contour`:
+
+```text
+logs/offline_replay/stage3_card_localization/hybrid_edge_plus_contour/*/card_geometry_overlay.png
+```
+
+Po akceptacji Supervisora oznaczyc Stage 3 jako zatwierdzone wejscie do kolejnego etapu. Nie rozpoczynac Stage 4 przed ta decyzja.
