@@ -1025,3 +1025,43 @@ diagnostics.legacy_detector_false_positive=true
 ```
 
 Wniosek: po finalizacji pustej referencji pipeline nie publikuje już później false positives na stabilnej pustej macie. False positives starego detektora pozostają tylko diagnostyką etapu `empty`.
+
+### Event-first Task 7 One Card Smoke
+
+Warunek wejściowy:
+
+```text
+background_reference_active=true
+table.calibrated=true
+marker_ids=[10, 11, 12, 13]
+jedna karta fizycznie położona na macie
+```
+
+Wynik payloadu live:
+
+```text
+detected=true
+cards_len=1
+card.name=Gilded_03
+card.confidence=0.4
+card.orientation=reversed
+background_reference_active=true
+snapshot_analysis_warped=1.0
+```
+
+Metryki rolling z `logs/cv_metrics.jsonl`:
+
+```text
+change_added_count=0.333
+change_region_count=0.333
+change_removed_count=0.0
+change_global_shift=0.667
+change_mask_ratio=0.467
+snapshot_quads_found=2.0
+snapshot_recognition_attempts=2.0
+snapshot_recognition_rejections=0.75
+layout_publish_count=1.0
+layout_changed=1.0
+```
+
+Wniosek: scenariusz jednej karty przeszedł funkcjonalnie (`cards_len=1`, brak dodatkowych kart), ale diagnostyka change detection nie jest jeszcze idealnie czysta, bo rolling metrics pokazują część próbek jako `global_shift`. Obserwować to przy trzech kartach, no-change i removal.

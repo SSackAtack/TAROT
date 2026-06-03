@@ -1370,6 +1370,16 @@ Weryfikacja: regresja `test_empty_reference_finalization_seeds_previous_stable_s
 
 Kolejne kroki: kontynuować Task 7 od realnego scenariusza jednej karty.
 
+## Session Status (2026-06-03 Event-first Task 7 One Card Smoke)
+
+Stan aktualny: **Task 7 nadal IN_PROGRESS**. Po położeniu jednej fizycznej karty backend z aktywną `empty_reference` wykrył dokładnie jedną kartę w layoutcie.
+
+Co zostało zaobserwowane: live payload: `detected=true`, `cards_len=1`, `card.name=Gilded_03`, `confidence=0.4`, `orientation=reversed`, `table.calibrated=True`, `marker_ids=[10,11,12,13]`, `background_reference_active=True`. Metryki pokazują publikację layoutu (`layout_publish_count=1`, `layout_changed=1`) i analizę po warpie (`snapshot_analysis_warped=1`).
+
+Ryzyko do obserwacji: rolling metrics change detection pokazały mieszany sygnał: `change_added_count=0.333`, `change_region_count=0.333`, ale też `change_global_shift=0.667` i `change_mask_ratio=0.467`. Funkcjonalnie scenariusz jednej karty przeszedł, ale jeśli `global_shift` będzie powtarzalny przy normalnym dodawaniu/usuwaniu kart, potrzebny będzie osobny mały task diagnostyczny dla klasyfikacji global shift.
+
+Kolejne kroki: kontynuować Task 7 do scenariusza trzech kart, a potem no-change i removal.
+
 ---
 
 ## Kryteria Akceptacji

@@ -144,6 +144,14 @@ Co zostało zrobione: po `BackgroundModel.capture_many()` i walidacji `changed_r
 
 Kolejne kroki: teraz można kontynuować właściwy Task 7 od realnego dodania jednej karty na obszar ArUco.
 
+## Session Status (2026-06-03 Event-first Task 7 One Card Smoke)
+
+Stan aktualny: **Task 7 nadal IN_PROGRESS; scenariusz jednej karty przeszedł funkcjonalnie, ale diagnostyka change detection wymaga obserwacji w kolejnych krokach**. Po realnym położeniu jednej karty na obszarze ArUco backend utrzymał `background_reference_active=True`, stół pozostał skalibrowany (`marker_ids=[10,11,12,13]`), a layout opublikował dokładnie jedną kartę.
+
+Co zostało zaobserwowane: payload live pokazał `detected=true`, `cards_len=1`, karta `Gilded_03`, `confidence=0.4`, `orientation=reversed`, `snapshot_analysis_warped=1.0` w metrykach. Pełny layout nie został zanieczyszczony dodatkowymi false positives. Metryki rolling wskazują jednak mieszany sygnał change detection: `change_added_count=0.333`, `change_region_count=0.333`, `change_global_shift=0.667`, `change_mask_ratio=0.467`. To oznacza, że funkcjonalnie karta została wykryta, ale część próbek była klasyfikowana jako global shift.
+
+Kolejne kroki: kontynuować smoke do trzech kart, a potem szczególnie sprawdzić no-change i removal. Jeśli global shift będzie stale pojawiał się przy normalnym dodawaniu kart, zapisać osobny mały task diagnostyczny dla progu/global-shift klasyfikacji w `ChangeDetector`, bez strojenia starego detektora pustej maty.
+
 ## Kolejne kroki
 
 1. Kontynuować pełny `Task 7: Live Smoke` przy widocznych 4 markerach ArUco: jedna karta, trzy karty, no-change, removal i global shift.
