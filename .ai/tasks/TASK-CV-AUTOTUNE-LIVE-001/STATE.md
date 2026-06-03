@@ -256,3 +256,33 @@ To był task diagnostyczny. Nie dodano fixu jakości cropu, ponieważ bez nowego
 
 ### Required next action
 Powtórzyć krótki live smoke `Pusta mata 3/3 -> 3 karty` i odczytać nowe `crop_diagnostics` dla odrzuceń. Dopiero po tych danych wybrać jeden mały fix: crop normalization, ROI padding, deskew/resize albo candidate validation.
+
+## TASK-CV-LIVE-FIXTURE-CAPTURE-001
+
+### Summary
+Dodano lokalny zapis fixture live smoke do `logs/live_fixtures/`. Mechanizm jest domyślnie wyłączony i aktywuje się dopiero po ustawieniu `TAROTVISION_CAPTURE_LIVE_FIXTURES=1`. Fixture zapisuje reprezentatywną próbkę scenariusza: `raw_frame.png`, `analysis_frame.png`, opcjonalnie `empty_reference.png`, `metrics.json`, `payload.json`, `roi_diagnostics.json` oraz wspólny `manifest.json`.
+
+### Scope
+Zmienione pliki:
+- `app_cv/tarotvision/live_fixture_capture.py`
+- `app_cv/tests/test_live_fixture_capture.py`
+- `app_cv/tarotvision/pipelines/snapshot_first.py`
+- `app_cv/tests/test_pipelines_contract.py`
+- `app_cv/main.py`
+- `.ai/tasks/TASK-CV-AUTOTUNE-LIVE-001/STATE.md`
+- `.ai/tasks/TASK-CV-AUTOTUNE-LIVE-001/TEST_REPORT.md`
+- `.ai/tasks/TASK-CV-AUTOTUNE-LIVE-001/CHANGELOG.md`
+
+Nie zmieniano `.gitignore`, bo repo ignoruje już cały katalog `logs/`.
+
+### Tests
+- `python -m unittest app_cv.tests.test_live_fixture_capture -v` => PASS, 4 testy.
+- `python -m unittest app_cv.tests.test_snapshot_analyzer app_cv.tests.test_pipelines_contract app_cv.tests.test_operator_explainability app_cv.tests.test_main_static_audit -v` => PASS, 60 testów.
+- `python -B -m py_compile app_cv\tarotvision\live_fixture_capture.py app_cv\tarotvision\pipelines\snapshot_first.py app_cv\main.py` => PASS.
+- `cd app_cv; python -m unittest discover tests -v` => PASS, 314 testów.
+
+### Manual verification
+NOT_RUN. Nie uruchamiano backendu live ani fizycznego smoke w tej sesji; poprawność zapisu plików została zweryfikowana testem jednostkowym na tymczasowym katalogu.
+
+### Next action
+Uruchomić backend z `TAROTVISION_CAPTURE_LIVE_FIXTURES=1` i `TAROTVISION_LIVE_FIXTURE_NAME=event_first_current_debug`, zebrać fixture `empty`, `one_card`, `three_cards`, a potem użyć ich w replay/debug tasku dla `TASK-CV-ROI-RECOGNITION-CROP-QUALITY-001`.

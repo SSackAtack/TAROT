@@ -33,6 +33,7 @@ from tarotvision.autotune_session import AutotuneSession
 from tarotvision.autotune_session_log import AutotuneSessionLog
 from tarotvision.autotune_profiles import generate_candidate_profiles
 from tarotvision.autotune_scoring import choose_best_profile_result
+from tarotvision.live_fixture_capture import LiveFixtureCapture
 
 # Konfiguracja
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -69,6 +70,7 @@ autotune_session_log = AutotuneSessionLog(os.path.join(LOG_DIR, "autotune_sessio
 active_tuning_profile = "default"
 background_model = BackgroundModel()
 change_detector = ChangeDetector()
+live_fixture_capture = LiveFixtureCapture.from_env(LOG_DIR, deck=DECK_NAME)
 pending_background_capture = False
 autotune_session = None
 autotune_candidate_profiles = []
@@ -719,6 +721,7 @@ snapshot_pipeline = SnapshotFirstPipeline(
     autotune_sample_recorder=record_autotune_sample_from_snapshot,
     change_detector=change_detector,
     background_model=background_model,
+    live_fixture_capture=live_fixture_capture,
 )
 snapshot_pipeline.snapshot_sample_count = SNAPSHOT_SAMPLE_COUNT
 snapshot_pipeline.snapshot_sample_interval_ms = SNAPSHOT_SAMPLE_INTERVAL_MS

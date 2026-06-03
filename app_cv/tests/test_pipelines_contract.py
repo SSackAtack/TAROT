@@ -166,6 +166,157 @@ class TestPipelinesContract(unittest.TestCase):
         self.assertTrue(np.array_equal(analyzed_frame, warped))
         runtime_metrics.add.assert_any_call("snapshot_analysis_warped", 1)
 
+    def test_snapshot_pipeline_can_run_without_live_fixture_capture(self):
+        camera_session = MagicMock()
+        camera_session.frame_width = 1280
+        camera_session.frame_height = 720
+        camera_session.camera_index = 0
+
+        opencv_preview = MagicMock()
+        opencv_preview.handle_keyboard.return_value = None
+        status_store = MagicMock()
+        diagnostics_writer = MagicMock()
+        snapshot_gate = MagicMock()
+        snapshot_analyzer = MagicMock()
+        snapshot_analyzer.analyze.return_value.card_count = 0
+        snapshot_analyzer.analyze.return_value.cards = []
+        snapshot_analyzer.analyze.return_value.diagnostics = {}
+
+        table_calibration = MagicMock()
+        table_calibration.calibrated = False
+        table_calibration.status.return_value = {"calibrated": False, "marker_ids": []}
+
+        runtime_metrics = MagicMock()
+        runtime_metrics.snapshot.return_value = {}
+        runtime_config = MagicMock()
+        runtime_config.values = {}
+
+        gate_decision = MagicMock()
+        gate_decision.state = "sampling_snapshots"
+        gate_decision.stable_for_ms = 700
+        gate_decision.should_sample = True
+        snapshot_gate.update.return_value = gate_decision
+
+        pipeline = SnapshotFirstPipeline(
+            camera_session=camera_session,
+            opencv_preview=opencv_preview,
+            status_store=status_store,
+            diagnostics_writer=diagnostics_writer,
+            snapshot_gate=snapshot_gate,
+            snapshot_analyzer=snapshot_analyzer,
+            table_calibration=table_calibration,
+            runtime_metrics=runtime_metrics,
+            runtime_config=runtime_config,
+            build_operator_snapshot_fn=MagicMock(return_value={}),
+            operator_warnings=[],
+            log_dir="dummy",
+            runtime_profile="default",
+        )
+
+        motion_result = MagicMock()
+        motion_result.motion_detected = False
+        motion_result.changed_ratio = 0.0
+
+        result = pipeline.process_frame(
+            frame=self._readable_frame(),
+            motion_result=motion_result,
+            frame_width=1280,
+            frame_height=720,
+            frame_loop_start=12345.67,
+        )
+
+        self.assertEqual(result["action"], "continue")
+
+    def test_snapshot_pipeline_writes_live_fixture_when_capture_is_enabled(self):
+        camera_session = MagicMock()
+        camera_session.frame_width = 1280
+        camera_session.frame_height = 720
+        camera_session.camera_index = 0
+
+        opencv_preview = MagicMock()
+        opencv_preview.handle_keyboard.return_value = None
+        status_store = MagicMock()
+        diagnostics_writer = MagicMock()
+        snapshot_gate = MagicMock()
+
+        snapshot_analyzer = MagicMock()
+        snapshot_analyzer.analyze.return_value.card_count = 2
+        snapshot_analyzer.analyze.return_value.cards = [{"name": "Gilded_01"}, {"name": "Gilded_02"}]
+        snapshot_analyzer.analyze.return_value.diagnostics = {
+            "roi_diagnostics": [{"roi_index": 0}],
+            "roi_count": 1,
+        }
+
+        table_calibration = MagicMock()
+        table_calibration.calibrated = True
+        warped = np.full((720, 1280, 3), 77, dtype=np.uint8)
+        table_calibration.warp_frame.return_value = warped
+        table_calibration.status.return_value = {"calibrated": True, "marker_ids": [10, 11, 12, 13]}
+
+        runtime_metrics = MagicMock()
+        runtime_metrics.snapshot.return_value = {
+            "roi_count": 1,
+            "roi_diagnostics": [{"roi_index": 0}],
+        }
+        runtime_config = MagicMock()
+        runtime_config.values = {}
+
+        gate_decision = MagicMock()
+        gate_decision.state = "sampling_snapshots"
+        gate_decision.stable_for_ms = 700
+        gate_decision.should_sample = True
+        snapshot_gate.update.return_value = gate_decision
+
+        operator_snapshot = {
+            "calibration": {
+                "autotune": {
+                    "scenario": "three_cards",
+                    "empty_reference_status": "PASS",
+                }
+            }
+        }
+        live_fixture_capture = MagicMock()
+
+        pipeline = SnapshotFirstPipeline(
+            camera_session=camera_session,
+            opencv_preview=opencv_preview,
+            status_store=status_store,
+            diagnostics_writer=diagnostics_writer,
+            snapshot_gate=snapshot_gate,
+            snapshot_analyzer=snapshot_analyzer,
+            table_calibration=table_calibration,
+            runtime_metrics=runtime_metrics,
+            runtime_config=runtime_config,
+            build_operator_snapshot_fn=MagicMock(return_value=operator_snapshot),
+            operator_warnings=[],
+            log_dir="dummy",
+            runtime_profile="default",
+            live_fixture_capture=live_fixture_capture,
+        )
+
+        motion_result = MagicMock()
+        motion_result.motion_detected = False
+        motion_result.changed_ratio = 0.0
+
+        raw_frame = self._readable_frame()
+        pipeline.process_frame(
+            frame=raw_frame,
+            motion_result=motion_result,
+            frame_width=1280,
+            frame_height=720,
+            frame_loop_start=12345.67,
+        )
+
+        live_fixture_capture.save_snapshot.assert_called_once()
+        kwargs = live_fixture_capture.save_snapshot.call_args.kwargs
+        self.assertEqual(kwargs["scenario"], "three_cards")
+        self.assertEqual(kwargs["expected_cards_count"], 3)
+        self.assertTrue(np.array_equal(kwargs["raw_frame"], raw_frame))
+        self.assertTrue(np.array_equal(kwargs["analysis_frame"], warped))
+        self.assertEqual(kwargs["metrics"]["roi_count"], 1)
+        self.assertEqual(kwargs["payload"]["cards"], [{"name": "Gilded_01"}, {"name": "Gilded_02"}])
+        self.assertTrue(kwargs["payload"]["detected"])
+
     def test_snapshot_pipeline_clears_cards_after_confirmed_empty_snapshots(self):
         camera_session = MagicMock()
         camera_session.frame_width = 1280

@@ -19,6 +19,7 @@ SNAPSHOT_QUALITY_REJECT_CODES = {
 ROI_DIAGNOSTIC_FIELDS = (
     "roi_count",
     "roi_diagnostics",
+    "crop_diagnostics",
     "roi_with_quads_count",
     "roi_with_accepted_card_count",
     "accepted_cards_before_dedup",
@@ -53,6 +54,7 @@ class SnapshotFirstPipeline(VisionPipeline):
         autotune_sample_recorder=None,
         change_detector=None,
         background_model=None,
+        live_fixture_capture=None,
     ):
         self.camera_session = camera_session
         self.opencv_preview = opencv_preview
@@ -70,6 +72,7 @@ class SnapshotFirstPipeline(VisionPipeline):
         self.autotune_sample_recorder = autotune_sample_recorder
         self.change_detector = change_detector
         self.background_model = background_model
+        self.live_fixture_capture = live_fixture_capture
         self.empty_reference_frames = []
         self.empty_reference_capture_active = False
         self.last_roi_diagnostics = {}
@@ -129,6 +132,8 @@ class SnapshotFirstPipeline(VisionPipeline):
         self.runtime_metrics.add("fps", fps)
 
         # Pobieranie próbek (sampling)
+        selected_raw_frame = None
+        selected_analysis_frame = None
         if gate_decision.should_sample:
             samples = [frame.copy()]
             key_action = None
@@ -179,6 +184,7 @@ class SnapshotFirstPipeline(VisionPipeline):
                 self.runtime_metrics.add("snapshot_quality_brightness", quality.brightness)
                 self.runtime_metrics.add("snapshot_quality_contrast", quality.contrast)
             else:
+                selected_raw_frame = selected.frame.copy()
                 self.snapshot_gate.mark_analyzing()
                 
                 # Szybki podgląd stanu analizy
@@ -197,6 +203,7 @@ class SnapshotFirstPipeline(VisionPipeline):
                         self.runtime_metrics.add("snapshot_analysis_warped", 0)
                 else:
                     self.runtime_metrics.add("snapshot_analysis_warped", 0)
+                selected_analysis_frame = analysis_frame.copy()
 
                 roi_hints = None
                 hold_previous_state = False
@@ -366,21 +373,30 @@ class SnapshotFirstPipeline(VisionPipeline):
         }
         
         status_update_start = time.perf_counter()
+        operator_snapshot = self.build_operator_snapshot_fn(
+            cards=self.last_snapshot_cards,
+            metrics=metrics_snapshot,
+            runtime=runtime_snapshot,
+            layout=layout_snapshot,
+            warnings=list(self.operator_warnings[-8:]),
+        )
         self.status_store.update_cv_state(
             cards=self.last_snapshot_cards,
             metrics=metrics_snapshot,
             runtime=runtime_snapshot,
-            operator=self.build_operator_snapshot_fn(
-                cards=self.last_snapshot_cards,
-                metrics=metrics_snapshot,
-                runtime=runtime_snapshot,
-                layout=layout_snapshot,
-                warnings=list(self.operator_warnings[-8:]),
-            ),
+            operator=operator_snapshot,
             layout=layout_snapshot,
             warnings=list(self.operator_warnings[-8:])
         )
         self.runtime_metrics.add("status_update_ms", (time.perf_counter() - status_update_start) * 1000.0)
+        self._capture_live_fixture(
+            raw_frame=selected_raw_frame,
+            analysis_frame=selected_analysis_frame,
+            metrics=metrics_snapshot,
+            runtime=runtime_snapshot,
+            operator=operator_snapshot,
+            layout=layout_snapshot,
+        )
 
         diagnostics_time = time.time()
         if diagnostics_time - self.last_diagnostics_time >= 1.0:
@@ -416,3 +432,50 @@ class SnapshotFirstPipeline(VisionPipeline):
             "candidate_validation_rejections": int(diagnostics.get("candidate_validation_rejections", 0)),
         }
         return self.autotune_sample_recorder(sample)
+
+    def _capture_live_fixture(self, raw_frame, analysis_frame, metrics, runtime, operator, layout):
+        if self.live_fixture_capture is None or raw_frame is None or analysis_frame is None:
+            return None
+        scenario = _fixture_scenario(operator)
+        payload = {
+            "detected": bool(self.last_snapshot_cards),
+            "cards": self.last_snapshot_cards,
+            "metrics": metrics,
+            "runtime": runtime,
+            "operator": operator,
+            "layout": layout,
+        }
+        return self.live_fixture_capture.save_snapshot(
+            scenario=scenario,
+            raw_frame=raw_frame,
+            analysis_frame=analysis_frame,
+            empty_reference=_background_reference_image(self.background_model),
+            metrics=metrics,
+            payload=payload,
+            expected_cards_count=_expected_cards_count(scenario),
+        )
+
+
+def _fixture_scenario(operator):
+    calibration = operator.get("calibration") if isinstance(operator, dict) else {}
+    autotune = calibration.get("autotune") if isinstance(calibration, dict) else {}
+    scenario = autotune.get("scenario") if isinstance(autotune, dict) else None
+    if scenario:
+        return scenario
+    import os
+    return os.environ.get("TAROTVISION_LIVE_FIXTURE_SCENARIO", "unknown")
+
+
+def _expected_cards_count(scenario):
+    return {
+        "empty": 0,
+        "one_card": 1,
+        "three_cards": 3,
+    }.get(scenario)
+
+
+def _background_reference_image(background_model):
+    image = getattr(background_model, "_gray_background", None)
+    if image is None:
+        return None
+    return image.copy()

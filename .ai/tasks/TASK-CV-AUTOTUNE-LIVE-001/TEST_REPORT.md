@@ -1356,3 +1356,81 @@ Task zakończony jako diagnostyczny. Nie zmieniano progów ORB, `ChangeDetector`
 ### Required next action
 
 Powtórzyć live smoke trzech kart i zebrać `crop_diagnostics`. Jeżeli nowe dane pokażą systematycznie zbyt małe cropy albo za mało deskryptorów przy poprawnym rozmiarze ROI, wybrać jeden mały fix: crop normalization, ROI padding, deskew/resize albo candidate validation.
+
+## TASK-CV-LIVE-FIXTURE-CAPTURE-001
+
+### Summary
+
+Dodano lokalny zapis fixture live smoke do `logs/live_fixtures/`. Capture jest domyślnie nieaktywny i wymaga `TAROTVISION_CAPTURE_LIVE_FIXTURES=1`. Opcjonalna nazwa fixture pochodzi z `TAROTVISION_LIVE_FIXTURE_NAME`, a scenariusz z aktywnego Auto Tune albo `TAROTVISION_LIVE_FIXTURE_SCENARIO`.
+
+### Scope
+
+Zmienione pliki:
+
+```text
+app_cv/tarotvision/live_fixture_capture.py
+app_cv/tests/test_live_fixture_capture.py
+app_cv/tarotvision/pipelines/snapshot_first.py
+app_cv/tests/test_pipelines_contract.py
+app_cv/main.py
+.ai/tasks/TASK-CV-AUTOTUNE-LIVE-001/STATE.md
+.ai/tasks/TASK-CV-AUTOTUNE-LIVE-001/TEST_REPORT.md
+.ai/tasks/TASK-CV-AUTOTUNE-LIVE-001/CHANGELOG.md
+```
+
+`.gitignore` nie wymagał zmiany, bo `logs/` jest już ignorowane.
+
+### RED
+
+```text
+python -m unittest app_cv.tests.test_live_fixture_capture -v
+```
+
+Wynik: FAIL oczekiwany. Brakowało modułu `tarotvision.live_fixture_capture`.
+
+```text
+python -m unittest app_cv.tests.test_pipelines_contract.TestPipelinesContract.test_snapshot_pipeline_writes_live_fixture_when_capture_is_enabled app_cv.tests.test_pipelines_contract.TestPipelinesContract.test_snapshot_pipeline_can_run_without_live_fixture_capture -v
+```
+
+Wynik: FAIL oczekiwany dla aktywnego capture: `SnapshotFirstPipeline.__init__() got an unexpected keyword argument 'live_fixture_capture'`. Test bez capture przechodził, potwierdzając dotychczasowy baseline.
+
+### GREEN
+
+```text
+python -m unittest app_cv.tests.test_live_fixture_capture -v
+```
+
+Wynik: PASS, 4 testy.
+
+```text
+python -m unittest app_cv.tests.test_pipelines_contract.TestPipelinesContract.test_snapshot_pipeline_writes_live_fixture_when_capture_is_enabled app_cv.tests.test_pipelines_contract.TestPipelinesContract.test_snapshot_pipeline_can_run_without_live_fixture_capture -v
+```
+
+Wynik: PASS, 2 testy.
+
+```text
+python -m unittest app_cv.tests.test_snapshot_analyzer app_cv.tests.test_pipelines_contract app_cv.tests.test_operator_explainability app_cv.tests.test_main_static_audit -v
+```
+
+Wynik: PASS, 60 testów.
+
+```text
+python -B -m py_compile app_cv\tarotvision\live_fixture_capture.py app_cv\tarotvision\pipelines\snapshot_first.py app_cv\main.py
+```
+
+Wynik: PASS.
+
+```text
+cd app_cv
+python -m unittest discover tests -v
+```
+
+Wynik: PASS, 314 testów.
+
+### Manual verification
+
+NOT_RUN. Nie uruchamiano backendu live ani fizycznego smoke w tej sesji. Test `test_saves_basic_fixture_files` potwierdził zapis `manifest.json`, `raw_frame.png`, `analysis_frame.png`, `metrics.json`, `payload.json` i `roi_diagnostics.json` w tymczasowym katalogu.
+
+### Next action
+
+Po uruchomieniu backendu z `TAROTVISION_CAPTURE_LIVE_FIXTURES=1` zebrać lokalne fixture `empty`, `one_card`, `three_cards`, a następnie dodać osobny replay/debug task używający tych obrazów w `TASK-CV-ROI-RECOGNITION-CROP-QUALITY-001`.

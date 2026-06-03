@@ -260,3 +260,12 @@
 - Zabezpieczono przypadki `not_enough_crop_descriptors`, `smooth_low_texture` i `not_enough_good_matches` testami RED/GREEN.
 - Nie zmieniano progów ORB, progów `ChangeDetector`, ArUco, `empty_reference`, layoutu pipeline ani Studio UI.
 - Decyzja: task diagnostyczny; następny krok to live smoke trzech kart z nowymi polami `crop_diagnostics`, a dopiero potem jeden celowany fix crop normalization / ROI padding / deskew-resize / candidate validation.
+
+## TASK-CV-LIVE-FIXTURE-CAPTURE-001
+
+- Dodano moduł `LiveFixtureCapture` zapisujący lokalne fixture live smoke do `logs/live_fixtures/`.
+- Capture jest domyślnie wyłączony i aktywuje się przez `TAROTVISION_CAPTURE_LIVE_FIXTURES=1`; nazwa fixture może pochodzić z `TAROTVISION_LIVE_FIXTURE_NAME`.
+- Fixture zapisuje `manifest.json`, `raw_frame.png`, `analysis_frame.png`, `metrics.json`, `payload.json`, `roi_diagnostics.json` oraz opcjonalne `empty_reference.png`.
+- `SnapshotFirstPipeline` przyjmuje opcjonalne `live_fixture_capture`; gdy go nie ma albo nie było wybranego snapshotu, pipeline działa jak wcześniej.
+- `main.py` tworzy capture przez `LiveFixtureCapture.from_env(LOG_DIR, deck=DECK_NAME)`.
+- Nie zmieniano detekcji, rozpoznawania, ArUco, pustej referencji, layoutu ani Studio UI.
