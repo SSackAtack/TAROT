@@ -295,6 +295,95 @@ class SnapshotAnalyzerTest(unittest.TestCase):
         self.assertEqual(roi_diagnostics[1]["roi_accepted_cards"], 1)
         self.assertEqual(roi_diagnostics[1]["roi_reject_reasons"], {"recognition_rejected": 1})
 
+    def test_roi_crop_diagnostics_include_descriptor_rejection_context(self):
+        frame = np.zeros((200, 300, 3), dtype=np.uint8)
+        debug = RecognitionDebug(
+            crop_keypoints=3,
+            top_matches=[],
+            reject_reason="not_enough_crop_descriptors",
+        )
+
+        analyzer = SnapshotAnalyzer(
+            find_quads=lambda crop: [np.array([[10, 10], [50, 10], [50, 90], [10, 90]], dtype=np.float32)],
+            crop_card=lambda frame, quad: np.zeros((72, 48, 3), dtype=np.uint8),
+            recognize_crop_with_debug=lambda crop: (None, debug),
+            validate_candidate_crop=lambda crop: None,
+        )
+
+        result = analyzer.analyze(frame, roi_hints=[(30, 40, 80, 120)])
+
+        crop_diagnostics = result.diagnostics["crop_diagnostics"]
+        self.assertEqual(len(crop_diagnostics), 1)
+        self.assertEqual(crop_diagnostics[0]["roi_index"], 0)
+        self.assertEqual(crop_diagnostics[0]["candidate_index"], 1)
+        self.assertEqual(crop_diagnostics[0]["crop_width"], 48)
+        self.assertEqual(crop_diagnostics[0]["crop_height"], 72)
+        self.assertEqual(crop_diagnostics[0]["crop_keypoints"], 3)
+        self.assertEqual(crop_diagnostics[0]["descriptor_count"], 3)
+        self.assertEqual(crop_diagnostics[0]["reject_reason"], "not_enough_crop_descriptors")
+        self.assertEqual(crop_diagnostics[0]["recognition_attempt_result"], "rejected")
+        roi_diagnostics = result.diagnostics["roi_diagnostics"]
+        self.assertEqual(roi_diagnostics[0]["roi_candidate_diagnostics"][0]["candidate_index"], 1)
+
+    def test_roi_crop_diagnostics_include_smooth_validation_context(self):
+        frame = np.zeros((200, 300, 3), dtype=np.uint8)
+        smooth_crop = np.full((60, 40, 3), 216, dtype=np.uint8)
+        calls = []
+
+        analyzer = SnapshotAnalyzer(
+            find_quads=lambda crop: [np.array([[8, 8], [44, 8], [44, 70], [8, 70]], dtype=np.float32)],
+            crop_card=lambda frame, quad: smooth_crop,
+            recognize_crop=lambda crop: calls.append(crop),
+        )
+
+        result = analyzer.analyze(frame, roi_hints=[(20, 30, 70, 100)])
+
+        self.assertEqual(calls, [])
+        crop_diagnostics = result.diagnostics["crop_diagnostics"]
+        self.assertEqual(crop_diagnostics[0]["roi_index"], 0)
+        self.assertEqual(crop_diagnostics[0]["crop_width"], 40)
+        self.assertEqual(crop_diagnostics[0]["crop_height"], 60)
+        self.assertEqual(crop_diagnostics[0]["reject_reason"], "smooth_low_texture")
+        self.assertEqual(crop_diagnostics[0]["recognition_attempt_result"], "skipped_candidate_validation")
+        self.assertFalse(crop_diagnostics[0]["candidate_validation"]["accepted"])
+        self.assertEqual(crop_diagnostics[0]["candidate_validation"]["reject_reason"], "smooth_low_texture")
+
+    def test_roi_crop_diagnostics_map_rejections_to_specific_roi(self):
+        frame = np.zeros((200, 300, 3), dtype=np.uint8)
+        debug = RecognitionDebug(
+            crop_keypoints=42,
+            top_matches=[
+                {"name": "Gilded_01", "score": 4.0, "match_count": 4, "inlier_ratio": 0.0},
+            ],
+            reject_reason="not_enough_good_matches",
+        )
+
+        def find_quads(crop):
+            if crop.shape[1] == 50:
+                return []
+            return [np.array([[8, 8], [42, 8], [42, 68], [8, 68]], dtype=np.float32)]
+
+        analyzer = SnapshotAnalyzer(
+            find_quads=find_quads,
+            crop_card=lambda frame, quad: np.zeros((80, 52, 3), dtype=np.uint8),
+            recognize_crop_with_debug=lambda crop: (None, debug),
+            validate_candidate_crop=lambda crop: None,
+        )
+
+        result = analyzer.analyze(
+            frame,
+            roi_hints=[(0, 0, 50, 100), (100, 0, 90, 120)],
+        )
+
+        crop_diagnostics = result.diagnostics["crop_diagnostics"]
+        self.assertEqual(len(crop_diagnostics), 1)
+        self.assertEqual(crop_diagnostics[0]["roi_index"], 1)
+        self.assertEqual(crop_diagnostics[0]["reject_reason"], "not_enough_good_matches")
+        self.assertEqual(crop_diagnostics[0]["top_matches"][0]["match_count"], 4)
+        roi_diagnostics = result.diagnostics["roi_diagnostics"]
+        self.assertEqual(roi_diagnostics[0]["roi_candidate_diagnostics"], [])
+        self.assertEqual(roi_diagnostics[1]["roi_candidate_diagnostics"][0]["roi_index"], 1)
+
     def test_analyze_with_empty_roi_hints_does_not_fallback_to_global_detection(self):
         frame = np.zeros((200, 300, 3), dtype=np.uint8)
         calls = []

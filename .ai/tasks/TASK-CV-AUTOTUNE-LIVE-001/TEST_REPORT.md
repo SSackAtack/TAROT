@@ -1301,3 +1301,58 @@ Wynik: **recognition issue**.
 Jeden mały task: `TASK-CV-ROI-RECOGNITION-CROP-QUALITY-001`.
 
 Zakres następnego taska powinien zebrać/zapisać diagnostyczne cropy i metadane rozpoznawania dla ROI odrzucanych przez `not_enough_crop_descriptors` oraz `not_enough_good_matches`, a potem poprawić jakość cropu/normalizacji wejścia ORB. Nie zmieniać progów `ChangeDetector`, ArUco, `empty_reference`, Studio UI ani starego detektora pustej maty.
+
+## TASK-CV-ROI-RECOGNITION-CROP-QUALITY-001
+
+### Summary
+
+Dodano diagnostykę crop-level dla kandydatów ROI. `SnapshotAnalyzer.diagnostics` publikuje teraz globalne `crop_diagnostics`, a każdy wpis `roi_diagnostics[]` zawiera `roi_candidate_diagnostics`. Dane pozwalają powiązać odrzucenia `not_enough_crop_descriptors`, `smooth_low_texture` i `not_enough_good_matches` z konkretnym ROI, kandydatem oraz rozmiarem cropu.
+
+### RED
+
+```text
+python -m unittest app_cv.tests.test_snapshot_analyzer.SnapshotAnalyzerTest.test_roi_crop_diagnostics_include_descriptor_rejection_context app_cv.tests.test_snapshot_analyzer.SnapshotAnalyzerTest.test_roi_crop_diagnostics_include_smooth_validation_context app_cv.tests.test_snapshot_analyzer.SnapshotAnalyzerTest.test_roi_crop_diagnostics_map_rejections_to_specific_roi -v
+```
+
+Wynik: FAIL oczekiwany, 3 błędy `KeyError: 'crop_diagnostics'`. Testy potwierdziły, że dotychczasowa diagnostyka ROI nie zawierała crop-level kontekstu.
+
+### GREEN
+
+```text
+python -m unittest app_cv.tests.test_snapshot_analyzer.SnapshotAnalyzerTest.test_roi_crop_diagnostics_include_descriptor_rejection_context app_cv.tests.test_snapshot_analyzer.SnapshotAnalyzerTest.test_roi_crop_diagnostics_include_smooth_validation_context app_cv.tests.test_snapshot_analyzer.SnapshotAnalyzerTest.test_roi_crop_diagnostics_map_rejections_to_specific_roi -v
+```
+
+Wynik: PASS, 3 testy.
+
+```text
+python -m unittest app_cv.tests.test_snapshot_analyzer app_cv.tests.test_card_candidate_validation -v
+```
+
+Wynik: PASS, 19 testów.
+
+```text
+python -m unittest app_cv.tests.test_snapshot_analyzer app_cv.tests.test_pipelines_contract app_cv.tests.test_operator_explainability app_cv.tests.test_main_static_audit -v
+```
+
+Wynik: PASS, 58 testów.
+
+```text
+python -B -m py_compile app_cv\tarotvision\snapshot_analyzer.py
+```
+
+Wynik: PASS.
+
+### Evidence
+
+Nowe testy zabezpieczają:
+- odrzucenie `not_enough_crop_descriptors` z `roi_index`, `candidate_index`, `crop_width`, `crop_height`, `crop_keypoints` i `descriptor_count`;
+- odrzucenie `smooth_low_texture` z pełnym `candidate_validation` i statusem `recognition_attempt_result=skipped_candidate_validation`;
+- odrzucenie `not_enough_good_matches` przypisane do konkretnego ROI wraz z `top_matches[].match_count`.
+
+### Decision
+
+Task zakończony jako diagnostyczny. Nie zmieniano progów ORB, `ChangeDetector`, ArUco, `empty_reference`, `SnapshotFirstPipeline` ani Studio UI. Nie dodano fixu crop quality bez danych z nowego live smoke.
+
+### Required next action
+
+Powtórzyć live smoke trzech kart i zebrać `crop_diagnostics`. Jeżeli nowe dane pokażą systematycznie zbyt małe cropy albo za mało deskryptorów przy poprawnym rozmiarze ROI, wybrać jeden mały fix: crop normalization, ROI padding, deskew/resize albo candidate validation.

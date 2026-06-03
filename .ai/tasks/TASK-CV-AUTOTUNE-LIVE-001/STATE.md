@@ -228,3 +228,31 @@ ROI passthrough działa i nie jest to brak regionów: `roi_count=5`, `roi_with_q
 
 ### Required next action
 Utworzyć mały task naprawczy `TASK-CV-ROI-RECOGNITION-CROP-QUALITY-001`: zapisać diagnostyczne cropy/kontekst rozpoznawania dla ROI z `not_enough_crop_descriptors` i `not_enough_good_matches`, a następnie poprawić jakość cropu/normalizacji przekazywanej do ORB bez zmiany progów `ChangeDetector`, ArUco, pustej referencji ani starego detektora pustej maty.
+
+## TASK-CV-ROI-RECOGNITION-CROP-QUALITY-001
+
+### Summary
+Dodano crop-level diagnostics w `SnapshotAnalyzer`, aby następny live smoke trzech kart mógł powiązać każde odrzucenie rozpoznania lub walidacji z konkretnym ROI i konkretnym kandydatem. Diagnostyka nie zmienia decyzji detekcji, walidacji, ORB ani publikacji layoutu.
+
+Nowe pola:
+- globalnie: `diagnostics.crop_diagnostics`
+- per ROI: `roi_diagnostics[].roi_candidate_diagnostics`
+- per kandydat: `roi_index`, `candidate_index`, `crop_width`, `crop_height`, `crop_keypoints`, `descriptor_count`, `reject_reason`, `candidate_validation`, `recognition_attempt_result`, `top_matches`, `score_margin`, `recognition_score`
+
+### Evidence
+Opisane są teraz trzy krytyczne ścieżki odrzuceń z RED smoke:
+- `not_enough_crop_descriptors`: diagnostyka zawiera rozmiar cropu, ROI, indeks kandydata, `crop_keypoints`/`descriptor_count` i wynik próby rozpoznania.
+- `smooth_low_texture`: diagnostyka zawiera kontekst walidacji cropa, w tym `candidate_validation.accepted=false` i `candidate_validation.reject_reason`.
+- `not_enough_good_matches`: diagnostyka wiąże odrzucenie z konkretnym ROI oraz zachowuje `top_matches`/`match_count`, jeżeli `RecognitionDebug` je dostarcza.
+
+### Tests
+- `python -m unittest app_cv.tests.test_snapshot_analyzer.SnapshotAnalyzerTest.test_roi_crop_diagnostics_include_descriptor_rejection_context app_cv.tests.test_snapshot_analyzer.SnapshotAnalyzerTest.test_roi_crop_diagnostics_include_smooth_validation_context app_cv.tests.test_snapshot_analyzer.SnapshotAnalyzerTest.test_roi_crop_diagnostics_map_rejections_to_specific_roi -v` => RED przed implementacją (`KeyError: 'crop_diagnostics'`), PASS po implementacji.
+- `python -m unittest app_cv.tests.test_snapshot_analyzer app_cv.tests.test_card_candidate_validation -v` => PASS, 19 testów.
+- `python -m unittest app_cv.tests.test_snapshot_analyzer app_cv.tests.test_pipelines_contract app_cv.tests.test_operator_explainability app_cv.tests.test_main_static_audit -v` => PASS, 58 testów.
+- `python -B -m py_compile app_cv\tarotvision\snapshot_analyzer.py` => PASS.
+
+### Decision
+To był task diagnostyczny. Nie dodano fixu jakości cropu, ponieważ bez nowego live smoke z `crop_diagnostics` nie ma jeszcze dowodu, czy naprawa powinna dotyczyć normalizacji kontrastu, paddingu ROI, deskew/resize, minimalnego rozmiaru cropu czy walidacji `smooth_low_texture`.
+
+### Required next action
+Powtórzyć krótki live smoke `Pusta mata 3/3 -> 3 karty` i odczytać nowe `crop_diagnostics` dla odrzuceń. Dopiero po tych danych wybrać jeden mały fix: crop normalization, ROI padding, deskew/resize albo candidate validation.

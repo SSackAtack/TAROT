@@ -44,6 +44,7 @@ class SnapshotAnalyzer:
             "recognition_rejections": 0,
             "candidate_validation_rejections": 0,
             "recognition_candidates": [],
+            "crop_diagnostics": [],
             "recognition_score": 0.0,
             "roi_limited": roi_hints is not None,
             "roi_count": len(roi_hints or []),
@@ -99,12 +100,17 @@ class SnapshotAnalyzer:
             if candidate_validation is not None and not candidate_validation.accepted:
                 diagnostics["candidate_validation_rejections"] += 1
                 _record_roi_validation_rejection(roi_payload, candidate_validation.reject_reason)
-                diagnostics["recognition_candidates"].append(_candidate_diagnostics(
+                candidate_debug = _candidate_diagnostics(
                     candidate_index,
                     None,
                     None,
                     candidate_validation,
-                ))
+                    crop=crop,
+                    roi_payload=roi_payload,
+                    recognition_attempt_result="skipped_candidate_validation",
+                )
+                diagnostics["recognition_candidates"].append(candidate_debug)
+                _record_crop_diagnostics(diagnostics, roi_payload, candidate_debug)
                 continue
 
             _record_roi_candidate_after_validation(roi_payload)
@@ -117,8 +123,14 @@ class SnapshotAnalyzer:
                 recognition,
                 recognition_debug,
                 candidate_validation,
+                crop=crop,
+                roi_payload=roi_payload,
+                recognition_attempt_result=(
+                    "accepted" if recognition is not None else "rejected"
+                ),
             )
             diagnostics["recognition_candidates"].append(candidate_debug)
+            _record_crop_diagnostics(diagnostics, roi_payload, candidate_debug)
             if not recognition:
                 diagnostics["recognition_rejections"] += 1
                 _record_roi_recognition_rejection(roi_payload, candidate_debug.get("reject_reason"))
@@ -203,6 +215,7 @@ def _empty_roi_diagnostics(roi_index, bbox, quad_count):
         "roi_recognition_rejections": 0,
         "roi_accepted_cards": 0,
         "roi_reject_reasons": {},
+        "roi_candidate_diagnostics": [],
     }
 
 
@@ -246,6 +259,12 @@ def _record_roi_accepted_card(roi_payload):
 def _record_roi_reject_reason(roi_payload, reject_reason):
     reasons = roi_payload["roi_reject_reasons"]
     reasons[reject_reason] = reasons.get(reject_reason, 0) + 1
+
+
+def _record_crop_diagnostics(diagnostics, roi_payload, candidate_debug):
+    diagnostics["crop_diagnostics"].append(candidate_debug)
+    if roi_payload is not None:
+        roi_payload["roi_candidate_diagnostics"].append(candidate_debug)
 
 
 def _finalize_roi_diagnostics(diagnostics, cards):
@@ -300,11 +319,22 @@ def _frame_to_scene(center_x, center_y, frame_width, frame_height,
     return float(scene_x), float(scene_y)
 
 
-def _candidate_diagnostics(index, recognition, recognition_debug, candidate_validation=None):
+def _candidate_diagnostics(index, recognition, recognition_debug, candidate_validation=None,
+                           crop=None, roi_payload=None, recognition_attempt_result=None):
     top_matches = top_match_summary(recognition_debug) if recognition_debug else []
     validation_payload = _validation_diagnostics(candidate_validation)
+    crop_width, crop_height = _crop_dimensions(crop)
+    crop_keypoints = (
+        int(recognition_debug.crop_keypoints)
+        if recognition_debug is not None else None
+    )
     return {
         "index": int(index),
+        "candidate_index": int(index),
+        "roi_index": (
+            int(roi_payload["roi_index"])
+            if roi_payload is not None else None
+        ),
         "accepted": recognition is not None,
         "reject_reason": (
             recognition_debug.reject_reason
@@ -316,13 +346,24 @@ def _candidate_diagnostics(index, recognition, recognition_debug, candidate_vali
             )
         ),
         "candidate_validation": validation_payload,
-        "crop_keypoints": (
-            int(recognition_debug.crop_keypoints)
-            if recognition_debug is not None else None
-        ),
+        "crop_width": crop_width,
+        "crop_height": crop_height,
+        "crop_keypoints": crop_keypoints,
+        "descriptor_count": crop_keypoints,
+        "recognition_attempt_result": recognition_attempt_result,
         "top_matches": top_matches,
         "score_margin": _score_margin(top_matches),
+        "recognition_score": None,
     }
+
+
+def _crop_dimensions(crop):
+    if crop is None or not hasattr(crop, "shape"):
+        return None, None
+    shape = crop.shape
+    if len(shape) < 2:
+        return None, None
+    return int(shape[1]), int(shape[0])
 
 
 def _validation_diagnostics(candidate_validation):

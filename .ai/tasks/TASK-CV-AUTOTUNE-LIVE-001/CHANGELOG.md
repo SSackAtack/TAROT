@@ -252,3 +252,11 @@
 - Dla trzech kart maksymalny layout miał `cards_len=2`; payload zawierał `roi_count=5`, `roi_with_quads_count=5`, `roi_with_accepted_card_count=1`, `accepted_cards_before_dedup=2`, `accepted_cards_after_dedup=2`.
 - Interpretacja: problem nie jest brakiem ROI ani deduplikacją; najbliższy wąski gardło to jakość cropów/rozpoznawanie ORB w ROI (`not_enough_crop_descriptors`, `smooth_low_texture`, `not_enough_good_matches`).
 - Następny mały task: `TASK-CV-ROI-RECOGNITION-CROP-QUALITY-001`.
+
+## TASK-CV-ROI-RECOGNITION-CROP-QUALITY-001
+
+- Dodano crop-level diagnostics w `SnapshotAnalyzer.diagnostics`.
+- Nowe `crop_diagnostics` i `roi_candidate_diagnostics` raportują `roi_index`, `candidate_index`, rozmiar cropu, `crop_keypoints`/`descriptor_count`, wynik walidacji, wynik próby rozpoznania, `top_matches` i `reject_reason`.
+- Zabezpieczono przypadki `not_enough_crop_descriptors`, `smooth_low_texture` i `not_enough_good_matches` testami RED/GREEN.
+- Nie zmieniano progów ORB, progów `ChangeDetector`, ArUco, `empty_reference`, layoutu pipeline ani Studio UI.
+- Decyzja: task diagnostyczny; następny krok to live smoke trzech kart z nowymi polami `crop_diagnostics`, a dopiero potem jeden celowany fix crop normalization / ROI padding / deskew-resize / candidate validation.
