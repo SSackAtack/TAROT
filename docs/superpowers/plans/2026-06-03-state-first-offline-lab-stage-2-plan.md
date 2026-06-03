@@ -8,7 +8,7 @@ Stage 1 Difference Detection jest zatwierdzony:
 APPROVED_STAGE_1_METHOD: gray_absdiff_gaussian
 ```
 
-Stage 2 pozostaje na etapie Research Gate. Benchmark Stage 2 nie został jeszcze uruchomiony ani zaimplementowany.
+Stage 2 ma zaimplementowany pierwszy izolowany benchmark offline. Wynik jest wyłącznie provisional i wymaga manualnego review overlay przez Supervisora.
 
 ## Session Status (2026-06-03 Codex)
 
@@ -28,7 +28,7 @@ Kolejne kroki: Stage 2 benchmark must not begin until Supervisor accepts TEST_NO
 ## Taski
 
 - [x] `TASK-CV-RESEARCH-STAGE-2-REGION-SEGMENTATION-001`: Research Gate Stage 2 Region Segmentation / Region Refinement.
-- [ ] `TASK-CV-OFFLINE-LAB-STAGE-2-REGION-BENCHMARK-001`: implementacja benchmarku po akceptacji shortlisty.
+- [x] `TASK-CV-OFFLINE-LAB-STAGE-2-REGION-BENCHMARK-001`: implementacja benchmarku po akceptacji shortlisty.
 
 ## Shortlista TEST_NOW
 
@@ -47,3 +47,24 @@ Kolejne kroki: Stage 2 benchmark must not begin until Supervisor accepts TEST_NO
 ## Kolejne kroki
 
 Natychmiastowy następny krok dla kolejnego modelu: przekazać shortlistę `TEST_NOW` Supervisorowi. Po akceptacji dopiero wtedy utworzyć i zaimplementować offline benchmark Stage 2 w izolowanym `tools/cv_detection_lab/`, bez zmian runtime.
+
+## Session Status (2026-06-03 Codex Stage 2 Benchmark)
+
+Stan aktualny: benchmark Stage 2 działa offline i wygenerował `42` wiersze macierzy na zatwierdzonych fixture.
+
+Co zostało zrobione: dodano `tools/cv_detection_lab/region_methods.py`, `tools/cv_detection_lab/stage2_region_benchmark.py` oraz testy `app_cv/tests/test_cv_detection_lab_stage2.py`. Benchmark używa Stage 1 `gray_absdiff_gaussian` jako wejścia i zapisuje raporty/debug overlay do `logs/offline_replay/stage2_region/`.
+
+Wynik: `contour_external` jest `PROVISIONAL_RECOMMENDED`, bo ma komplet `PASS` i najniższy runtime w tym przebiegu. Nie oznacza to finalnego `APPROVED_STAGE_2_METHOD`.
+
+Kolejne kroki: Supervisor powinien przejrzeć:
+
+```text
+logs/offline_replay/stage2_region/contour_external/empty_to_empty/candidate_overlay.png
+logs/offline_replay/stage2_region/contour_external/empty_to_one_card/candidate_overlay.png
+logs/offline_replay/stage2_region/contour_external/empty_to_three_cards/candidate_overlay.png
+logs/offline_replay/stage2_region/contour_external/one_card_to_three_cards/candidate_overlay.png
+logs/offline_replay/stage2_region/contour_external/one_card_to_empty/candidate_overlay.png
+logs/offline_replay/stage2_region/contour_external/three_cards_to_empty/candidate_overlay.png
+```
+
+Nie przechodzić do Stage 3 przed review.
