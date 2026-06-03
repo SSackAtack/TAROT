@@ -160,6 +160,8 @@ Co zostało zaobserwowane: `table.calibrated=True`, `marker_ids=[10,11,12,13]`, 
 
 Kolejne kroki: zatrzymać Task 7 przed oznaczeniem jako green. Następny mały task powinien zbadać, dlaczego przy wielu regionach event-first rozpoznaje tylko jedną z trzech kart: ROI sizing/merge, walidacja kandydatów albo rozpoznawanie wielu ROI. Nie wracać do strojenia starego detektora pustej maty.
 
+Decyzja Michala po restarcie procesu: **opcja 1**. Nie odtwarzać teraz smoke od zera. Wcześniejsze wyniki `Pusta mata` i `1 karta` pozostają reprezentatywne, a `3 karty` zostaje zapisane jako RED na podstawie danych sprzed restartu.
+
 ## Kolejne kroki
 
 1. Kontynuować pełny `Task 7: Live Smoke` przy widocznych 4 markerach ArUco: jedna karta, trzy karty, no-change, removal i global shift.

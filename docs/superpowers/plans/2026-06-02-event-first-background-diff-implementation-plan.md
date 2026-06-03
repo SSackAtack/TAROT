@@ -1388,6 +1388,8 @@ Co zostało zaobserwowane: ArUco i referencja tła pozostały aktywne (`marker_i
 
 Kolejne kroki: nie uznawać Task 7 za green. Następny mały task powinien zbadać przetwarzanie wielu ROI i odrzucenia kandydatów/rozpoznań przy trzech kartach. Nie stroić starego detektora pustej maty.
 
+Decyzja Michala po restarcie procesu: **opcja 1**. Nie powtarzać teraz pełnego smoke od zera; użyć zebranych danych jako podstawy do następnego taska debugowego multi-card ROI/recognition.
+
 ---
 
 ## Kryteria Akceptacji
