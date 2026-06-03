@@ -58,3 +58,40 @@ logs/offline_replay/stage2_region/
 ## 7. Uwagi Środowiskowe
 
 Lokalny katalog zależności `C:\tmp\tarot_pydeps` musiał zostać odtworzony, bo sandboxowy import widział uszkodzony namespace `numpy`. Testy uruchomiono z dostępem do odtworzonych zależności OpenCV/NumPy.
+
+## TASK-CV-OFFLINE-LAB-STAGE-2-MANUAL-REVIEW-PACK-001
+
+### Summary
+
+Prepared local manual review pack for Stage 2 `contour_external` overlays.
+
+### Files prepared locally
+
+- `logs/offline_replay/stage2_manual_review_pack/contour_external/01_empty_to_empty_candidate_overlay.png`
+- `logs/offline_replay/stage2_manual_review_pack/contour_external/02_empty_to_one_card_candidate_overlay.png`
+- `logs/offline_replay/stage2_manual_review_pack/contour_external/03_empty_to_three_cards_candidate_overlay.png`
+- `logs/offline_replay/stage2_manual_review_pack/contour_external/04_one_card_to_three_cards_candidate_overlay.png`
+- `logs/offline_replay/stage2_manual_review_pack/contour_external/05_one_card_to_empty_candidate_overlay.png`
+- `logs/offline_replay/stage2_manual_review_pack/contour_external/06_three_cards_to_empty_candidate_overlay.png`
+- `logs/offline_replay/stage2_manual_review_pack/README_FOR_SUPERVISOR.md`
+- `logs/offline_replay/stage2_manual_review_pack_contour_external.zip`
+
+### Tests
+
+No algorithmic tests required. Packaging only.
+
+Verification:
+
+- confirmed all 6 PNG files exist
+- confirmed README exists
+- confirmed ZIP exists
+
+### Decision
+
+Stage 2 still `PROVISIONAL_RECOMMENDED`.
+
+Waiting for Supervisor visual review.
+
+### Required next action
+
+Michał uploads the six PNG overlays to ChatGPT Supervisor for manual Stage 2 review.
