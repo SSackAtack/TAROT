@@ -137,3 +137,56 @@ logs/offline_replay/stage1_diff/
 ## Kolejne kroki
 
 Natychmiastowy następny krok dla kolejnego modelu: przejrzeć `logs/offline_replay/stage1_diff/gray_absdiff_gaussian/*/regions_overlay.png` oraz `gray_absdiff_median` jako backup. Po zatwierdzeniu Stage 1 utworzyć `TASK-CV-OFFLINE-LAB-STAGE-1-DECISION-001` albo bezpośrednio plan Stage 2 Region Segmentation, jeżeli Michał zaakceptuje wynik.
+
+## TASK-CV-OFFLINE-LAB-STAGE-1-DIFF-REFINE-001
+
+### Summary
+
+Domknięto refinement benchmarku Stage 1 przed formalnym Stage Gate. Benchmark nie ocenia już płytko samego `region_count == expected_region_count`; zapisuje surowe komponenty, komponenty po filtrach, regiony po prostym merge bliskich bboxów i liczniki odrzuceń. `region_count` pozostaje kompatybilnym polem, ale oznacza `merged_region_count`, a `verdict_basis=merged_region_count`.
+
+### Metrics added
+
+- `raw_region_count`
+- `filtered_region_count`
+- `merged_region_count`
+- `ignored_small_count`
+- `ignored_large_count`
+- `largest_region_area_ratio`
+- `largest_merged_region_area_ratio`
+- `recommendation_status`
+- `manual_review_paths`
+
+### Benchmark result
+
+- `recommended_method`: `gray_absdiff_gaussian`
+- `recommendation_status`: `PROVISIONAL_RECOMMENDED`
+- `rows`: `42`
+- output: `logs/offline_replay/stage1_diff`
+
+### Tests
+
+- `$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv;.'; python -m unittest app_cv.tests.test_cv_detection_lab_stage1 -v` => PASS, 8 testów.
+- `python -B -m py_compile tools\cv_detection_lab\methods.py tools\cv_detection_lab\stage1_diff_benchmark.py app_cv\tests\test_cv_detection_lab_stage1.py` => PASS.
+- `$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv;.'; python tools\cv_detection_lab\stage1_diff_benchmark.py --fixture logs\live_fixtures\event_first_current_debug_verified --output logs\offline_replay\stage1_diff` => PASS, 42 rows.
+- `$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv;.'; python -m unittest discover -s app_cv\tests -v` => PASS, 324 testy.
+
+Frontend build: `NOT_RUN`, bo task nie modyfikuje `app_ar/`.
+
+### Decision
+
+Na tym etapie: `PROVISIONAL_RECOMMENDED: gray_absdiff_gaussian`. Stage 1 nie jest jeszcze oznaczony jako final `APPROVED_STAGE_1_METHOD`.
+
+### Required next action
+
+Supervisor ma przejrzeć overlay dla `gray_absdiff_gaussian`:
+
+```text
+logs/offline_replay/stage1_diff/gray_absdiff_gaussian/empty_to_empty/regions_overlay.png
+logs/offline_replay/stage1_diff/gray_absdiff_gaussian/empty_to_one_card/regions_overlay.png
+logs/offline_replay/stage1_diff/gray_absdiff_gaussian/empty_to_three_cards/regions_overlay.png
+logs/offline_replay/stage1_diff/gray_absdiff_gaussian/one_card_to_three_cards/regions_overlay.png
+logs/offline_replay/stage1_diff/gray_absdiff_gaussian/one_card_to_empty/regions_overlay.png
+logs/offline_replay/stage1_diff/gray_absdiff_gaussian/three_cards_to_empty/regions_overlay.png
+```
+
+Dopiero po tym można zatwierdzić Stage 1 albo zlecić dodatkowy refinement.

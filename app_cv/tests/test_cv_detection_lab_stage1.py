@@ -11,6 +11,7 @@ from tools.cv_detection_lab.stage1_diff_benchmark import (
     EXPECTED_REGION_COUNTS,
     build_fixture_pairs,
     run_benchmark,
+    _extract_regions,
 )
 
 
@@ -88,6 +89,87 @@ class Stage1DiffBenchmarkTest(unittest.TestCase):
             row = next(item for item in report["rows"] if item["pair"] == "empty_to_empty")
             self.assertEqual(row["verdict"], "PASS")
             self.assertEqual(row["region_count"], 0)
+
+    def test_merges_nearby_components_without_hiding_raw_count(self):
+        mask = np.zeros((120, 160), dtype=np.uint8)
+        cv2.rectangle(mask, (40, 30), (70, 90), 255, -1)
+        cv2.rectangle(mask, (78, 30), (108, 90), 255, -1)
+
+        result = _extract_regions(mask, min_area_ratio=0.01, max_area_ratio=0.6, merge_padding_px=12)
+
+        self.assertEqual(result.raw_region_count, 2)
+        self.assertEqual(result.filtered_region_count, 2)
+        self.assertEqual(result.merged_region_count, 1)
+        self.assertEqual(len(result.merged_regions), 1)
+
+    def test_counts_small_noise_without_adding_merged_region(self):
+        mask = np.zeros((120, 160), dtype=np.uint8)
+        cv2.circle(mask, (10, 10), 2, 255, -1)
+        cv2.circle(mask, (30, 10), 2, 255, -1)
+
+        result = _extract_regions(mask, min_area_ratio=0.01, max_area_ratio=0.6)
+
+        self.assertEqual(result.raw_region_count, 2)
+        self.assertEqual(result.ignored_small_count, 2)
+        self.assertEqual(result.merged_region_count, 0)
+
+    def test_counts_large_region_without_adding_merged_region(self):
+        mask = np.zeros((120, 160), dtype=np.uint8)
+        cv2.rectangle(mask, (0, 0), (159, 119), 255, -1)
+
+        result = _extract_regions(mask, min_area_ratio=0.01, max_area_ratio=0.6)
+
+        self.assertEqual(result.raw_region_count, 1)
+        self.assertEqual(result.ignored_large_count, 1)
+        self.assertEqual(result.merged_region_count, 0)
+
+    def test_matrix_csv_contains_refined_region_columns(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            fixture_dir = _write_fixture(tmpdir)
+            output_dir = os.path.join(tmpdir, "offline_replay")
+
+            run_benchmark(
+                fixture_dir=fixture_dir,
+                output_dir=output_dir,
+                method_names=["gray_absdiff_fixed"],
+            )
+
+            with open(os.path.join(output_dir, "matrix.csv"), newline="", encoding="utf-8") as handle:
+                first_row = next(csv.DictReader(handle))
+
+            for column in [
+                "raw_region_count",
+                "filtered_region_count",
+                "merged_region_count",
+                "ignored_small_count",
+                "ignored_large_count",
+                "largest_region_area_ratio",
+                "largest_merged_region_area_ratio",
+                "verdict_basis",
+            ]:
+                self.assertIn(column, first_row)
+
+    def test_report_marks_recommendation_as_provisional_with_manual_review_paths(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            fixture_dir = _write_fixture(tmpdir)
+            output_dir = os.path.join(tmpdir, "offline_replay")
+
+            report = run_benchmark(
+                fixture_dir=fixture_dir,
+                output_dir=output_dir,
+                method_names=["gray_absdiff_fixed"],
+            )
+
+            self.assertEqual(report["recommendation_status"], "PROVISIONAL_RECOMMENDED")
+            self.assertTrue(report["manual_review_required"])
+            self.assertEqual(len(report["manual_review_paths"]), 6)
+            self.assertTrue(report["manual_review_paths"][0].endswith("regions_overlay.png"))
+
+            with open(os.path.join(output_dir, "report.json"), encoding="utf-8") as handle:
+                payload = json.load(handle)
+            self.assertEqual(payload["recommendation_status"], "PROVISIONAL_RECOMMENDED")
+            self.assertTrue(payload["manual_review_required"])
+            self.assertEqual(len(payload["manual_review_paths"]), 6)
 
 
 def _write_fixture(root):

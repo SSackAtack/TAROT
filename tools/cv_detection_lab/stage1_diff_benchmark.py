@@ -3,7 +3,7 @@ import csv
 import json
 import os
 import time
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 
 import cv2
 import numpy as np
@@ -45,6 +45,35 @@ class FixturePair:
     change_type: str
 
 
+@dataclass(frozen=True)
+class RegionExtractionResult:
+    raw_regions: list
+    filtered_regions: list
+    merged_regions: list
+    ignored_small_count: int
+    ignored_large_count: int
+
+    @property
+    def raw_region_count(self):
+        return len(self.raw_regions)
+
+    @property
+    def filtered_region_count(self):
+        return len(self.filtered_regions)
+
+    @property
+    def merged_region_count(self):
+        return len(self.merged_regions)
+
+    @property
+    def largest_region_area_ratio(self):
+        return _largest_area_ratio(self.filtered_regions)
+
+    @property
+    def largest_merged_region_area_ratio(self):
+        return _largest_area_ratio(self.merged_regions)
+
+
 def build_fixture_pairs(fixture_dir):
     pairs = []
     for pair_name, previous_scenario, current_scenario, change_type in PAIR_DEFINITIONS:
@@ -79,16 +108,29 @@ def run_benchmark(fixture_dir, output_dir, method_names=None):
             started = time.perf_counter()
             result = run_diff_method(method_name, previous, current)
             runtime_ms = (time.perf_counter() - started) * 1000.0
-            regions = _extract_regions(result.mask)
-            row = _build_row(method_name, pair, result.mask, regions, runtime_ms)
+            extraction = _extract_regions(result.mask)
+            row = _build_row(method_name, pair, result.mask, extraction, runtime_ms)
             rows.append(row)
-            _write_debug_images(output_dir, method_name, pair.name, result.diff, result.mask, current, regions)
+            _write_debug_images(
+                output_dir,
+                method_name,
+                pair.name,
+                result.diff,
+                result.mask,
+                current,
+                extraction.merged_regions,
+            )
 
+    recommended_method = _choose_recommended_method(rows, method_names)
     summary = {
         "fixture_dir": fixture_dir,
         "methods_tested": list(method_names),
         "rows": rows,
-        "recommended_method": _choose_recommended_method(rows, method_names),
+        "recommended_method": recommended_method,
+        "recommendation_status": "PROVISIONAL_RECOMMENDED" if recommended_method else "NO_RECOMMENDATION",
+        "reason": "PASS on fixture pairs after merged regions with low runtime.",
+        "manual_review_required": True,
+        "manual_review_paths": _manual_review_paths(output_dir, recommended_method) if recommended_method else [],
     }
     _write_matrix(output_dir, rows)
     _write_json(os.path.join(output_dir, "report.json"), summary)
@@ -107,30 +149,89 @@ def _read_image(path):
     return image
 
 
-def _extract_regions(mask, min_area_ratio=0.002, max_area_ratio=0.6):
+def _extract_regions(mask, min_area_ratio=0.002, max_area_ratio=0.6, merge_padding_px=12):
     if mask is None or mask.size == 0:
-        return []
+        return RegionExtractionResult([], [], [], 0, 0)
     total_area = float(mask.shape[0] * mask.shape[1])
     count, labels, stats, _ = cv2.connectedComponentsWithStats(mask, connectivity=8)
+    raw_regions = []
     regions = []
+    ignored_small_count = 0
+    ignored_large_count = 0
     for label in range(1, count):
         x, y, width, height, area = stats[label]
         area_ratio = float(area) / total_area
+        region = {
+            "bbox": [int(x), int(y), int(width), int(height)],
+            "area": int(area),
+            "area_ratio": area_ratio,
+        }
+        raw_regions.append(region)
         if area_ratio < min_area_ratio or area_ratio > max_area_ratio:
+            if area_ratio < min_area_ratio:
+                ignored_small_count += 1
+            else:
+                ignored_large_count += 1
             continue
-        regions.append(
-            {
-                "bbox": [int(x), int(y), int(width), int(height)],
-                "area": int(area),
-                "area_ratio": area_ratio,
-            }
-        )
-    return regions
+        regions.append(region)
+    merged_regions = _merge_regions(regions, total_area, merge_padding_px=merge_padding_px)
+    return RegionExtractionResult(raw_regions, regions, merged_regions, ignored_small_count, ignored_large_count)
 
 
-def _build_row(method_name, pair, mask, regions, runtime_ms):
+def _merge_regions(regions, total_area, merge_padding_px):
+    merged = []
+    for region in regions:
+        current = dict(region)
+        did_merge = True
+        while did_merge:
+            did_merge = False
+            remaining = []
+            for existing in merged:
+                if _boxes_overlap_with_padding(current["bbox"], existing["bbox"], merge_padding_px):
+                    current = _merge_two_regions(current, existing, total_area)
+                    did_merge = True
+                else:
+                    remaining.append(existing)
+            merged = remaining
+        merged.append(current)
+    return merged
+
+
+def _boxes_overlap_with_padding(first, second, padding):
+    ax, ay, aw, ah = first
+    bx, by, bw, bh = second
+    return not (
+        ax + aw + padding < bx
+        or bx + bw + padding < ax
+        or ay + ah + padding < by
+        or by + bh + padding < ay
+    )
+
+
+def _merge_two_regions(first, second, total_area):
+    ax, ay, aw, ah = first["bbox"]
+    bx, by, bw, bh = second["bbox"]
+    x1 = min(ax, bx)
+    y1 = min(ay, by)
+    x2 = max(ax + aw, bx + bw)
+    y2 = max(ay + ah, by + bh)
+    area = int(first["area"]) + int(second["area"])
+    return {
+        "bbox": [int(x1), int(y1), int(x2 - x1), int(y2 - y1)],
+        "area": area,
+        "area_ratio": float(area) / float(total_area),
+    }
+
+
+def _largest_area_ratio(regions):
+    if not regions:
+        return 0.0
+    return max(float(region.get("area_ratio", 0.0)) for region in regions)
+
+
+def _build_row(method_name, pair, mask, extraction, runtime_ms):
     changed_area_ratio = float(np.count_nonzero(mask)) / float(mask.size) if mask.size else 0.0
-    region_count = len(regions)
+    region_count = extraction.merged_region_count
     expected = pair.expected_regions
     return {
         "method": method_name,
@@ -139,13 +240,20 @@ def _build_row(method_name, pair, mask, regions, runtime_ms):
         "runtime_ms": round(runtime_ms, 3),
         "changed_area_ratio": round(changed_area_ratio, 6),
         "region_count": region_count,
+        "raw_region_count": extraction.raw_region_count,
+        "filtered_region_count": extraction.filtered_region_count,
+        "merged_region_count": extraction.merged_region_count,
         "expected_region_count": expected,
         "region_count_delta": region_count - expected,
         "global_shift_score": round(changed_area_ratio, 6),
-        "ignored_small_count": 0,
-        "ignored_large_count": 0,
+        "ignored_small_count": extraction.ignored_small_count,
+        "ignored_large_count": extraction.ignored_large_count,
+        "largest_region_area_ratio": round(extraction.largest_region_area_ratio, 6),
+        "largest_merged_region_area_ratio": round(extraction.largest_merged_region_area_ratio, 6),
+        "verdict_basis": "merged_region_count",
         "verdict": _verdict(region_count, expected, changed_area_ratio),
-        "regions": regions,
+        "regions": extraction.merged_regions,
+        "filtered_regions": extraction.filtered_regions,
     }
 
 
@@ -191,11 +299,17 @@ def _write_matrix(output_dir, rows):
         "runtime_ms",
         "changed_area_ratio",
         "region_count",
+        "raw_region_count",
+        "filtered_region_count",
+        "merged_region_count",
         "expected_region_count",
         "region_count_delta",
         "global_shift_score",
         "ignored_small_count",
         "ignored_large_count",
+        "largest_region_area_ratio",
+        "largest_merged_region_area_ratio",
+        "verdict_basis",
         "verdict",
     ]
     with open(os.path.join(output_dir, "matrix.csv"), "w", newline="", encoding="utf-8") as handle:
@@ -216,17 +330,34 @@ def _write_markdown_report(output_dir, summary):
         "",
         f"Fixture: `{summary['fixture_dir']}`",
         f"Recommended method: `{summary['recommended_method']}`",
+        f"Recommendation status: `{summary['recommendation_status']}`",
+        f"Manual review required: `{summary['manual_review_required']}`",
+        f"Reason: {summary['reason']}",
         "",
-        "| Method | Pair | Regions | Expected | Verdict | Runtime ms |",
-        "|---|---|---:|---:|---|---:|",
+        "## Manual Review Paths",
+        "",
+        *[f"- `{path}`" for path in summary["manual_review_paths"]],
+        "",
+        "## Matrix",
+        "",
+        "| Method | Pair | Raw | Filtered | Merged | Expected | Verdict | Runtime ms |",
+        "|---|---|---:|---:|---:|---:|---|---:|",
     ]
     for row in summary["rows"]:
         lines.append(
-            f"| {row['method']} | {row['pair']} | {row['region_count']} | "
+            f"| {row['method']} | {row['pair']} | {row['raw_region_count']} | "
+            f"{row['filtered_region_count']} | {row['merged_region_count']} | "
             f"{row['expected_region_count']} | {row['verdict']} | {row['runtime_ms']:.3f} |"
         )
     with open(os.path.join(output_dir, "report.md"), "w", encoding="utf-8") as handle:
         handle.write("\n".join(lines) + "\n")
+
+
+def _manual_review_paths(output_dir, method_name):
+    return [
+        os.path.join(output_dir, method_name, pair_name, "regions_overlay.png").replace("\\", "/")
+        for pair_name, _, _, _ in PAIR_DEFINITIONS
+    ]
 
 
 def main(argv=None):

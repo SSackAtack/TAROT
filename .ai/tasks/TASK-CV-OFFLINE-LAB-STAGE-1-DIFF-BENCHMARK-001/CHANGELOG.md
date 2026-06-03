@@ -25,6 +25,7 @@ Brak zmian w runtime produkcyjnym.
 * Testuje budowę par fixture.
 * Testuje zapis raportów i obrazów debug.
 * Testuje, że baseline `empty -> empty` daje `PASS` i zero regionów.
+* Dodano regresje dla refinementu Stage 1: merge bliskich komponentów, liczenie `ignored_small_count`, liczenie `ignored_large_count`, obecność nowych kolumn CSV oraz provisional/manual-review fields w `report.json`.
 
 ---
 
@@ -37,3 +38,33 @@ Brak zmian w runtime produkcyjnym.
 ### `docs/superpowers/plans/2026-06-03-state-first-offline-lab-stage-1-plan.md`
 
 * Dopisano wyniki pierwszego benchmarku offline.
+
+## TASK-CV-OFFLINE-LAB-STAGE-1-DIFF-REFINE-001
+
+### Summary
+
+Rozszerzono benchmark Stage 1 o bogatszą diagnostykę regionów przed formalnym Stage Gate.
+
+### Metrics added
+
+- `raw_region_count`
+- `filtered_region_count`
+- `merged_region_count`
+- `ignored_small_count`
+- `ignored_large_count`
+- `largest_region_area_ratio`
+- `largest_merged_region_area_ratio`
+- `verdict_basis`
+- `recommendation_status`
+- `manual_review_paths`
+
+### Benchmark result
+
+- `recommended_method`: `gray_absdiff_gaussian`
+- `recommendation_status`: `PROVISIONAL_RECOMMENDED`
+- `rows`: `42`
+- output: `logs/offline_replay/stage1_diff`
+
+### Decision
+
+Stage 1 nie jest jeszcze finalnie zatwierdzony. `gray_absdiff_gaussian` jest tylko provisional recommendation do ręcznego review overlay.
