@@ -269,3 +269,10 @@
 - `SnapshotFirstPipeline` przyjmuje opcjonalne `live_fixture_capture`; gdy go nie ma albo nie było wybranego snapshotu, pipeline działa jak wcześniej.
 - `main.py` tworzy capture przez `LiveFixtureCapture.from_env(LOG_DIR, deck=DECK_NAME)`.
 - Nie zmieniano detekcji, rozpoznawania, ArUco, pustej referencji, layoutu ani Studio UI.
+
+## 2026-06-03 Live fixture filename disambiguation
+
+- Zmieniono nazwy obrazów fixture na scenariuszowe: `raw_frame_0.png` / `analysis_frame_0.png` dla `empty`, `raw_frame_1.png` / `analysis_frame_1.png` dla `one_card`, `raw_frame_3.png` / `analysis_frame_3.png` dla `three_cards`.
+- Opcjonalna pusta referencja także dostaje sufiks scenariusza, np. `empty_reference_0.png`.
+- Usunięto lokalne wcześniejsze snapshoty z `logs/live_fixtures/`, żeby kolejny live capture zacząć od zera bez mieszania starych plików.
+- Nie zmieniano detekcji, rozpoznawania, ArUco, pustej referencji, layoutu ani Studio UI.

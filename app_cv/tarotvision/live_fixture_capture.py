@@ -84,10 +84,11 @@ class LiveFixtureCapture:
             os.makedirs(scenario_dir, exist_ok=True)
 
             self._write_manifest(fixture_dir, scenario_name)
-            _write_png(os.path.join(scenario_dir, "raw_frame.png"), raw_frame)
-            _write_png(os.path.join(scenario_dir, "analysis_frame.png"), analysis_frame)
+            image_suffix = _scenario_image_suffix(scenario_name)
+            _write_png(os.path.join(scenario_dir, f"raw_frame_{image_suffix}.png"), raw_frame)
+            _write_png(os.path.join(scenario_dir, f"analysis_frame_{image_suffix}.png"), analysis_frame)
             if empty_reference is not None:
-                _write_png(os.path.join(scenario_dir, "empty_reference.png"), empty_reference)
+                _write_png(os.path.join(scenario_dir, f"empty_reference_{image_suffix}.png"), empty_reference)
 
             safe_metrics = _metrics_payload(metrics or {})
             safe_payload = _status_payload(
@@ -184,6 +185,14 @@ def _to_jsonable(value):
 def _safe_name(value):
     safe = "".join(ch if ch.isalnum() or ch in ("-", "_") else "_" for ch in str(value))
     return safe.strip("_") or "unknown"
+
+
+def _scenario_image_suffix(scenario_name):
+    return {
+        "empty": "0",
+        "one_card": "1",
+        "three_cards": "3",
+    }.get(scenario_name, _safe_name(scenario_name))
 
 
 def _default_fixture_name():

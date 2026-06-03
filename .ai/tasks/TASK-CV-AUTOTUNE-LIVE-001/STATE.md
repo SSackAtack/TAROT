@@ -286,3 +286,22 @@ NOT_RUN. Nie uruchamiano backendu live ani fizycznego smoke w tej sesji; poprawn
 
 ### Next action
 Uruchomić backend z `TAROTVISION_CAPTURE_LIVE_FIXTURES=1` i `TAROTVISION_LIVE_FIXTURE_NAME=event_first_current_debug`, zebrać fixture `empty`, `one_card`, `three_cards`, a potem użyć ich w replay/debug tasku dla `TASK-CV-ROI-RECOGNITION-CROP-QUALITY-001`.
+
+## 2026-06-03 Live fixture filename disambiguation
+
+### Summary
+Podczas ręcznego zbierania fixture wykryto, że identyczne nazwy `raw_frame.png` i `analysis_frame.png` w każdym folderze scenariusza są zbyt łatwe do pomylenia przy ręcznej kontroli i kopiowaniu snapshotów. Zmieniono nazwy obrazów na scenariuszowe:
+- `empty`: `raw_frame_0.png`, `analysis_frame_0.png`, `empty_reference_0.png`
+- `one_card`: `raw_frame_1.png`, `analysis_frame_1.png`, `empty_reference_1.png`
+- `three_cards`: `raw_frame_3.png`, `analysis_frame_3.png`, `empty_reference_3.png`
+
+### Tests
+- `cd app_cv; python -m unittest tests.test_live_fixture_capture -v` => PASS, 5 testów.
+- `cd app_cv; python -m unittest tests.test_live_fixture_capture tests.test_pipelines_contract -v` => PASS, 24 testy.
+- `cd app_cv; python -B -m py_compile tarotvision\live_fixture_capture.py tarotvision\pipelines\snapshot_first.py main.py` => PASS.
+
+### Snapshot cleanup
+Usunięto wszystkie lokalne wcześniejsze snapshoty z `logs/live_fixtures/`. Następna procedura live capture ma zacząć od pustego katalogu i nowych nazw obrazów.
+
+### Next action
+Zebrać od zera `empty`, `one_card`, `three_cards`; po każdym scenariuszu zweryfikować fizycznie zapisany obraz i dopiero po potwierdzeniu przejść dalej.

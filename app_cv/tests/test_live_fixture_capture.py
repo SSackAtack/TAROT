@@ -45,8 +45,8 @@ class LiveFixtureCaptureTest(unittest.TestCase):
             scenario_dir = os.path.join(fixture_dir, "three_cards")
             for name in [
                 "manifest.json",
-                "three_cards/raw_frame.png",
-                "three_cards/analysis_frame.png",
+                "three_cards/raw_frame_3.png",
+                "three_cards/analysis_frame_3.png",
                 "three_cards/metrics.json",
                 "three_cards/payload.json",
                 "three_cards/roi_diagnostics.json",
@@ -64,6 +64,34 @@ class LiveFixtureCaptureTest(unittest.TestCase):
             self.assertEqual(payload["actual_cards_count"], 1)
             self.assertEqual(payload["expected_cards_count"], 3)
             self.assertEqual(payload["marker_ids"], [10, 11, 12, 13])
+
+    def test_uses_scenario_card_count_suffix_for_image_files(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            capture = LiveFixtureCapture(
+                log_dir=tmpdir,
+                enabled=True,
+                fixture_name="event_first_test",
+            )
+
+            for scenario, suffix in [
+                ("empty", "0"),
+                ("one_card", "1"),
+                ("three_cards", "3"),
+            ]:
+                result = capture.save_snapshot(
+                    scenario=scenario,
+                    raw_frame=np.zeros((4, 4, 3), dtype=np.uint8),
+                    analysis_frame=np.zeros((4, 4, 3), dtype=np.uint8),
+                    metrics={},
+                    payload={},
+                )
+
+                self.assertTrue(result.ok, result.error)
+                scenario_dir = os.path.join(tmpdir, "live_fixtures", "event_first_test", scenario)
+                self.assertTrue(os.path.exists(os.path.join(scenario_dir, f"raw_frame_{suffix}.png")))
+                self.assertTrue(os.path.exists(os.path.join(scenario_dir, f"analysis_frame_{suffix}.png")))
+                self.assertFalse(os.path.exists(os.path.join(scenario_dir, "raw_frame.png")))
+                self.assertFalse(os.path.exists(os.path.join(scenario_dir, "analysis_frame.png")))
 
     def test_returns_error_status_when_write_fails(self):
         with tempfile.TemporaryDirectory() as tmpdir:
