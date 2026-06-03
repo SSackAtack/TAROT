@@ -68,3 +68,32 @@ logs/offline_replay/stage2_region/contour_external/three_cards_to_empty/candidat
 ```
 
 Nie przechodzić do Stage 3 przed review.
+
+## Stage 2 Final Decision
+
+Decision:
+
+APPROVED_STAGE_2_METHOD: contour_external
+
+Reason:
+
+Metoda poprawnie przeszła benchmark i manualny overlay review na parach:
+
+- `empty -> empty`
+- `empty -> one_card`
+- `empty -> three_cards`
+- `one_card -> three_cards`
+- `one_card -> empty`
+- `three_cards -> empty`
+
+Scope:
+
+Stage 2 approval covers Region Segmentation / Region Refinement only.
+
+Important limitation:
+
+Stage 2 bbox = candidate object/card region, not final card geometry or crop.
+
+Next stage:
+
+TASK-CV-RESEARCH-STAGE-3-CARD-LOCALIZATION-001

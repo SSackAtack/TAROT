@@ -95,3 +95,29 @@ Waiting for Supervisor visual review.
 ### Required next action
 
 Michał uploads the six PNG overlays to ChatGPT Supervisor for manual Stage 2 review.
+
+## TASK-CV-OFFLINE-LAB-STAGE-2-DECISION-001
+
+### Manual Review
+
+Reviewed overlays for `contour_external`:
+
+- `empty_to_empty`: PASS
+- `empty_to_one_card`: PASS
+- `empty_to_three_cards`: PASS
+- `one_card_to_three_cards`: PASS
+- `one_card_to_empty`: PASS
+- `three_cards_to_empty`: PASS
+
+### Decision
+
+APPROVED_STAGE_2_METHOD: contour_external
+
+### Automated Tests
+
+NOT_RUN — documentation-only stage gate.
+
+### Notes
+
+Automated tests were already executed in `TASK-CV-OFFLINE-LAB-STAGE-2-REGION-BENCHMARK-001`.
+This task only records the Supervisor decision after manual overlay review.

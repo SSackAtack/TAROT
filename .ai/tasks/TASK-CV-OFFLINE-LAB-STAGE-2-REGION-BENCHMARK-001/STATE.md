@@ -101,3 +101,41 @@ Waiting for Supervisor visual review.
 ### Required next action
 
 Michał uploads the six PNG overlays to ChatGPT Supervisor for manual Stage 2 review.
+
+## TASK-CV-OFFLINE-LAB-STAGE-2-DECISION-001
+
+### Supervisor Manual Review
+
+Manualnie przejrzano overlaye `contour_external` dla 6 par testowych:
+
+- `empty_to_empty`
+- `empty_to_one_card`
+- `empty_to_three_cards`
+- `one_card_to_three_cards`
+- `one_card_to_empty`
+- `three_cards_to_empty`
+
+### Decision
+
+APPROVED_STAGE_2_METHOD: contour_external
+
+### Scope of Approval
+
+Zatwierdzenie dotyczy tylko Stage 2 Region Segmentation / Region Refinement:
+
+- wykrywanie kandydatów regionów po Stage 1,
+- poprawne działanie dla added/removed candidate regions,
+- poprawne działanie w modelu kaskadowym `one_card -> three_cards`,
+- przygotowanie regionów wejściowych dla przyszłego Stage 3.
+
+### Known Limitation
+
+Bbox Stage 2 jest regionem kandydata, nie finalnym obrysem karty.
+Nie wolno używać go bezpośrednio jako finalnego cropa.
+Stage 3 musi dopiero wyznaczyć geometrię karty wewnątrz regionu.
+
+### Required Next Action
+
+Utworzyć:
+
+TASK-CV-RESEARCH-STAGE-3-CARD-LOCALIZATION-001
