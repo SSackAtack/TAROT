@@ -199,3 +199,12 @@
 - Potwierdzono w payloadzie WebSocket obecność diagnostyki Task 6: `background_reference_active`, `empty_reference_capture_active`, `empty_reference_frame_count`, kroki CV Explain `empty_reference` oraz `change_detection`.
 - Rozpoczęto live smoke dla scenariusza `empty`; wynik RED: etap `Pusta mata` pozostał na `0/3`, nie utworzył `empty_reference`, a log sesji zawiera tylko `empty_stage_started`.
 - Nie wykonano scenariuszy jedna karta, trzy karty, no-change, usunięcie i global shift, ponieważ bootstrap pustej referencji nie przeszedł pierwszego kroku.
+
+## 2026-06-03 Event-first Task 7 Snapshot Quality Diagnostics
+
+- Dodano diagnostykę jakości snapshotu dla przypadku `all_samples_rejected` w `SnapshotFirstPipeline`.
+- Pipeline publikuje teraz `snapshot_quality_reject_code`, `snapshot_quality_blur_score`, `snapshot_quality_brightness` i `snapshot_quality_contrast` w metrykach runtime.
+- Layout publikowany do Studio zawiera `snapshot_quality_reject_reason`, `snapshot_quality_blur_score`, `snapshot_quality_brightness` i `snapshot_quality_contrast`.
+- CV Explain pokazuje odrzucony snapshot jako `warn` w kroku `Snapshot` oraz kieruje operatora na poprawę światła, ostrości albo kontrastu.
+- Dodano testy regresji dla diagnostyki odrzuconego snapshotu w pipeline i CV Explain.
+- Powtórka `autotune_start empty` z bieżącym backendem zebrała `3/3` i utworzyła referencję, ale tylko przy `table.calibrated=false`, więc pełny Task 7 z ArUco nadal wymaga powtórzenia.

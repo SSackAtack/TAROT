@@ -105,6 +105,30 @@ def _change_detection_step(metrics):
     )
 
 
+def _snapshot_step(layout):
+    layout_state = layout.get("state") or "unknown"
+    reject_reason = layout.get("snapshot_reject_reason")
+    quality_reject_reason = layout.get("snapshot_quality_reject_reason")
+    if reject_reason == "all_samples_rejected":
+        value = quality_reject_reason or reject_reason
+        return _step(
+            "snapshot",
+            "Snapshot",
+            "warn",
+            value,
+            f"Snapshot odrzucony przez bramke jakosci: {value}.",
+        )
+    if layout_state in {"settling", "sampling_snapshots", "analyzing_snapshot"}:
+        return _step(
+            "snapshot",
+            "Snapshot",
+            "wait",
+            layout_state,
+            "Czeka na stabilny snapshot",
+        )
+    return _step("snapshot", "Snapshot", "ok", layout_state, "Snapshot gotowy")
+
+
 def build_cv_explainability(cards, metrics, runtime, layout, operator, warnings):
     cards = cards or []
     metrics = metrics or {}
@@ -161,15 +185,7 @@ def build_cv_explainability(cards, metrics, runtime, layout, operator, warnings)
             f"{aruco_markers}/4",
             aruco_message,
         ),
-        _step(
-            "snapshot",
-            "Snapshot",
-            "wait" if layout_state in {"settling", "sampling_snapshots", "analyzing_snapshot"} else "ok",
-            layout_state,
-            "Czeka na stabilny snapshot"
-            if layout_state in {"settling", "sampling_snapshots", "analyzing_snapshot"}
-            else "Snapshot gotowy",
-        ),
+        _snapshot_step(layout),
         _empty_reference_step(metrics, runtime),
         _change_detection_step(metrics),
         _step(
@@ -200,6 +216,10 @@ def build_cv_explainability(cards, metrics, runtime, layout, operator, warnings)
     elif layout_state in {"settling", "sampling_snapshots", "analyzing_snapshot"}:
         severity = "warn"
         next_action = "Zostaw mate nieruchomo przez kilka sekund."
+    elif layout.get("snapshot_reject_reason") == "all_samples_rejected":
+        severity = "warn"
+        quality_reject_reason = layout.get("snapshot_quality_reject_reason") or "unknown"
+        next_action = f"Snapshot odrzucony ({quality_reject_reason}); popraw swiatlo, ostrosc albo kontrast maty."
     elif candidate_count < 1 and not cards:
         severity = "warn"
         next_action = "Popraw swiatlo, kontrast albo polozenie kart."

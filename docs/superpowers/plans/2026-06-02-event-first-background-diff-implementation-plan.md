@@ -1334,6 +1334,14 @@ Co zostało zrobione: uruchomiono świeży backend z bieżącego branchu po wykr
 
 Kolejne kroki: nie uznawać Task 7 za ukończony. Najpierw zdiagnozować, dlaczego pusty etap live nie dostaje zaakceptowanych snapshotów w bieżących warunkach kamery/ArUco, następnie powtórzyć pełny smoke: `empty`, jedna karta, trzy karty, no-change, usunięcie karty i global shift.
 
+## Session Status (2026-06-03 Event-first Task 7 Snapshot Quality Diagnostics)
+
+Stan aktualny: **Task 7 nadal IN_PROGRESS**. Dodano małą diagnostykę do RED smoke: gdy `choose_best_snapshot()` odrzuca wszystkie próbki, `SnapshotFirstPipeline` publikuje teraz powód jakości (`snapshot_quality_reject_reason` w layout, `snapshot_quality_reject_code` w metrykach) oraz `blur_score`, `brightness` i `contrast`. CV Explain pokazuje ten stan w kroku `Snapshot` jako ostrzeżenie i podaje operatorowi następny krok.
+
+Co zostało zrobione: zabezpieczono kontrakt testem RED/GREEN, uruchomiono `test_operator_explainability + test_pipelines_contract` (`27` testów PASS), targeted event-first suite (`49` testów PASS), `py_compile` oraz full backend suite (`302` testy PASS). Powtórka `autotune_start empty` z bieżącym backendem zebrała `3/3` i utworzyła `background_reference_active=True`, ale tylko przy `table.calibrated=False`, `marker_ids=[]`, `snapshot_analysis_warped=0.0`.
+
+Kolejne kroki: pełny Task 7 musi zostać powtórzony przy skalibrowanym stole ArUco. Jeśli `Pusta mata` znów zostanie na `0/3`, nowe metryki jakości powinny wskazać, czy blokuje ją jasność, kontrast, ostrość, czy problem z warpowaniem/markerami.
+
 ---
 
 ## Kryteria Akceptacji

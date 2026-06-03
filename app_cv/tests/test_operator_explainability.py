@@ -43,6 +43,29 @@ class OperatorExplainabilityTest(unittest.TestCase):
         self.assertEqual(result["severity"], "warn")
         self.assertEqual(result["next_action"], "Zostaw mate nieruchomo przez kilka sekund.")
 
+    def test_rejected_snapshot_reports_quality_reason(self):
+        result = build_cv_explainability(
+            cards=[],
+            metrics={
+                "snapshot_quality_brightness": 0.0,
+                "snapshot_quality_contrast": 0.0,
+            },
+            runtime={"aruco_calibrated": True, "aruco_markers": 4},
+            layout={
+                "state": "holding_last_good",
+                "snapshot_reject_reason": "all_samples_rejected",
+                "snapshot_quality_reject_reason": "too_dark",
+            },
+            operator={"active_decks": ["gilded"]},
+            warnings=[],
+        )
+
+        snapshot_step = next(step for step in result["steps"] if step["id"] == "snapshot")
+        self.assertEqual(snapshot_step["state"], "warn")
+        self.assertEqual(snapshot_step["value"], "too_dark")
+        self.assertIn("odrzucony", snapshot_step["message"].lower())
+        self.assertIn("too_dark", result["next_action"])
+
     def test_detected_cards_are_ok(self):
         result = build_cv_explainability(
             cards=[{"id": "card-1"}],

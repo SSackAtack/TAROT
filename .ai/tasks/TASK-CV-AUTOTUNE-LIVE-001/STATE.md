@@ -112,8 +112,16 @@ Co zostało zrobione: zrestartowano stary backend CV, uruchomiono świeży `Snap
 
 Kolejne kroki: nie przechodzić do merge ani kolejnego taska runtime. Następny bezpieczny krok to mała diagnoza/fix przed ponowieniem Task 7: ustalić, dlaczego live `Pusta mata` nie zbiera zaakceptowanych snapshotów w obecnych warunkach kamery, mimo aktywnego `empty_reference_capture_active`, i dopiero potem powtórzyć pełny smoke (`empty`, jedna karta, trzy karty, no-change, removal, global shift).
 
+## Session Status (2026-06-03 Event-first Task 7 Snapshot Quality Diagnostics)
+
+Stan aktualny: **Task 7 nadal IN_PROGRESS**. Codex dodał brakującą diagnostykę dla ścieżki `all_samples_rejected`, żeby następny smoke nie kończył się samym `0/3` bez przyczyny. `SnapshotFirstPipeline` publikuje teraz w layout i metrykach powód odrzucenia jakości (`too_dark`, `too_bright`, `low_contrast`, `blurry`) oraz wartości `blur_score`, `brightness`, `contrast`; CV Explain pokazuje ten powód w kroku `Snapshot` i w `next_action`.
+
+Co zostało zrobione: uruchomiono wąski test RED dla brakującego `snapshot_quality_reject_reason`, wdrożono minimalną diagnostykę bez zmiany semantyki akceptacji snapshotów, a następnie powtórzono próbę `autotune_start empty`. W tej lokalnej powtórce `empty` zebrał `3/3` i utworzył `background_reference_active=True`, ale tylko w trybie bez kalibracji ArUco (`table.calibrated=False`, `marker_ids=[]`, `snapshot_analysis_warped=0.0`). To nie zamyka Task 7, bo docelowy smoke wymaga skalibrowanej maty i widocznych markerów.
+
+Kolejne kroki: uruchomić pełny live smoke przy widocznych 4 markerach ArUco. Jeżeli `Pusta mata` znowu zostanie na `0/3`, sprawdzić nowe pola `snapshot_quality_reject_code`, `snapshot_quality_blur_score`, `snapshot_quality_brightness`, `snapshot_quality_contrast` oraz komunikat CV Explain `Snapshot`.
+
 ## Kolejne kroki
 
-1. Zdiagnozować RED live smoke z 2026-06-03: `Pusta mata` pozostaje na `0/3`, `empty_reference_capture_active=True`, `empty_reference_frame_count=0`.
-2. Po poprawce albo korekcie warunków kamery powtórzyć pełny `Task 7: Live Smoke`.
+1. Powtórzyć pełny `Task 7: Live Smoke` przy widocznych 4 markerach ArUco.
+2. Jeżeli `Pusta mata` znowu zostanie na `0/3`, użyć nowych metryk jakości snapshotu do decyzji: światło/kontrast/ostrość/ArUco.
 3. Manualny live smoke z kamerą pozostaje wymagany dla obecnego `TASK-CV-AUTOTUNE-LIVE-001` przed oznaczeniem go jako `DONE`.

@@ -782,3 +782,49 @@ table.marker_ids=[]
 ```
 
 Wniosek: Task 7 nie spełnia kryterium akceptacji "`Pusta mata` nie wisi na `0/3`". Scenariusze jedna karta, trzy karty, no-change, removal i global shift nie zostały uruchomione, bo pustej referencji nie udało się zbudować.
+
+### Event-first Task 7 Snapshot Quality Diagnostics
+
+#### RED
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_pipelines_contract.TestPipelinesContract.test_snapshot_pipeline_reports_quality_reason_when_all_samples_rejected -v
+```
+
+Wynik: FAIL oczekiwany. Pipeline ustawiał `snapshot_reject_reason=all_samples_rejected`, ale layout nie zawierał `snapshot_quality_reject_reason`, więc operator i logi nie wyjaśniały, czy problemem jest ciemność, kontrast, ostrość czy prześwietlenie.
+
+#### GREEN
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_operator_explainability app_cv.tests.test_pipelines_contract -v
+```
+
+Wynik: PASS, 27 testów.
+
+```text
+$env:PYTHONDONTWRITEBYTECODE='1'; python -B -m py_compile app_cv\tarotvision\operator_explainability.py app_cv\tarotvision\pipelines\snapshot_first.py
+```
+
+Wynik: PASS.
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_background_model app_cv.tests.test_change_detection app_cv.tests.test_snapshot_analyzer app_cv.tests.test_pipelines_contract app_cv.tests.test_operator_explainability -v
+```
+
+Wynik: PASS, 49 testów.
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest discover -s app_cv\tests -v
+```
+
+Wynik: PASS, 302 testy.
+
+#### Live diagnostic retry
+
+```text
+WebSocket command: {"type":"autotune_start","scenario":"empty"}
+```
+
+Wynik: PARTIAL PASS / NOT FINAL TASK 7. Backend z bieżącą diagnostyką zebrał `empty 3/3`, utworzył `background_reference_active=true`, zapisał `sample_collected` i `stage_completed`, a `stage_result` był `PASS`.
+
+Ograniczenie: ta powtórka działała przy `table.calibrated=false`, `marker_ids=[]`, `snapshot_analysis_warped=0.0`, więc nie weryfikuje docelowego smoke z aktywną kalibracją ArUco.

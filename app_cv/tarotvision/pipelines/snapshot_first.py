@@ -6,7 +6,14 @@ import time
 import numpy as np
 from tarotvision.pipelines.base import VisionPipeline
 from tarotvision.detection_diagnostics import summarize_detection_diagnostics
-from tarotvision.snapshot_quality import choose_best_snapshot
+from tarotvision.snapshot_quality import choose_best_snapshot, score_snapshot
+
+SNAPSHOT_QUALITY_REJECT_CODES = {
+    "too_dark": 1,
+    "too_bright": 2,
+    "low_contrast": 3,
+    "blurry": 4,
+}
 
 class SnapshotFirstPipeline(VisionPipeline):
     def __init__(
@@ -135,10 +142,22 @@ class SnapshotFirstPipeline(VisionPipeline):
             self.runtime_metrics.add("snapshot_samples_taken", len(samples))
             selected = choose_best_snapshot(samples)
             if selected is None:
+                quality = score_snapshot(samples[-1])
                 self.snapshot_gate.mark_rejected()
                 layout_snapshot["state"] = self.snapshot_gate.state
                 layout_snapshot["snapshot_reject_reason"] = "all_samples_rejected"
+                layout_snapshot["snapshot_quality_reject_reason"] = quality.reject_reason
+                layout_snapshot["snapshot_quality_blur_score"] = quality.blur_score
+                layout_snapshot["snapshot_quality_brightness"] = quality.brightness
+                layout_snapshot["snapshot_quality_contrast"] = quality.contrast
                 self.runtime_metrics.add("snapshot_rejected_count", 1)
+                self.runtime_metrics.add(
+                    "snapshot_quality_reject_code",
+                    SNAPSHOT_QUALITY_REJECT_CODES.get(quality.reject_reason, 99),
+                )
+                self.runtime_metrics.add("snapshot_quality_blur_score", quality.blur_score)
+                self.runtime_metrics.add("snapshot_quality_brightness", quality.brightness)
+                self.runtime_metrics.add("snapshot_quality_contrast", quality.contrast)
             else:
                 self.snapshot_gate.mark_analyzing()
                 
