@@ -153,3 +153,24 @@ Stage 1 still `PROVISIONAL_RECOMMENDED`. Waiting for Supervisor visual review.
 ### Required next action
 
 Michał uploads the six PNG overlays to ChatGPT Supervisor for visual review.
+
+## TASK-CV-OFFLINE-LAB-STAGE-1-DECISION-001
+
+### Manual Review
+
+Reviewed overlays:
+
+- empty_to_empty: PASS
+- empty_to_one_card: PASS
+- empty_to_three_cards: PASS_WITH_NOTE
+- one_card_to_three_cards: PASS
+- one_card_to_empty: PASS
+- three_cards_to_empty: PASS
+
+### Decision
+
+APPROVED_STAGE_1_METHOD: gray_absdiff_gaussian
+
+### Automated Tests
+
+NOT_RUN — documentation-only stage gate.

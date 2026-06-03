@@ -121,3 +121,33 @@ Stage 1 still `PROVISIONAL_RECOMMENDED`. Waiting for Supervisor visual review.
 ### Required next action
 
 Michał uploads the six PNG overlays to ChatGPT Supervisor for visual review.
+
+## TASK-CV-OFFLINE-LAB-STAGE-1-DECISION-001
+
+### Supervisor Manual Review
+
+Manualnie przejrzano overlaye `gray_absdiff_gaussian` dla 6 par testowych.
+
+### Decision
+
+APPROVED_STAGE_1_METHOD: gray_absdiff_gaussian
+
+### Scope of Approval
+
+Zatwierdzenie dotyczy tylko Stage 1 Difference Detection:
+
+- wykrywanie braku zmiany,
+- wykrywanie dodanych regionów,
+- wykrywanie usuniętych regionów,
+- poprawne działanie w modelu kaskadowym `one_card -> three_cards`.
+
+### Known Limitation
+
+Regiony Stage 1 są regionami zmiany, nie finalnymi obrysami kart.
+Nie wolno ich używać bezpośrednio jako cropów kart.
+Stage 2 musi rozwiązać segmentację/refinement regionów.
+
+### Required Next Action
+
+Utworzyć:
+TASK-CV-RESEARCH-STAGE-2-REGION-SEGMENTATION-001

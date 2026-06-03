@@ -190,3 +190,24 @@ logs/offline_replay/stage1_diff/gray_absdiff_gaussian/three_cards_to_empty/regio
 ```
 
 Dopiero po tym można zatwierdzić Stage 1 albo zlecić dodatkowy refinement.
+
+## Stage 1 Final Decision
+
+Decision:
+APPROVED_STAGE_1_METHOD: gray_absdiff_gaussian
+
+Reason:
+Metoda poprawnie przeszła benchmark i manualny overlay review na parach:
+
+- empty -> empty
+- empty -> one_card
+- empty -> three_cards
+- one_card -> three_cards
+- one_card -> empty
+- three_cards -> empty
+
+Important limitation:
+Stage 1 bbox = region zmiany, nie finalna karta.
+
+Next stage:
+TASK-CV-RESEARCH-STAGE-2-REGION-SEGMENTATION-001

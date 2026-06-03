@@ -102,3 +102,10 @@ Stage 1 still `PROVISIONAL_RECOMMENDED`. Waiting for Supervisor visual review.
 ### Required next action
 
 Michał uploads the six PNG overlays to ChatGPT Supervisor for visual review.
+
+## TASK-CV-OFFLINE-LAB-STAGE-1-DECISION-001
+
+- Supervisor zatwierdził `gray_absdiff_gaussian` jako metodę Stage 1 Difference Detection.
+- Zatwierdzenie dotyczy wyłącznie detekcji różnic, nie segmentacji kart ani cropowania.
+- Znane ograniczenie: bboxy mogą obejmować tło/refleksy, szczególnie przy środkowej karcie.
+- Następny krok: Research Gate Stage 2 Region Segmentation.
