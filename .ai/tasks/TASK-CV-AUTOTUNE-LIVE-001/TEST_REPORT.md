@@ -1180,3 +1180,124 @@ $env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.te
 ```
 
 Wynik: PASS, 55 testów.
+
+## 2026-06-03 Event-first 3-card ROI diagnostic smoke
+
+### Input state
+
+```text
+backend commit: branch HEAD e19b866; ostatni commit kodu backendu 991ba87
+table.calibrated=true
+marker_ids=[10, 11, 12, 13]
+empty_reference_status=PASS
+background_reference_active=true
+background_reference_validation_warning=0.0
+cards_len=0
+detected=false
+```
+
+### Empty reference command
+
+```text
+WebSocket command: {"type":"autotune_start","scenario":"empty"}
+```
+
+Wynik: PASS. Logi `logs/autotune_sessions/` utworzyły `empty_stage_started`, trzy `empty_sample_collected` i `empty_stage_completed`. Payload potwierdził `progress.empty=3/3`, `empty_reference_status=PASS`, `background_reference_active=true`, `background_reference_validation_warning=0.0`, `table.calibrated=true`, `marker_ids=[10,11,12,13]`, `cards_len=0`, `detected=false`.
+
+### 3-card result
+
+Warunek wejściowy: operator położył trzy fizyczne karty na obszarze maty ArUco i ręka opuściła kadr.
+
+Odczyt: 154 payloady WebSocket przez około 22 sekundy.
+
+```text
+max_cards_len=2
+selected.detected=true
+selected.cards_len=2
+selected.cards=[Gilded_34, Gilded_38]
+change_region_count=3.706
+change_added_count=3.529
+change_removed_count=0.176
+change_mask_ratio=0.088
+snapshot_quads_found=15.923
+snapshot_recognition_attempts=9.154
+snapshot_recognition_rejections=8.308
+snapshot_candidate_validation_rejections=6.769
+snapshot_detection_quads_final=0.154
+roi_count=5
+roi_with_quads_count=5
+roi_with_accepted_card_count=1
+accepted_cards_before_dedup=2
+accepted_cards_after_dedup=2
+```
+
+### ROI diagnostics
+
+```text
+ROI 0
+roi_bbox=[180, 92, 228, 358]
+roi_area=81624
+roi_quads_found=7
+roi_candidates_after_validation=5
+roi_validation_rejections=2
+roi_recognition_attempts=5
+roi_recognition_rejections=3
+roi_accepted_cards=2
+roi_reject_reasons={"not_enough_good_matches":1,"smooth_low_texture":2,"not_enough_crop_descriptors":2}
+
+ROI 1
+roi_bbox=[151, 8, 117, 144]
+roi_area=16848
+roi_quads_found=10
+roi_candidates_after_validation=1
+roi_validation_rejections=9
+roi_recognition_attempts=1
+roi_recognition_rejections=1
+roi_accepted_cards=0
+roi_reject_reasons={"smooth_low_texture":9,"not_enough_crop_descriptors":1}
+
+ROI 2
+roi_bbox=[257, 23, 91, 82]
+roi_area=7462
+roi_quads_found=9
+roi_candidates_after_validation=5
+roi_validation_rejections=4
+roi_recognition_attempts=5
+roi_recognition_rejections=5
+roi_accepted_cards=0
+roi_reject_reasons={"not_enough_good_matches":1,"not_enough_crop_descriptors":4,"smooth_low_texture":4}
+
+ROI 3
+roi_bbox=[606, 476, 90, 70]
+roi_area=6300
+roi_quads_found=10
+roi_candidates_after_validation=8
+roi_validation_rejections=2
+roi_recognition_attempts=8
+roi_recognition_rejections=8
+roi_accepted_cards=0
+roi_reject_reasons={"not_enough_crop_descriptors":7,"not_enough_good_matches":1,"smooth_low_texture":2}
+
+ROI 4
+roi_bbox=[554, 570, 82, 69]
+roi_area=5658
+roi_quads_found=4
+roi_candidates_after_validation=1
+roi_validation_rejections=3
+roi_recognition_attempts=1
+roi_recognition_rejections=1
+roi_accepted_cards=0
+roi_reject_reasons={"not_enough_crop_descriptors":1,"smooth_low_texture":3}
+```
+
+### Interpretation
+
+Wynik: **recognition issue**.
+
+`roi_diagnostics` jest obecne w payloadzie, więc passthrough działa. `roi_count=5` i `roi_with_quads_count=5` wykluczają brak ROI jako główny problem. `accepted_cards_before_dedup=2` i `accepted_cards_after_dedup=2` wykluczają deduplikację jako przyczynę utraty trzeciej karty w tym smoke. Najsilniejszy sygnał to wysokie odrzucenia rozpoznawania: `snapshot_recognition_attempts=9.154`, `snapshot_recognition_rejections=8.308`, a w ROI dominują `not_enough_crop_descriptors`, `smooth_low_texture` i `not_enough_good_matches`.
+
+### Required next action
+
+Jeden mały task: `TASK-CV-ROI-RECOGNITION-CROP-QUALITY-001`.
+
+Zakres następnego taska powinien zebrać/zapisać diagnostyczne cropy i metadane rozpoznawania dla ROI odrzucanych przez `not_enough_crop_descriptors` oraz `not_enough_good_matches`, a potem poprawić jakość cropu/normalizacji wejścia ORB. Nie zmieniać progów `ChangeDetector`, ArUco, `empty_reference`, Studio UI ani starego detektora pustej maty.

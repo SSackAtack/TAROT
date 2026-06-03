@@ -244,3 +244,11 @@
 - Dodano minimalny passthrough pól `roi_count`, `roi_diagnostics`, `roi_with_quads_count`, `roi_with_accepted_card_count`, `accepted_cards_before_dedup`, `accepted_cards_after_dedup`.
 - Dodano test kontraktowy potwierdzający, że diagnostyka ROI z `SnapshotAnalyzer.diagnostics` trafia do `status_store.update_cv_state(..., metrics=...)`.
 - Nie zmieniano progów `ChangeDetector`, ArUco, pustej referencji, ORB ani Studio UI.
+
+## 2026-06-03 Event-first 3-card ROI diagnostic smoke
+
+- Wykonano krótki live smoke diagnostyczny bez zmian kodu: `Pusta mata 3/3 -> 3 karty -> odczyt roi_diagnostics`.
+- `Pusta mata` przeszła: `empty_reference_status=PASS`, `background_reference_active=true`, `background_reference_validation_warning=0`, `cards_len=0`, `detected=false`, `marker_ids=[10,11,12,13]`.
+- Dla trzech kart maksymalny layout miał `cards_len=2`; payload zawierał `roi_count=5`, `roi_with_quads_count=5`, `roi_with_accepted_card_count=1`, `accepted_cards_before_dedup=2`, `accepted_cards_after_dedup=2`.
+- Interpretacja: problem nie jest brakiem ROI ani deduplikacją; najbliższy wąski gardło to jakość cropów/rozpoznawanie ORB w ROI (`not_enough_crop_descriptors`, `smooth_low_texture`, `not_enough_good_matches`).
+- Następny mały task: `TASK-CV-ROI-RECOGNITION-CROP-QUALITY-001`.

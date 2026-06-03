@@ -185,3 +185,46 @@ Kolejne kroki: po commicie i pushu powtórzyć krótki cykl live: `Pusta mata 3/
 1. Kontynuować pełny `Task 7: Live Smoke` przy widocznych 4 markerach ArUco: jedna karta, trzy karty, no-change, removal i global shift.
 2. Traktować false positives starego detektora podczas `Pusta mata` jako warning diagnostyczny, nie jako bloker referencji tła.
 3. Osobny późniejszy task: `TASK-CV-LEGACY-DETECTOR-EMPTY-FP-001`, jeżeli po smoke nadal warto ograniczać false positives starego detektora.
+
+## 2026-06-03 Event-first 3-card ROI diagnostic smoke
+
+### Input state
+- backend commit: branch HEAD `e19b866`; ostatni commit kodu backendu `991ba87`
+- table.calibrated: `true`
+- marker_ids: `[10, 11, 12, 13]`
+- empty_reference_status: `PASS`
+- background_reference_active: `true`
+- background_reference_validation_warning: `0.0`
+
+### 3-card result
+- cards_len: `2` maksymalnie w 154 payloadach
+- detected: `true`
+- change_region_count: `3.706`
+- change_added_count: `3.529`
+- change_removed_count: `0.176`
+- change_mask_ratio: `0.088`
+- snapshot_quads_found: `15.923`
+- snapshot_recognition_attempts: `9.154`
+- snapshot_recognition_rejections: `8.308`
+- snapshot_candidate_validation_rejections: `6.769`
+- snapshot_detection_quads_final: `0.154`
+- roi_count: `5`
+- roi_with_quads_count: `5`
+- roi_with_accepted_card_count: `1`
+- accepted_cards_before_dedup: `2`
+- accepted_cards_after_dedup: `2`
+
+### ROI diagnostics
+- ROI 0: bbox `[180, 92, 228, 358]`, area `81624`, quads `7`, candidates after validation `5`, validation rejections `2`, recognition attempts `5`, recognition rejections `3`, accepted cards `2`, reject reasons: `not_enough_good_matches=1`, `smooth_low_texture=2`, `not_enough_crop_descriptors=2`.
+- ROI 1: bbox `[151, 8, 117, 144]`, area `16848`, quads `10`, candidates after validation `1`, validation rejections `9`, recognition attempts `1`, recognition rejections `1`, accepted cards `0`, reject reasons: `smooth_low_texture=9`, `not_enough_crop_descriptors=1`.
+- ROI 2: bbox `[257, 23, 91, 82]`, area `7462`, quads `9`, candidates after validation `5`, validation rejections `4`, recognition attempts `5`, recognition rejections `5`, accepted cards `0`, reject reasons: `not_enough_good_matches=1`, `not_enough_crop_descriptors=4`, `smooth_low_texture=4`.
+- ROI 3: bbox `[606, 476, 90, 70]`, area `6300`, quads `10`, candidates after validation `8`, validation rejections `2`, recognition attempts `8`, recognition rejections `8`, accepted cards `0`, reject reasons: `not_enough_crop_descriptors=7`, `not_enough_good_matches=1`, `smooth_low_texture=2`.
+- ROI 4: bbox `[554, 570, 82, 69]`, area `5658`, quads `4`, candidates after validation `1`, validation rejections `3`, recognition attempts `1`, recognition rejections `1`, accepted cards `0`, reject reasons: `not_enough_crop_descriptors=1`, `smooth_low_texture=3`.
+
+### Interpretation
+Wybór: **recognition issue**.
+
+ROI passthrough działa i nie jest to brak regionów: `roi_count=5`, `roi_with_quads_count=5`. Walidacja cropów odrzuca część kandydatów, ale przez rozpoznanie nadal przechodzi dużo prób (`snapshot_recognition_attempts=9.154`, suma prób ROI w wybranym payloadzie `20`), z bardzo wysokim odsetkiem odrzuceń (`snapshot_recognition_rejections=8.308`, suma ROI `18`). Dominujące powody to `not_enough_crop_descriptors`, `smooth_low_texture` i `not_enough_good_matches`, więc najbliższy problem jest w jakości cropów/rozpoznawaniu ORB w ROI, a nie w deduplikacji ani publikacji layoutu.
+
+### Required next action
+Utworzyć mały task naprawczy `TASK-CV-ROI-RECOGNITION-CROP-QUALITY-001`: zapisać diagnostyczne cropy/kontekst rozpoznawania dla ROI z `not_enough_crop_descriptors` i `not_enough_good_matches`, a następnie poprawić jakość cropu/normalizacji przekazywanej do ORB bez zmiany progów `ChangeDetector`, ArUco, pustej referencji ani starego detektora pustej maty.
