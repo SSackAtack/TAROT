@@ -9,8 +9,8 @@ Stage 1 approved: gray_absdiff_gaussian.
 Stage 2 approved: contour_external.
 ```
 
-Next gate: Supervisor manual review of Stage 3 overlays.
-Stage 4 must not begin until Supervisor accepts Stage 3 geometry output.
+Stage 3 final decision: `APPROVED_STAGE_3_METHOD: hybrid_edge_plus_contour`.
+Next gate: `TASK-CV-RESEARCH-STAGE-4-CROP-DESKEW-NORMALIZE-001`.
 
 ## Session Status (2026-06-03 Codex)
 
@@ -67,3 +67,40 @@ logs/offline_replay/stage3_card_localization/hybrid_edge_plus_contour/*/card_geo
 ```
 
 Po akceptacji Supervisora oznaczyc Stage 3 jako zatwierdzone wejscie do kolejnego etapu. Nie rozpoczynac Stage 4 przed ta decyzja.
+
+## Stage 3 Final Decision
+
+Decision:
+
+APPROVED_STAGE_3_METHOD: hybrid_edge_plus_contour
+
+Reason:
+
+Metoda poprawnie przeszła benchmark i manualny overlay review na parach:
+
+- `empty -> empty`
+- `empty -> one_card`
+- `empty -> three_cards`
+- `one_card -> three_cards`
+- `one_card -> empty`
+- `three_cards -> empty`
+
+Scope:
+
+Stage 3 approval covers Card Localization / Geometry Extraction only.
+
+Approved output:
+
+- `bbox`
+- `rotated_bbox`
+- `quad_points`
+- `ordered_quad_points`
+- `geometry_confidence`
+
+Important limitation:
+
+Stage 3 does not approve crop, deskew, crop quality, card identification or runtime integration.
+
+Next stage:
+
+TASK-CV-RESEARCH-STAGE-4-CROP-DESKEW-NORMALIZE-001

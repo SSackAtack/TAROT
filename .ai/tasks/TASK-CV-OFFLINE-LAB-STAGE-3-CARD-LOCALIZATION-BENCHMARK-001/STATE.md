@@ -91,3 +91,43 @@ Waiting for Supervisor visual review.
 ### Required next action
 
 Michal uploads the six PNG overlays to ChatGPT Supervisor for manual Stage 3 review.
+
+## TASK-CV-OFFLINE-LAB-STAGE-3-DECISION-001
+
+### Supervisor Manual Review
+
+Manualnie przejrzano overlaye `hybrid_edge_plus_contour` dla 6 par testowych:
+
+- `empty_to_empty`
+- `empty_to_one_card`
+- `empty_to_three_cards`
+- `one_card_to_three_cards`
+- `one_card_to_empty`
+- `three_cards_to_empty`
+
+### Decision
+
+APPROVED_STAGE_3_METHOD: hybrid_edge_plus_contour
+
+### Scope of Approval
+
+Zatwierdzenie dotyczy tylko Stage 3 Card Localization / Geometry Extraction:
+
+- wyznaczanie geometrii karty wewnątrz regionu kandydata Stage 2,
+- generowanie bbox / rotated bbox / quad points / ordered quad points,
+- poprawne działanie dla `added` regions,
+- poprawne działanie dla `removed` regions z użyciem `previous_snapshot`,
+- poprawne działanie w modelu kaskadowym `one_card -> three_cards`,
+- przygotowanie danych geometrycznych dla przyszłego Stage 4.
+
+### Known Limitation
+
+Stage 3 nie zatwierdza jeszcze cropowania, deskew, normalizacji ani identyfikacji kart.
+
+`ordered_quad_points` są wejściem do przyszłego Stage 4, ale Stage 4 musi dopiero potwierdzić jakość crop/deskew.
+
+### Required Next Action
+
+Utworzyć:
+
+TASK-CV-RESEARCH-STAGE-4-CROP-DESKEW-NORMALIZE-001

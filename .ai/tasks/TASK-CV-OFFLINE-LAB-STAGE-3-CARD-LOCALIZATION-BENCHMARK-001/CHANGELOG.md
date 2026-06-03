@@ -66,3 +66,11 @@ Waiting for Supervisor visual review.
 ### Required next action
 
 Michal uploads the six PNG overlays to ChatGPT Supervisor for manual Stage 3 review.
+
+## TASK-CV-OFFLINE-LAB-STAGE-3-DECISION-001
+
+- Supervisor zatwierdził `hybrid_edge_plus_contour` jako metodę Stage 3 Card Localization / Geometry Extraction.
+- Zatwierdzenie dotyczy wyłącznie lokalizacji geometrii karty.
+- Nie zatwierdza cropowania, deskew, normalizacji, jakości cropa, identyfikacji kart, state managera ani integracji runtime.
+- Znane ograniczenie: Stage 3 dostarcza geometrię, ale Stage 4 musi dopiero zweryfikować jakość crop/deskew.
+- Następny krok: Research Gate Stage 4 Crop / Deskew / Normalize.
