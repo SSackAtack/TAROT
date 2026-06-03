@@ -211,3 +211,11 @@ Stage 1 bbox = region zmiany, nie finalna karta.
 
 Next stage:
 TASK-CV-RESEARCH-STAGE-2-REGION-SEGMENTATION-001
+
+## Session Status (2026-06-03 Codex Stage 2 Research Gate)
+
+Stan aktualny: Stage 1 approved: `gray_absdiff_gaussian`. Next gate: Stage 2 Region Segmentation research.
+
+Co zostało zrobione: utworzono `TASK-CV-RESEARCH-STAGE-2-REGION-SEGMENTATION-001` i zapisano shortlistę metod region segmentation/refinement do decyzji Supervisora. Nie zmieniono `tools/cv_detection_lab/`, runtime, Studio ani frontendu.
+
+Kolejne kroki: Stage 2 benchmark must not begin until Supervisor accepts TEST_NOW shortlist. Po akceptacji należy utworzyć `TASK-CV-OFFLINE-LAB-STAGE-2-REGION-BENCHMARK-001`.
