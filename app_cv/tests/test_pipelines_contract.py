@@ -999,5 +999,82 @@ class TestPipelinesContract(unittest.TestCase):
         self.assertEqual(pipeline.empty_reference_frames, [])
         self.assertFalse(pipeline.empty_reference_capture_active)
 
+    def test_empty_reference_capture_records_false_positive_without_publishing_layout(self):
+        camera_session = MagicMock()
+        camera_session.frame_width = 300
+        camera_session.frame_height = 200
+        camera_session.camera_index = 0
+
+        opencv_preview = MagicMock()
+        opencv_preview.handle_keyboard.return_value = None
+        status_store = MagicMock()
+        diagnostics_writer = MagicMock()
+        snapshot_gate = MagicMock()
+        gate_decision = MagicMock()
+        gate_decision.state = "sampling_snapshots"
+        gate_decision.stable_for_ms = 700
+        gate_decision.should_sample = True
+        snapshot_gate.update.return_value = gate_decision
+
+        snapshot_analyzer = MagicMock()
+        analyzed = MagicMock()
+        analyzed.card_count = 2
+        analyzed.cards = [{"name": "false_1"}, {"name": "false_2"}]
+        analyzed.diagnostics = {"quads_found": 2, "recognition_score": 0.25}
+        snapshot_analyzer.analyze.return_value = analyzed
+
+        table_calibration = MagicMock()
+        table_calibration.calibrated = False
+        table_calibration.status.return_value = {"calibrated": False, "marker_ids": []}
+
+        runtime_metrics = MagicMock()
+        runtime_metrics.snapshot.return_value = {}
+        runtime_config = MagicMock()
+        runtime_config.values = {}
+
+        samples = []
+
+        def recorder(sample):
+            samples.append(sample)
+            return {"collect_empty_reference_frame": True, "request_next_sample": True}
+
+        pipeline = SnapshotFirstPipeline(
+            camera_session=camera_session,
+            opencv_preview=opencv_preview,
+            status_store=status_store,
+            diagnostics_writer=diagnostics_writer,
+            snapshot_gate=snapshot_gate,
+            snapshot_analyzer=snapshot_analyzer,
+            table_calibration=table_calibration,
+            runtime_metrics=runtime_metrics,
+            runtime_config=runtime_config,
+            build_operator_snapshot_fn=MagicMock(return_value={}),
+            operator_warnings=[],
+            log_dir="dummy",
+            runtime_profile="default",
+            autotune_sample_recorder=recorder,
+        )
+        pipeline.empty_reference_capture_active = True
+
+        motion_result = MagicMock()
+        motion_result.motion_detected = False
+        motion_result.changed_ratio = 0.0
+
+        pipeline.process_frame(
+            frame=self._readable_frame()[0:200, 0:300],
+            motion_result=motion_result,
+            frame_width=300,
+            frame_height=200,
+            frame_loop_start=12345.67,
+        )
+
+        self.assertEqual(samples[0]["candidate_count"], 2)
+        self.assertEqual(samples[0]["accepted_count"], 2)
+        self.assertEqual(pipeline.last_snapshot_cards, [])
+        kwargs = status_store.update_cv_state.call_args.kwargs
+        self.assertEqual(kwargs["cards"], [])
+        self.assertEqual(kwargs["layout"]["snapshot_reject_reason"], "empty_reference_capture_hold")
+        runtime_metrics.add.assert_any_call("empty_reference_false_positive_hold", 1)
+
 if __name__ == '__main__':
     unittest.main()

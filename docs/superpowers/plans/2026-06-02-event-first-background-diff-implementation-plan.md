@@ -1342,6 +1342,14 @@ Co zostało zrobione: zabezpieczono kontrakt testem RED/GREEN, uruchomiono `test
 
 Kolejne kroki: pełny Task 7 musi zostać powtórzony przy skalibrowanym stole ArUco. Jeśli `Pusta mata` znów zostanie na `0/3`, nowe metryki jakości powinny wskazać, czy blokuje ją jasność, kontrast, ostrość, czy problem z warpowaniem/markerami.
 
+## Session Status (2026-06-03 Event-first Task 7 Empty Layout Hold Fix)
+
+Stan aktualny: **Task 7 nadal IN_PROGRESS**. Realny smoke po ustawieniu kamery potwierdził `table.calibrated=True`, `marker_ids=[10,11,12,13]` i brak fizycznych kart w obszarze ArUco. `Pusta mata` zbiera teraz `3/3` i tworzy aktywną referencję, ale etap pozostaje `FAIL`, bo detektor nadal widzi false positives na pustej macie.
+
+Co zostało zrobione: naprawiono krytyczne zanieczyszczanie layoutu podczas `empty_reference_capture_active`. False positives wykryte w etapie `Pusta mata` są zapisywane do próbek Auto Tune i powodują `stage_result=FAIL`, ale nie są już publikowane jako karty w Studio. `autotune_start empty` czyści też stary layout (`last_snapshot_cards=[]`), żeby wirtualne karty nie zostawały na ekranie po rozpoczęciu kalibracji pustej maty. Testy: targeted regression `2` PASS, event-first/main static `62` PASS, `py_compile` PASS, full backend `303` PASS.
+
+Kolejne kroki: następny mały task powinien celować w redukcję false positives na pustej macie po warpie ArUco. Najnowszy live log `empty` ma próbki `candidate_count=3/2/2`, `accepted_count=2/1/1`, `background_reference_validation_ratio=0.01`, `background_reference_validation_warning=0`.
+
 ---
 
 ## Kryteria Akceptacji

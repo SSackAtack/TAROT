@@ -250,6 +250,11 @@ class SnapshotFirstPipeline(VisionPipeline):
 
                 if hold_previous_state:
                     pass
+                elif result.card_count > 0 and self.empty_reference_capture_active:
+                    self.empty_snapshot_streak = 0
+                    self.snapshot_gate.mark_rejected()
+                    layout_snapshot["snapshot_reject_reason"] = "empty_reference_capture_hold"
+                    self.runtime_metrics.add("empty_reference_false_positive_hold", 1)
                 elif result.card_count > 0:
                     self.empty_snapshot_streak = 0
                     self.snapshot_layout_id += 1

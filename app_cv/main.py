@@ -285,6 +285,8 @@ def handle_control_message(message, camera_session):
             background_model.clear()
             if "snapshot_pipeline" in globals():
                 snapshot_pipeline.empty_reference_frames.clear()
+                snapshot_pipeline.last_snapshot_cards = []
+                snapshot_pipeline.empty_snapshot_streak = 0
                 snapshot_pipeline.empty_reference_capture_active = True
         snapshot_gate.request_sample(now_ms=int(time.time() * 1000))
         autotune_candidate_profiles = generate_candidate_profiles()

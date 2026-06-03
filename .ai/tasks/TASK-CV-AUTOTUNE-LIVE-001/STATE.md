@@ -120,8 +120,16 @@ Co zostało zrobione: uruchomiono wąski test RED dla brakującego `snapshot_qua
 
 Kolejne kroki: uruchomić pełny live smoke przy widocznych 4 markerach ArUco. Jeżeli `Pusta mata` znowu zostanie na `0/3`, sprawdzić nowe pola `snapshot_quality_reject_code`, `snapshot_quality_blur_score`, `snapshot_quality_brightness`, `snapshot_quality_contrast` oraz komunikat CV Explain `Snapshot`.
 
+## Session Status (2026-06-03 Event-first Task 7 Empty Layout Hold Fix)
+
+Stan aktualny: **Task 7 nadal IN_PROGRESS, ale główny błąd UI z pustej maty został naprawiony**. Live smoke przy ustawionej kamerze i widocznych markerach ArUco (`table.calibrated=True`, `marker_ids=[10,11,12,13]`) pokazał, że etap `Pusta mata` zbiera `3/3` i tworzy `background_reference_active=True`, ale w każdej próbce nadal występują false positives na pustej macie. Przed poprawką te fałszywe karty były publikowane do layoutu i pojawiały się w scenie Studio mimo pustego obszaru ArUco.
+
+Co zostało zrobione: `autotune_start empty` czyści teraz `last_snapshot_cards` i licznik pustych snapshotów. `SnapshotFirstPipeline` podczas `empty_reference_capture_active` nadal zapisuje false positives do próbek Auto Tune, ale nie publikuje ich do layoutu (`cards=[]`, `detected=false`, metryka `empty_reference_false_positive_hold=1`). Realny retest po restarcie backendu potwierdził: `background_reference_active=True`, `background_reference_validation_ratio=0.01`, `background_reference_validation_warning=0`, `cards_len=0`, a log sesji nadal uczciwie pokazuje `stage_result=FAIL` przez false positives.
+
+Kolejne kroki: nie kontynuować do scenariuszy jedna/trzy karty jako pełny green smoke, dopóki `empty` ma false positives. Następny mały task powinien zmniejszyć false positives na pustej macie po warpie ArUco; aktualne próbki empty miały `candidate_count` 3, 2, 2 oraz `accepted_count` 2, 1, 1.
+
 ## Kolejne kroki
 
-1. Powtórzyć pełny `Task 7: Live Smoke` przy widocznych 4 markerach ArUco.
-2. Jeżeli `Pusta mata` znowu zostanie na `0/3`, użyć nowych metryk jakości snapshotu do decyzji: światło/kontrast/ostrość/ArUco.
+1. Naprawić false positives na pustej macie po warpie ArUco; najnowszy live smoke zbiera `3/3`, ale `empty` kończy jako `FAIL`.
+2. Po poprawce false positives powtórzyć pełny `Task 7: Live Smoke` przy widocznych 4 markerach ArUco.
 3. Manualny live smoke z kamerą pozostaje wymagany dla obecnego `TASK-CV-AUTOTUNE-LIVE-001` przed oznaczeniem go jako `DONE`.

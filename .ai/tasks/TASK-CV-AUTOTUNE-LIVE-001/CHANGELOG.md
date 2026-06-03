@@ -208,3 +208,11 @@
 - CV Explain pokazuje odrzucony snapshot jako `warn` w kroku `Snapshot` oraz kieruje operatora na poprawę światła, ostrości albo kontrastu.
 - Dodano testy regresji dla diagnostyki odrzuconego snapshotu w pipeline i CV Explain.
 - Powtórka `autotune_start empty` z bieżącym backendem zebrała `3/3` i utworzyła referencję, ale tylko przy `table.calibrated=false`, więc pełny Task 7 z ArUco nadal wymaga powtórzenia.
+
+## 2026-06-03 Event-first Task 7 Empty Layout Hold Fix
+
+- `autotune_start empty` czyści teraz `SnapshotFirstPipeline.last_snapshot_cards` oraz `empty_snapshot_streak`, żeby Studio nie trzymało starego layoutu podczas kalibracji pustej maty.
+- `SnapshotFirstPipeline` nie publikuje już kart wykrytych podczas `empty_reference_capture_active`; false positives są zapisywane do próbek Auto Tune, ale layout pozostaje pusty.
+- Dodano metrykę `empty_reference_false_positive_hold`, która potwierdza, że false positive został zatrzymany w ścieżce kalibracji pustej maty.
+- Dodano test regresji: false positive w `Pusta mata` ma dawać `candidate_count/accepted_count` w recorderze, ale `cards=[]` w publikowanym statusie.
+- Realny retest z kamerą i ArUco potwierdził brak publikacji fałszywych kart do layoutu, przy zachowaniu `stage_result=FAIL` dla etapu `empty`.

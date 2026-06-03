@@ -828,3 +828,72 @@ WebSocket command: {"type":"autotune_start","scenario":"empty"}
 Wynik: PARTIAL PASS / NOT FINAL TASK 7. Backend z bieżącą diagnostyką zebrał `empty 3/3`, utworzył `background_reference_active=true`, zapisał `sample_collected` i `stage_completed`, a `stage_result` był `PASS`.
 
 Ograniczenie: ta powtórka działała przy `table.calibrated=false`, `marker_ids=[]`, `snapshot_analysis_warped=0.0`, więc nie weryfikuje docelowego smoke z aktywną kalibracją ArUco.
+
+### Event-first Task 7 Empty Layout Hold Fix
+
+#### Regression
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_pipelines_contract.TestPipelinesContract.test_empty_reference_capture_records_false_positive_without_publishing_layout app_cv.tests.test_main_static_audit.TestMainStaticAudit.test_autotune_empty_stage_bootstraps_reference_before_validation -v
+```
+
+Wynik: PASS, 2 testy.
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_background_model app_cv.tests.test_change_detection app_cv.tests.test_snapshot_analyzer app_cv.tests.test_pipelines_contract app_cv.tests.test_operator_explainability app_cv.tests.test_main_static_audit -v
+```
+
+Wynik: PASS, 62 testy.
+
+```text
+$env:PYTHONDONTWRITEBYTECODE='1'; python -B -m py_compile app_cv\main.py app_cv\tarotvision\pipelines\snapshot_first.py
+```
+
+Wynik: PASS.
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest discover -s app_cv\tests -v
+```
+
+Wynik: PASS, 303 testy.
+
+#### Live retest after fix
+
+Warunek wejściowy:
+
+```text
+table.calibrated=true
+marker_ids=[10, 11, 12, 13]
+cards=[]
+```
+
+Komenda:
+
+```text
+WebSocket command: {"type":"autotune_start","scenario":"empty"}
+```
+
+Wynik: PARTIAL PASS / nadal RED dla pełnego Task 7.
+
+Po poprawce runtime nie publikuje fałszywych kart podczas `Pusta mata`:
+
+```text
+detected=false
+cards_len=0
+empty_reference_false_positive_hold=1.0
+background_reference_active=true
+background_reference_validation_ratio=0.01
+background_reference_validation_warning=0.0
+snapshot_analysis_warped=1.0
+```
+
+Log sesji nadal poprawnie klasyfikuje etap `empty` jako FAIL, bo false positives występują w próbkach:
+
+```text
+stage_result=FAIL
+sample 1: candidate_count=3, accepted_count=2
+sample 2: candidate_count=2, accepted_count=1
+sample 3: candidate_count=2, accepted_count=1
+```
+
+Wniosek: naprawiono zanieczyszczanie layoutu fałszywymi kartami podczas kalibracji pustej maty. Pełny smoke nadal nie jest green, bo trzeba zmniejszyć false positives detektora na pustej macie po warpie ArUco.
