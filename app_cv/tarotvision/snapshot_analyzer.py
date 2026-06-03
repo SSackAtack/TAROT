@@ -47,14 +47,20 @@ class SnapshotAnalyzer:
             "recognition_score": 0.0,
             "roi_limited": roi_hints is not None,
             "roi_count": len(roi_hints or []),
+            "roi_diagnostics": [],
+            "roi_with_quads_count": 0,
+            "roi_with_accepted_card_count": 0,
+            "accepted_cards_before_dedup": 0,
+            "accepted_cards_after_dedup": 0,
         }
         frame_height, frame_width = frame.shape[:2]
         recognition_score_total = 0.0
+        quad_roi_indices = []
 
         if roi_hints is not None:
             quads = []
             detection_debug = {"roi_hints": []}
-            for bbox in roi_hints:
+            for roi_index, bbox in enumerate(roi_hints):
                 x, y, w, h = _clamp_bbox(bbox, frame_width, frame_height)
                 if w <= 0 or h <= 0:
                     continue
@@ -65,6 +71,13 @@ class SnapshotAnalyzer:
                     points[:, 0] += x
                     points[:, 1] += y
                     quads.append(points)
+                    quad_roi_indices.append(len(diagnostics["roi_diagnostics"]))
+                roi_payload = _empty_roi_diagnostics(
+                    roi_index=roi_index,
+                    bbox=[x, y, w, h],
+                    quad_count=len(crop_quads),
+                )
+                diagnostics["roi_diagnostics"].append(roi_payload)
                 detection_debug["roi_hints"].append({
                     "bbox": [x, y, w, h],
                     "quads": len(crop_quads),
@@ -78,12 +91,14 @@ class SnapshotAnalyzer:
             quads = self.find_quads(frame)
 
         diagnostics["quads_found"] = len(quads)
-        for quad in quads:
+        for quad_index, quad in enumerate(quads):
             crop = self.crop_card(frame, quad)
             candidate_index = len(diagnostics["recognition_candidates"]) + 1
+            roi_payload = _roi_payload_for_quad(diagnostics, quad_roi_indices, quad_index)
             candidate_validation = self._validate_candidate_crop(crop)
             if candidate_validation is not None and not candidate_validation.accepted:
                 diagnostics["candidate_validation_rejections"] += 1
+                _record_roi_validation_rejection(roi_payload, candidate_validation.reject_reason)
                 diagnostics["recognition_candidates"].append(_candidate_diagnostics(
                     candidate_index,
                     None,
@@ -92,6 +107,7 @@ class SnapshotAnalyzer:
                 ))
                 continue
 
+            _record_roi_candidate_after_validation(roi_payload)
             diagnostics["recognition_attempts"] += 1
             _write_debug_crop(crop, diagnostics["recognition_attempts"])
 
@@ -105,6 +121,7 @@ class SnapshotAnalyzer:
             diagnostics["recognition_candidates"].append(candidate_debug)
             if not recognition:
                 diagnostics["recognition_rejections"] += 1
+                _record_roi_recognition_rejection(roi_payload, candidate_debug.get("reject_reason"))
                 continue
             candidate_score = _candidate_recognition_score(
                 recognition,
@@ -133,7 +150,9 @@ class SnapshotAnalyzer:
                 "orientation": recognition.get("orientation", "unknown"),
                 "homography_angle_deg": recognition.get("homography_angle_deg", 0.0),
             })
+            _record_roi_accepted_card(roi_payload)
             candidate_debug["name"] = recognition["name"]
+        _finalize_roi_diagnostics(diagnostics, cards)
         if diagnostics["quads_found"] > 0:
             diagnostics["recognition_score"] = round(
                 recognition_score_total / diagnostics["quads_found"],
@@ -170,6 +189,75 @@ def _clamp_bbox(bbox, frame_width, frame_height):
     x2 = min(frame_width, x + max(0, w))
     y2 = min(frame_height, y + max(0, h))
     return x1, y1, max(0, x2 - x1), max(0, y2 - y1)
+
+
+def _empty_roi_diagnostics(roi_index, bbox, quad_count):
+    return {
+        "roi_index": int(roi_index),
+        "roi_bbox": list(bbox),
+        "roi_area": int(bbox[2] * bbox[3]),
+        "roi_quads_found": int(quad_count),
+        "roi_candidates_after_validation": 0,
+        "roi_validation_rejections": 0,
+        "roi_recognition_attempts": 0,
+        "roi_recognition_rejections": 0,
+        "roi_accepted_cards": 0,
+        "roi_reject_reasons": {},
+    }
+
+
+def _roi_payload_for_quad(diagnostics, quad_roi_indices, quad_index):
+    if quad_index >= len(quad_roi_indices):
+        return None
+    roi_index = quad_roi_indices[quad_index]
+    roi_diagnostics = diagnostics.get("roi_diagnostics") or []
+    if roi_index < 0 or roi_index >= len(roi_diagnostics):
+        return None
+    return roi_diagnostics[roi_index]
+
+
+def _record_roi_validation_rejection(roi_payload, reject_reason):
+    if roi_payload is None:
+        return
+    roi_payload["roi_validation_rejections"] += 1
+    _record_roi_reject_reason(roi_payload, reject_reason or "validation_rejected")
+
+
+def _record_roi_candidate_after_validation(roi_payload):
+    if roi_payload is None:
+        return
+    roi_payload["roi_candidates_after_validation"] += 1
+    roi_payload["roi_recognition_attempts"] += 1
+
+
+def _record_roi_recognition_rejection(roi_payload, reject_reason):
+    if roi_payload is None:
+        return
+    roi_payload["roi_recognition_rejections"] += 1
+    _record_roi_reject_reason(roi_payload, reject_reason or "recognition_rejected")
+
+
+def _record_roi_accepted_card(roi_payload):
+    if roi_payload is None:
+        return
+    roi_payload["roi_accepted_cards"] += 1
+
+
+def _record_roi_reject_reason(roi_payload, reject_reason):
+    reasons = roi_payload["roi_reject_reasons"]
+    reasons[reject_reason] = reasons.get(reject_reason, 0) + 1
+
+
+def _finalize_roi_diagnostics(diagnostics, cards):
+    roi_diagnostics = diagnostics.get("roi_diagnostics") or []
+    diagnostics["roi_with_quads_count"] = sum(
+        1 for roi in roi_diagnostics if roi["roi_quads_found"] > 0
+    )
+    diagnostics["roi_with_accepted_card_count"] = sum(
+        1 for roi in roi_diagnostics if roi["roi_accepted_cards"] > 0
+    )
+    diagnostics["accepted_cards_before_dedup"] = len(cards)
+    diagnostics["accepted_cards_after_dedup"] = len(cards)
 
 
 def _quad_center(quad):

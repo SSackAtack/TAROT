@@ -162,6 +162,14 @@ Kolejne kroki: zatrzymać Task 7 przed oznaczeniem jako green. Następny mały t
 
 Decyzja Michala po restarcie procesu: **opcja 1**. Nie odtwarzać teraz smoke od zera. Wcześniejsze wyniki `Pusta mata` i `1 karta` pozostają reprezentatywne, a `3 karty` zostaje zapisane jako RED na podstawie danych sprzed restartu.
 
+## Session Status (2026-06-03 Event-first Multi-ROI Diagnostics)
+
+Stan aktualny: **Task diagnostyczny wykonany; Task 7 nadal RED dla trzech kart do ponownego smoke po diagnostyce**. Zgodnie z review Supervisor nie zmieniano progów `ChangeDetector`, ArUco, pustej referencji, ORB ani Studio UI.
+
+Co zostało zrobione: `SnapshotAnalyzer` publikuje teraz diagnostykę per ROI dla `roi_hints`: bbox, powierzchnię ROI, liczbę quadów, liczbę kandydatów po walidacji, odrzucenia walidacji, próby rozpoznania, odrzucenia rozpoznania, zaakceptowane karty i powody odrzuceń. Dodano agregaty `roi_with_quads_count`, `roi_with_accepted_card_count`, `accepted_cards_before_dedup`, `accepted_cards_after_dedup`. To pozwoli w kolejnym smoke rozróżnić, czy trzy karty odpadają na ROI, walidacji cropa, ORB recognition czy późniejszym składaniu layoutu.
+
+Kolejne kroki: po ponownej kalibracji pustej maty uruchomić smoke trzech kart i odczytać nowe pola `roi_diagnostics`. Dopiero na podstawie tej diagnostyki wybrać następny fix.
+
 ## Kolejne kroki
 
 1. Kontynuować pełny `Task 7: Live Smoke` przy widocznych 4 markerach ArUco: jedna karta, trzy karty, no-change, removal i global shift.

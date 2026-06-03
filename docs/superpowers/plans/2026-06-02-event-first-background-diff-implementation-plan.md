@@ -1390,6 +1390,16 @@ Kolejne kroki: nie uznawać Task 7 za green. Następny mały task powinien zbada
 
 Decyzja Michala po restarcie procesu: **opcja 1**. Nie powtarzać teraz pełnego smoke od zera; użyć zebranych danych jako podstawy do następnego taska debugowego multi-card ROI/recognition.
 
+## Session Status (2026-06-03 Event-first Multi-ROI Diagnostics)
+
+Stan aktualny: **diagnostyka multi-ROI dodana, bez zmiany progów i bez naprawy rozpoznawania**. Zakres był celowo diagnostyczny: odpowiedzieć, gdzie odpadają karty przy wielu ROI.
+
+Co zostało zrobione: `SnapshotAnalyzer` raportuje `roi_diagnostics` z `roi_index`, `roi_bbox`, `roi_area`, `roi_quads_found`, `roi_candidates_after_validation`, `roi_validation_rejections`, `roi_recognition_attempts`, `roi_recognition_rejections`, `roi_accepted_cards`, `roi_reject_reasons`. Agregaty: `roi_with_quads_count`, `roi_with_accepted_card_count`, `accepted_cards_before_dedup`, `accepted_cards_after_dedup`.
+
+Weryfikacja: test RED/GREEN `test_analyze_reports_per_roi_recognition_diagnostics`, `py_compile` PASS, targeted suite `test_snapshot_analyzer + test_pipelines_contract + test_operator_explainability + test_main_static_audit` PASS (`55`).
+
+Kolejne kroki: powtórzyć smoke trzech kart po ponownym `Pusta mata` i odczytać nowe `roi_diagnostics`; dopiero potem implementować właściwy fix.
+
 ---
 
 ## Kryteria Akceptacji

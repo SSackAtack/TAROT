@@ -249,6 +249,52 @@ class SnapshotAnalyzerTest(unittest.TestCase):
         self.assertTrue(result.diagnostics["roi_limited"])
         self.assertEqual(result.diagnostics["roi_count"], 1)
 
+    def test_analyze_reports_per_roi_recognition_diagnostics(self):
+        frame = np.zeros((200, 300, 3), dtype=np.uint8)
+        quads_by_width = {
+            80: [np.array([[10, 10], [50, 10], [50, 90], [10, 90]], dtype=np.float32)],
+            90: [
+                np.array([[10, 10], [50, 10], [50, 90], [10, 90]], dtype=np.float32),
+                np.array([[15, 15], [45, 15], [45, 80], [15, 80]], dtype=np.float32),
+            ],
+        }
+        recognitions = iter([
+            {"name": "Gilded_01", "confidence": 0.9},
+            None,
+            {"name": "Gilded_02", "confidence": 0.8},
+        ])
+
+        analyzer = SnapshotAnalyzer(
+            find_quads=lambda crop: quads_by_width[crop.shape[1]],
+            crop_card=lambda frame, quad: "crop",
+            recognize_crop=lambda crop: next(recognitions),
+            validate_candidate_crop=None,
+        )
+
+        result = analyzer.analyze(
+            frame,
+            roi_hints=[(0, 0, 80, 120), (100, 0, 90, 120)],
+        )
+
+        self.assertEqual(result.card_count, 2)
+        self.assertEqual(result.diagnostics["roi_count"], 2)
+        self.assertEqual(result.diagnostics["roi_with_quads_count"], 2)
+        self.assertEqual(result.diagnostics["roi_with_accepted_card_count"], 2)
+        self.assertEqual(result.diagnostics["accepted_cards_before_dedup"], 2)
+        self.assertEqual(result.diagnostics["accepted_cards_after_dedup"], 2)
+        roi_diagnostics = result.diagnostics["roi_diagnostics"]
+        self.assertEqual(roi_diagnostics[0]["roi_index"], 0)
+        self.assertEqual(roi_diagnostics[0]["roi_bbox"], [0, 0, 80, 120])
+        self.assertEqual(roi_diagnostics[0]["roi_quads_found"], 1)
+        self.assertEqual(roi_diagnostics[0]["roi_recognition_attempts"], 1)
+        self.assertEqual(roi_diagnostics[0]["roi_accepted_cards"], 1)
+        self.assertEqual(roi_diagnostics[1]["roi_index"], 1)
+        self.assertEqual(roi_diagnostics[1]["roi_quads_found"], 2)
+        self.assertEqual(roi_diagnostics[1]["roi_recognition_attempts"], 2)
+        self.assertEqual(roi_diagnostics[1]["roi_recognition_rejections"], 1)
+        self.assertEqual(roi_diagnostics[1]["roi_accepted_cards"], 1)
+        self.assertEqual(roi_diagnostics[1]["roi_reject_reasons"], {"recognition_rejected": 1})
+
     def test_analyze_with_empty_roi_hints_does_not_fallback_to_global_detection(self):
         frame = np.zeros((200, 300, 3), dtype=np.uint8)
         calls = []

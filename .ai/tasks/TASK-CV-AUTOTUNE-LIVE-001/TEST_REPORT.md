@@ -1120,3 +1120,33 @@ layout_publish_count=1.0
 ```
 
 Wniosek: event-first wykrywa regiony zmian dla wielu kart, ale finalny layout publikuje tylko jedną kartę. Problem jest po stronie analizy/rozpoznawania wielu ROI albo walidacji kandydatów, nie po stronie tworzenia pustej referencji.
+
+### Event-first Multi-ROI Diagnostics
+
+#### RED
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_snapshot_analyzer.SnapshotAnalyzerTest.test_analyze_reports_per_roi_recognition_diagnostics -v
+```
+
+Wynik: FAIL oczekiwany. Brakowało `roi_with_quads_count`, `roi_with_accepted_card_count`, `accepted_cards_before_dedup`, `accepted_cards_after_dedup` oraz szczegółowego `roi_diagnostics` z licznikami walidacji i rozpoznania.
+
+#### GREEN
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_snapshot_analyzer.SnapshotAnalyzerTest.test_analyze_reports_per_roi_recognition_diagnostics -v
+```
+
+Wynik: PASS.
+
+```text
+$env:PYTHONDONTWRITEBYTECODE='1'; python -B -m py_compile app_cv\tarotvision\snapshot_analyzer.py
+```
+
+Wynik: PASS.
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_snapshot_analyzer app_cv.tests.test_pipelines_contract app_cv.tests.test_operator_explainability app_cv.tests.test_main_static_audit -v
+```
+
+Wynik: PASS, 55 testów.

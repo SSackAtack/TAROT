@@ -230,3 +230,10 @@
 - `SnapshotFirstPipeline` po `BackgroundModel.capture_many()` i walidacji pustej referencji ustawia teraz bieżący pusty frame jako pierwszy `previous_stable_snapshot`.
 - Dodano test regresyjny `test_empty_reference_finalization_seeds_previous_stable_snapshot`.
 - Live retest potwierdził, że po `Pusta mata PASS` stabilna pusta mata przez kolejne payloady pozostaje `detected=false`, `cards_len=0`.
+
+## 2026-06-03 Event-first Multi-ROI Diagnostics
+
+- Dodano diagnostykę per ROI w `SnapshotAnalyzer` dla ścieżki `roi_hints`.
+- Diagnostyka raportuje `roi_index`, `roi_bbox`, `roi_area`, `roi_quads_found`, liczniki walidacji, rozpoznania, zaakceptowanych kart i powody odrzuceń.
+- Dodano agregaty: `roi_with_quads_count`, `roi_with_accepted_card_count`, `accepted_cards_before_dedup`, `accepted_cards_after_dedup`.
+- Dodano test `test_analyze_reports_per_roi_recognition_diagnostics`, który zabezpiecza diagnostykę dla dwóch ROI i mieszanego wyniku rozpoznania.
