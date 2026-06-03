@@ -223,3 +223,10 @@
 - `AutotuneSession` traktuje komplet próbek `empty` jako `PASS` dla referencji, nawet gdy próbki zawierają `candidate_count`, `accepted_count` albo `false_positive_count`.
 - Status autotuningu publikuje jawne `empty_reference_status`, a `diagnostics.legacy_detector_false_positive` i `diagnostics.false_positive_count` zachowują informację o halucynacjach starego detektora.
 - Backend dodaje ostrzeżenie operatorskie: referencja pustej maty jest OK, a false positives starego detektora są diagnostyką, nie powodem zablokowania referencji.
+
+## 2026-06-03 Event-first Previous Stable Seed Fix
+
+- Podczas live smoke wykryto, że po finalizacji `empty_reference` pierwsza kolejna stabilna analiza mogła wrócić do globalnego skanu, bo `previous_stable_snapshot` pozostawał pusty.
+- `SnapshotFirstPipeline` po `BackgroundModel.capture_many()` i walidacji pustej referencji ustawia teraz bieżący pusty frame jako pierwszy `previous_stable_snapshot`.
+- Dodano test regresyjny `test_empty_reference_finalization_seeds_previous_stable_snapshot`.
+- Live retest potwierdził, że po `Pusta mata PASS` stabilna pusta mata przez kolejne payloady pozostaje `detected=false`, `cards_len=0`.

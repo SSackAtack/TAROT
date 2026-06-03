@@ -316,6 +316,7 @@ class SnapshotFirstPipeline(VisionPipeline):
                     )
                     self.empty_reference_frames = []
                     self.empty_reference_capture_active = False
+                    update_previous_stable_snapshot = True
 
                 layout_snapshot.update({
                     "layout_id": self.snapshot_layout_id,

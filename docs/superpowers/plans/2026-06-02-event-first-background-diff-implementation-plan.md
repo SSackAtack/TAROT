@@ -1360,6 +1360,16 @@ Weryfikacja: targeted `test_autotune_session + test_main_static_audit` PASS (`19
 
 Kolejne kroki: kontynuować pełny Task 7 Live Smoke od scenariusza jednej karty. Nie naprawiać nowego pipeline przez dalsze strojenie starego detektora na pustej macie; osobny późniejszy task to `TASK-CV-LEGACY-DETECTOR-EMPTY-FP-001`.
 
+## Session Status (2026-06-03 Event-first Previous Stable Seed Fix)
+
+Stan aktualny: **Task 7 nadal IN_PROGRESS**. Podczas startu kolejnego kroku smoke wykryto, że po poprawnym `Pusta mata PASS` następny stabilny snapshot mógł opublikować false positives do layoutu. Przyczyną nie była semantyka statusu `empty`, tylko brak pierwszego `previous_stable_snapshot` po utworzeniu `empty_reference`.
+
+Co zostało zrobione: po finalizacji `empty_reference` przez `BackgroundModel.capture_many()` i walidacji `changed_ratio()` pipeline oznacza bieżący pusty frame jako pierwszy stabilny snapshot odniesienia. To zamyka lukę, w której kolejny snapshot miał `previous_stable_snapshot is None`, `roi_hints=None` i mógł wykonać globalny skan zamiast event-first diff.
+
+Weryfikacja: regresja `test_empty_reference_finalization_seeds_previous_stable_snapshot` najpierw FAIL, potem PASS; `py_compile` PASS; targeted event-first/main suite PASS (`70`); full backend PASS (`304`). Live retest z kamerą i ArUco: `empty_reference_status=PASS`, `background_reference_active=True`, `background_reference_validation_warning=0`, `completed_cards_len=0`, a przez `53` kolejne payloady `post_max_cards_len=0` i `post_any_detected=false`.
+
+Kolejne kroki: kontynuować Task 7 od realnego scenariusza jednej karty.
+
 ---
 
 ## Kryteria Akceptacji

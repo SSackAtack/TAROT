@@ -957,3 +957,71 @@ diagnostics.legacy_detector_false_positive=true
 ```
 
 Wniosek: `Pusta mata` tworzy referencję i nie publikuje false positives do layoutu. False positives starego detektora są zachowane jako warning/diagnostyka do osobnego taska, a nie jako bloker referencji tła.
+
+### Event-first Previous Stable Seed Fix
+
+#### RED
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_pipelines_contract.TestPipelinesContract.test_empty_reference_finalization_seeds_previous_stable_snapshot -v
+```
+
+Wynik: FAIL oczekiwany. Po finalizacji `empty_reference` `pipeline.previous_stable_snapshot` pozostawał `None`, więc następny stabilny snapshot mógł użyć `roi_hints=None` i wrócić do globalnej detekcji.
+
+#### GREEN
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_pipelines_contract.TestPipelinesContract.test_empty_reference_finalization_seeds_previous_stable_snapshot -v
+```
+
+Wynik: PASS.
+
+```text
+$env:PYTHONDONTWRITEBYTECODE='1'; python -B -m py_compile app_cv\tarotvision\pipelines\snapshot_first.py
+```
+
+Wynik: PASS.
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_background_model app_cv.tests.test_change_detection app_cv.tests.test_snapshot_analyzer app_cv.tests.test_pipelines_contract app_cv.tests.test_operator_explainability app_cv.tests.test_autotune_session app_cv.tests.test_main_static_audit -v
+```
+
+Wynik: PASS, 70 testów.
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest discover -s app_cv\tests -v
+```
+
+Wynik: PASS, 304 testy.
+
+#### Live retest after seed fix
+
+Warunek wejściowy:
+
+```text
+table.calibrated=true
+marker_ids=[10, 11, 12, 13]
+```
+
+Komenda:
+
+```text
+WebSocket command: {"type":"autotune_start","scenario":"empty"}
+```
+
+Wynik: PASS dla pustej referencji i stabilnej pustej maty po finalizacji:
+
+```text
+empty_reference_status=PASS
+background_reference_active=true
+background_reference_validation_warning=0.0
+completed_detected=false
+completed_cards_len=0
+post_observation_count=53
+post_max_cards_len=0
+post_any_detected=false
+diagnostics.false_positive_count=4
+diagnostics.legacy_detector_false_positive=true
+```
+
+Wniosek: po finalizacji pustej referencji pipeline nie publikuje już później false positives na stabilnej pustej macie. False positives starego detektora pozostają tylko diagnostyką etapu `empty`.

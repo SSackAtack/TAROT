@@ -136,6 +136,14 @@ Co zostało zrobione: `AutotuneSession` publikuje `empty_reference_status`, trak
 
 Kolejne kroki: kontynuować pełny Task 7 Live Smoke na event-first: jedna karta, trzy karty, no-change, usunięcie karty i global shift. Redukcja false positives starego detektora na pustej macie jest osobnym późniejszym taskiem (`TASK-CV-LEGACY-DETECTOR-EMPTY-FP-001`) i nie powinna blokować `empty_reference`.
 
+## Session Status (2026-06-03 Event-first Previous Stable Seed Fix)
+
+Stan aktualny: **Task 7 nadal IN_PROGRESS, a stabilna pusta mata po `empty_reference` nie wraca już do globalnego skanu**. Podczas przygotowania scenariusza jednej karty live payload pokazał `cards_len=2` po zakończonym `Pusta mata PASS`. Analiza logów wykazała, że `empty_reference` była aktywna, ale `previous_stable_snapshot` nie został ustawiony przy finalizacji pustej referencji, więc kolejny snapshot mógł przejść przez `roi_hints=None` i globalny `SnapshotAnalyzer`.
+
+Co zostało zrobione: po `BackgroundModel.capture_many()` i walidacji `changed_ratio()` pipeline ustawia `update_previous_stable_snapshot=True`, dzięki czemu bieżąca pusta klatka staje się pierwszą referencją zdarzeń. Dodano test regresyjny, który najpierw failował na `previous_stable_snapshot is None`, a po poprawce przechodzi. Live retest po restarcie backendu potwierdził `empty_reference_status=PASS`, `background_reference_active=True`, `background_reference_validation_warning=0`, a przez 53 kolejne payloady `post_max_cards_len=0` i `post_any_detected=false`.
+
+Kolejne kroki: teraz można kontynuować właściwy Task 7 od realnego dodania jednej karty na obszar ArUco.
+
 ## Kolejne kroki
 
 1. Kontynuować pełny `Task 7: Live Smoke` przy widocznych 4 markerach ArUco: jedna karta, trzy karty, no-change, removal i global shift.
