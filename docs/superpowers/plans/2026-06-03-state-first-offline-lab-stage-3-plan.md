@@ -104,3 +104,11 @@ Stage 3 does not approve crop, deskew, crop quality, card identification or runt
 Next stage:
 
 TASK-CV-RESEARCH-STAGE-4-CROP-DESKEW-NORMALIZE-001
+
+## Session Status (2026-06-03 Codex Stage 4 Research Gate)
+
+Stan aktualny: Stage 1 approved: `gray_absdiff_gaussian`. Stage 2 approved: `contour_external`. Stage 3 approved: `hybrid_edge_plus_contour`. Next gate: Stage 4 Crop / Deskew / Normalize research.
+
+Co zostało zrobione: utworzono `TASK-CV-RESEARCH-STAGE-4-CROP-DESKEW-NORMALIZE-001` i zapisano shortlistę metod crop / deskew / normalize do decyzji Supervisora. Nie zmieniono `tools/cv_detection_lab/`, runtime, Studio ani frontendu.
+
+Kolejne kroki: Stage 4 benchmark must not begin until Supervisor accepts TEST_NOW shortlist. Po akceptacji należy utworzyć `TASK-CV-OFFLINE-LAB-STAGE-4-CROP-DESKEW-NORMALIZE-BENCHMARK-001`.
