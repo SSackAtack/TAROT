@@ -82,3 +82,42 @@ logs/offline_replay/stage1_diff/gray_absdiff_gaussian/three_cards_to_empty/regio
 ```
 
 Dopiero po tym można zatwierdzić Stage 1 albo zlecić dodatkowy refinement.
+
+## TASK-CV-OFFLINE-LAB-STAGE-1-MANUAL-REVIEW-PACK-001
+
+### Summary
+
+Prepared local manual review pack for `gray_absdiff_gaussian` overlays. This is a packaging-only task for Supervisor visual review; no algorithm, threshold, runtime, frontend or Stage 2 changes were made.
+
+### Files prepared locally
+
+- `logs/offline_replay/stage1_manual_review_pack/gray_absdiff_gaussian/01_empty_to_empty_regions_overlay.png`
+- `logs/offline_replay/stage1_manual_review_pack/gray_absdiff_gaussian/02_empty_to_one_card_regions_overlay.png`
+- `logs/offline_replay/stage1_manual_review_pack/gray_absdiff_gaussian/03_empty_to_three_cards_regions_overlay.png`
+- `logs/offline_replay/stage1_manual_review_pack/gray_absdiff_gaussian/04_one_card_to_three_cards_regions_overlay.png`
+- `logs/offline_replay/stage1_manual_review_pack/gray_absdiff_gaussian/05_one_card_to_empty_regions_overlay.png`
+- `logs/offline_replay/stage1_manual_review_pack/gray_absdiff_gaussian/06_three_cards_to_empty_regions_overlay.png`
+- `logs/offline_replay/stage1_manual_review_pack/README_FOR_SUPERVISOR.md`
+- `logs/offline_replay/stage1_manual_review_pack/report.md`
+- `logs/offline_replay/stage1_manual_review_pack/report.json`
+- `logs/offline_replay/stage1_manual_review_pack/matrix.csv`
+- `logs/offline_replay/stage1_manual_review_pack_gray_absdiff_gaussian.zip`
+
+### Tests
+
+No algorithmic tests required. This is local packaging only.
+
+Optional verification:
+
+- confirmed all 6 PNG files exist
+- confirmed `README_FOR_SUPERVISOR.md` exists
+- confirmed `report.md`, `report.json` and `matrix.csv` exist
+- confirmed ZIP exists
+
+### Decision
+
+Stage 1 still `PROVISIONAL_RECOMMENDED`. Waiting for Supervisor visual review.
+
+### Required next action
+
+Michał uploads the six PNG overlays to ChatGPT Supervisor for visual review.
