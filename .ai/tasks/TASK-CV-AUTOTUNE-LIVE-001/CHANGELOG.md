@@ -276,3 +276,13 @@
 - Opcjonalna pusta referencja także dostaje sufiks scenariusza, np. `empty_reference_0.png`.
 - Usunięto lokalne wcześniejsze snapshoty z `logs/live_fixtures/`, żeby kolejny live capture zacząć od zera bez mieszania starych plików.
 - Nie zmieniano detekcji, rozpoznawania, ArUco, pustej referencji, layoutu ani Studio UI.
+
+## 2026-06-03 Live fixture overwrite guard and verified capture
+
+- Podczas ręcznego capture wykryto, że backend zapisuje kolejne klatki do aktywnego scenariusza, więc po fizycznej zmianie kart mógł nadpisać wcześniej poprawny snapshot.
+- `LiveFixtureCapture` odmawia teraz drugiego zapisu obrazów dla scenariusza, jeżeli istnieje już `raw_frame_<suffix>.png` albo `analysis_frame_<suffix>.png`; zwraca `reason="already_exists"` zamiast nadpisywać pliki.
+- Dodano test regresyjny potwierdzający, że drugi zapis `empty` nie nadpisuje `payload.json` ani obrazów pierwszej próbki.
+- Usunięto wszystkie wcześniejsze lokalne fixture i wykonano procedurę od zera: `empty`, `one_card`, `three_cards`.
+- Michał ręcznie potwierdził poprawność fizyczną wszystkich trzech snapshotów.
+- Zatwierdzone próbki skopiowano do `logs/live_fixtures/event_first_current_debug_verified/`.
+- Nie zmieniano detekcji, rozpoznawania, ArUco, pustej referencji, layoutu ani Studio UI.

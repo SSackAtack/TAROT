@@ -93,6 +93,38 @@ class LiveFixtureCaptureTest(unittest.TestCase):
                 self.assertFalse(os.path.exists(os.path.join(scenario_dir, "raw_frame.png")))
                 self.assertFalse(os.path.exists(os.path.join(scenario_dir, "analysis_frame.png")))
 
+    def test_does_not_overwrite_existing_scenario_images(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            capture = LiveFixtureCapture(
+                log_dir=tmpdir,
+                enabled=True,
+                fixture_name="event_first_test",
+            )
+
+            first = capture.save_snapshot(
+                scenario="empty",
+                raw_frame=np.zeros((4, 4, 3), dtype=np.uint8),
+                analysis_frame=np.zeros((4, 4, 3), dtype=np.uint8),
+                metrics={},
+                payload={"cards": []},
+            )
+            second = capture.save_snapshot(
+                scenario="empty",
+                raw_frame=np.full((4, 4, 3), 255, dtype=np.uint8),
+                analysis_frame=np.full((4, 4, 3), 255, dtype=np.uint8),
+                metrics={},
+                payload={"cards": [{"name": "should_not_overwrite"}]},
+            )
+
+            self.assertTrue(first.ok, first.error)
+            self.assertFalse(second.ok)
+            self.assertEqual(second.reason, "already_exists")
+
+            scenario_dir = os.path.join(tmpdir, "live_fixtures", "event_first_test", "empty")
+            with open(os.path.join(scenario_dir, "payload.json"), encoding="utf-8") as handle:
+                payload = json.load(handle)
+            self.assertEqual(payload["cards_len"], 0)
+
     def test_returns_error_status_when_write_fails(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             capture = LiveFixtureCapture(log_dir=tmpdir, enabled=True)

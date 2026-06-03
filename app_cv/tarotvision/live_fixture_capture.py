@@ -85,8 +85,13 @@ class LiveFixtureCapture:
 
             self._write_manifest(fixture_dir, scenario_name)
             image_suffix = _scenario_image_suffix(scenario_name)
-            _write_png(os.path.join(scenario_dir, f"raw_frame_{image_suffix}.png"), raw_frame)
-            _write_png(os.path.join(scenario_dir, f"analysis_frame_{image_suffix}.png"), analysis_frame)
+            raw_frame_path = os.path.join(scenario_dir, f"raw_frame_{image_suffix}.png")
+            analysis_frame_path = os.path.join(scenario_dir, f"analysis_frame_{image_suffix}.png")
+            if os.path.exists(raw_frame_path) or os.path.exists(analysis_frame_path):
+                return FixtureCaptureResult(ok=False, path=scenario_dir, reason="already_exists")
+
+            _write_png(raw_frame_path, raw_frame)
+            _write_png(analysis_frame_path, analysis_frame)
             if empty_reference is not None:
                 _write_png(os.path.join(scenario_dir, f"empty_reference_{image_suffix}.png"), empty_reference)
 

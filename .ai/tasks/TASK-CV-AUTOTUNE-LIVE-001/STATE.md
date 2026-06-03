@@ -305,3 +305,34 @@ Usunięto wszystkie lokalne wcześniejsze snapshoty z `logs/live_fixtures/`. Nas
 
 ### Next action
 Zebrać od zera `empty`, `one_card`, `three_cards`; po każdym scenariuszu zweryfikować fizycznie zapisany obraz i dopiero po potwierdzeniu przejść dalej.
+
+## 2026-06-03 Live fixture overwrite guard and verified capture
+
+### Summary
+Podczas ponownego ręcznego capture wykryto realny błąd operacyjny: backend działał dalej pod ostatnim scenariuszem i po fizycznej zmianie układu kart potrafił nadpisać wcześniej poprawne pliki scenariusza. Dodano ochronę w `LiveFixtureCapture`: jeżeli scenariusz ma już `raw_frame_<suffix>.png` albo `analysis_frame_<suffix>.png`, kolejne wywołanie `save_snapshot()` zwraca `ok=false`, `reason="already_exists"` i nie nadpisuje plików.
+
+### Verified fixture
+Wyczyszczono `logs/live_fixtures/` i zebrano od zera trzy scenariusze. Po każdym scenariuszu obrazy zostały pokazane Michałowi i ręcznie potwierdzone:
+- `empty`: poprawna pusta mata, 4 markery ArUco, brak kart.
+- `one_card`: poprawny obraz z dokładnie jedną kartą.
+- `three_cards`: poprawny obraz z dokładnie trzema kartami.
+
+Zatwierdzony komplet znajduje się lokalnie w:
+
+```text
+logs/live_fixtures/event_first_current_debug_verified/
+  empty/raw_frame_0.png
+  empty/analysis_frame_0.png
+  one_card/raw_frame_1.png
+  one_card/analysis_frame_1.png
+  three_cards/raw_frame_3.png
+  three_cards/analysis_frame_3.png
+```
+
+Payload dla `three_cards` wykrył `cards_len=4`, ale to nie blokuje celu tego etapu: fixture ma być fizyczną bazą obrazów do offline replay/debug i nauki poprawnej identyfikacji kart bez ciągłego układania kart oraz bez obciążenia frontendem/backendem.
+
+### Decision
+Ten etap dostarczył dataset bazowy, nie fix rozpoznawania. Następna praca powinna używać zapisanych obrazów offline, najpierw do najlepszego odtworzenia detekcji zmian i identyfikacji kart poza pełnym runtime, a dopiero po wypracowaniu metody przenieść mały, dowiedziony fix do głównego kodu.
+
+### Required next action
+Utworzyć mały offline replay/debug task używający `event_first_current_debug_verified/{empty,one_card,three_cards}` jako wejścia. Celem taska ma być analiza i poprawa identyfikacji kart na zapisanych obrazach, bez strojenia progów na ślepo i bez wymagania kolejnych live snapshotów.

@@ -1490,3 +1490,50 @@ Wynik: PASS.
 ### Snapshot cleanup
 
 Usunięto wszystkie lokalne wcześniejsze snapshoty z `logs/live_fixtures/`, żeby kolejny live capture zacząć od zera.
+
+## 2026-06-03 Live fixture overwrite guard and verified capture
+
+### RED
+
+```text
+cd app_cv
+python -m unittest tests.test_live_fixture_capture -v
+```
+
+Wynik: FAIL oczekiwany. Nowy test `test_does_not_overwrite_existing_scenario_images` pokazał, że drugi zapis tego samego scenariusza nadal przechodzi i nadpisuje payload.
+
+### GREEN
+
+```text
+cd app_cv
+python -m unittest tests.test_live_fixture_capture -v
+```
+
+Wynik: PASS, 6 testów.
+
+### Manual live capture
+
+Backend uruchamiano z:
+
+```text
+TAROTVISION_CAPTURE_LIVE_FIXTURES=1
+TAROTVISION_LIVE_FIXTURE_NAME=event_first_current_debug
+```
+
+Zebrano i ręcznie potwierdzono:
+
+```text
+logs/live_fixtures/event_first_current_debug_verified/empty/raw_frame_0.png
+logs/live_fixtures/event_first_current_debug_verified/empty/analysis_frame_0.png
+logs/live_fixtures/event_first_current_debug_verified/one_card/raw_frame_1.png
+logs/live_fixtures/event_first_current_debug_verified/one_card/analysis_frame_1.png
+logs/live_fixtures/event_first_current_debug_verified/three_cards/raw_frame_3.png
+logs/live_fixtures/event_first_current_debug_verified/three_cards/analysis_frame_3.png
+```
+
+Weryfikacja manualna Michała:
+- `empty` poprawne.
+- `one_card` poprawne.
+- `three_cards` poprawne.
+
+Uwaga: payload `three_cards` raportował `cards_len=4`, ale fizyczny obraz fixture jest poprawny i zgodny z celem dalszego offline debugowania identyfikacji.
