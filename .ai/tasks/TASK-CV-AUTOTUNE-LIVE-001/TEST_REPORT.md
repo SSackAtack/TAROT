@@ -897,3 +897,63 @@ sample 3: candidate_count=2, accepted_count=1
 ```
 
 Wniosek: naprawiono zanieczyszczanie layoutu fałszywymi kartami podczas kalibracji pustej maty. Pełny smoke nadal nie jest green, bo trzeba zmniejszyć false positives detektora na pustej macie po warpie ArUco.
+
+### Event-first Empty Reference Status Fix
+
+#### Regression
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_autotune_session app_cv.tests.test_main_static_audit -v
+```
+
+Wynik: PASS, 19 testów.
+
+```text
+$env:PYTHONDONTWRITEBYTECODE='1'; python -B -m py_compile app_cv\tarotvision\autotune_session.py app_cv\main.py
+```
+
+Wynik: PASS.
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_background_model app_cv.tests.test_change_detection app_cv.tests.test_snapshot_analyzer app_cv.tests.test_pipelines_contract app_cv.tests.test_operator_explainability app_cv.tests.test_autotune_session app_cv.tests.test_main_static_audit -v
+```
+
+Wynik: PASS, 69 testów.
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest discover -s app_cv\tests -v
+```
+
+Wynik: PASS, 303 testy.
+
+#### Live retest after status fix
+
+Warunek wejściowy:
+
+```text
+table.calibrated=true
+marker_ids=[10, 11, 12, 13]
+```
+
+Komenda:
+
+```text
+WebSocket command: {"type":"autotune_start","scenario":"empty"}
+```
+
+Wynik: PASS dla nowego kontraktu pustej referencji:
+
+```text
+stage_result=PASS
+empty_reference_status=PASS
+background_reference_active=true
+background_reference_validation_ratio=0.0
+background_reference_validation_warning=0.0
+detected=false
+cards_len=0
+empty_reference_false_positive_hold=1.0
+diagnostics.false_positive_count=7
+diagnostics.legacy_detector_false_positive=true
+```
+
+Wniosek: `Pusta mata` tworzy referencję i nie publikuje false positives do layoutu. False positives starego detektora są zachowane jako warning/diagnostyka do osobnego taska, a nie jako bloker referencji tła.

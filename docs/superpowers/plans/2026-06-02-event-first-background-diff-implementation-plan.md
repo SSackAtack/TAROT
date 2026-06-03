@@ -1275,7 +1275,7 @@ Start or restart Studio backend/frontend, then in `http://127.0.0.1:5174/?studio
 2. Remove all cards.
 3. Click `Pusta mata`.
 4. Wait for `3/3`.
-5. Expected: `PASS` if no false positives; if `FAIL`, logs must show exact false positives and change metrics.
+5. Expected: `PASS` if `empty_reference` is created and validation warning is `0`; false positives from the legacy detector must be shown as diagnostics/warnings and must not block the reference or enter the layout.
 6. Put one card.
 7. Confirm motion triggers snapshot.
 8. Expected: `change_region_count >= 1`, `change_added_count >= 1`, recognition runs in ROI.
@@ -1348,7 +1348,17 @@ Stan aktualny: **Task 7 nadal IN_PROGRESS**. Realny smoke po ustawieniu kamery p
 
 Co zostało zrobione: naprawiono krytyczne zanieczyszczanie layoutu podczas `empty_reference_capture_active`. False positives wykryte w etapie `Pusta mata` są zapisywane do próbek Auto Tune i powodują `stage_result=FAIL`, ale nie są już publikowane jako karty w Studio. `autotune_start empty` czyści też stary layout (`last_snapshot_cards=[]`), żeby wirtualne karty nie zostawały na ekranie po rozpoczęciu kalibracji pustej maty. Testy: targeted regression `2` PASS, event-first/main static `62` PASS, `py_compile` PASS, full backend `303` PASS.
 
-Kolejne kroki: następny mały task powinien celować w redukcję false positives na pustej macie po warpie ArUco. Najnowszy live log `empty` ma próbki `candidate_count=3/2/2`, `accepted_count=2/1/1`, `background_reference_validation_ratio=0.01`, `background_reference_validation_warning=0`.
+Kolejne kroki: po decyzji Michala nie blokować `empty_reference` przez false positives starego detektora. Następny mały task ma rozdzielić status pustej referencji od diagnostyki detektora; redukcja false positives starego detektora jest osobnym późniejszym zadaniem.
+
+## Session Status (2026-06-03 Event-first Empty Reference Status Fix)
+
+Stan aktualny: **Task 7 nadal IN_PROGRESS, ale `Pusta mata` ma poprawną semantykę event-first**. `Pusta mata` kończy `PASS`, gdy `empty_reference` została utworzona i walidacja `BackgroundModel.changed_ratio()` nie zgłasza warningu. False positives starego detektora są raportowane jako warning diagnostyczny, nie jako powód zablokowania referencji.
+
+Co zostało zrobione: `AutotuneSession.status()` publikuje `empty_reference_status`, a false positives dla scenariusza `empty` trafiają do `diagnostics.false_positive_count` i `diagnostics.legacy_detector_false_positive`. Backend pokazuje ostrzeżenie operatorskie, że referencja pustej maty jest OK, a stary detektor widzi false positives tylko diagnostycznie. Układ pozostaje pusty (`cards=[]`, `detected=false`) dzięki wcześniejszemu holdowi `empty_reference_capture_active`.
+
+Weryfikacja: targeted `test_autotune_session + test_main_static_audit` PASS (`19`), targeted event-first/main suite PASS (`69`), `py_compile` PASS, full backend PASS (`303`). Realny retest z kamerą i ArUco potwierdził `background_reference_active=True`, `background_reference_validation_warning=0`, `cards_len=0`, `detected=false` oraz diagnostykę `false_positive_count=7`.
+
+Kolejne kroki: kontynuować pełny Task 7 Live Smoke od scenariusza jednej karty. Nie naprawiać nowego pipeline przez dalsze strojenie starego detektora na pustej macie; osobny późniejszy task to `TASK-CV-LEGACY-DETECTOR-EMPTY-FP-001`.
 
 ---
 

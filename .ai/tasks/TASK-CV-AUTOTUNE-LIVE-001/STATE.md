@@ -128,8 +128,16 @@ Co zostało zrobione: `autotune_start empty` czyści teraz `last_snapshot_cards`
 
 Kolejne kroki: nie kontynuować do scenariuszy jedna/trzy karty jako pełny green smoke, dopóki `empty` ma false positives. Następny mały task powinien zmniejszyć false positives na pustej macie po warpie ArUco; aktualne próbki empty miały `candidate_count` 3, 2, 2 oraz `accepted_count` 2, 1, 1.
 
+## Session Status (2026-06-03 Event-first Empty Reference Status Fix)
+
+Stan aktualny: **Task 7 nadal IN_PROGRESS, ale etap `Pusta mata` nie jest już blokowany przez stary detektor**. Po decyzji Michala rozdzielono status utworzenia `empty_reference` od testu false positives starego detektora. Komplet próbek `empty` i poprawna walidacja tła oznaczają `empty_reference_status=PASS`; false positives są widoczne jako warning diagnostyczny, ale nie blokują referencji i nie trafiają do layoutu.
+
+Co zostało zrobione: `AutotuneSession` publikuje `empty_reference_status`, traktuje false positives w scenariuszu `empty` jako diagnostykę (`diagnostics.legacy_detector_false_positive`, `diagnostics.false_positive_count`) i nie ustawia przez nie `stage_result=FAIL`. Backend dopisuje ostrzeżenie operatorskie, że referencja pustej maty jest OK, a stary detektor widzi false positives tylko diagnostycznie. Realny retest z kamerą i ArUco potwierdził `background_reference_active=True`, `background_reference_validation_warning=0`, `detected=false`, `cards_len=0` oraz diagnostykę `false_positive_count=7`.
+
+Kolejne kroki: kontynuować pełny Task 7 Live Smoke na event-first: jedna karta, trzy karty, no-change, usunięcie karty i global shift. Redukcja false positives starego detektora na pustej macie jest osobnym późniejszym taskiem (`TASK-CV-LEGACY-DETECTOR-EMPTY-FP-001`) i nie powinna blokować `empty_reference`.
+
 ## Kolejne kroki
 
-1. Naprawić false positives na pustej macie po warpie ArUco; najnowszy live smoke zbiera `3/3`, ale `empty` kończy jako `FAIL`.
-2. Po poprawce false positives powtórzyć pełny `Task 7: Live Smoke` przy widocznych 4 markerach ArUco.
-3. Manualny live smoke z kamerą pozostaje wymagany dla obecnego `TASK-CV-AUTOTUNE-LIVE-001` przed oznaczeniem go jako `DONE`.
+1. Kontynuować pełny `Task 7: Live Smoke` przy widocznych 4 markerach ArUco: jedna karta, trzy karty, no-change, removal i global shift.
+2. Traktować false positives starego detektora podczas `Pusta mata` jako warning diagnostyczny, nie jako bloker referencji tła.
+3. Osobny późniejszy task: `TASK-CV-LEGACY-DETECTOR-EMPTY-FP-001`, jeżeli po smoke nadal warto ograniczać false positives starego detektora.

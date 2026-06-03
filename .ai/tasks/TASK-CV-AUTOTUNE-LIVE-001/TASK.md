@@ -28,7 +28,7 @@ Wdrożyć live autotuning jako bezpieczną rekomendację profilu, która optymal
 - Frontend build przechodzi.
 - Autotuning nie stosuje rekomendacji bez `autotune_apply`.
 - Rekomendacja zawiera score, confidence i konkretne parametry.
-- Pusta mata karze false positives.
+- Pusta mata tworzy referencję tła; false positives starego detektora są warningiem diagnostycznym, nie blokerem referencji.
 - Scenariusz 3 kart uwzględnia różnicę kandydaci vs zaakceptowane.
 - Operator ma rollback.
 - Profil po save jest zapisany w `logs/calibration_profiles/`.

@@ -189,6 +189,12 @@ def record_autotune_sample_from_snapshot(sample):
         add_operator_warning(
             f"Autotuning {scenario}: {result['state']} - {result['message']}"
         )
+        diagnostics = autotune_session.diagnostics()
+        if scenario == "empty" and diagnostics.get("legacy_detector_false_positive"):
+            add_operator_warning(
+                "Pusta mata: referencja OK; stary detektor widzi false positives "
+                f"({diagnostics.get('false_positive_count', 0)}) jako diagnostyke."
+            )
         if scenario == "empty":
             return {
                 "collect_empty_reference_frame": True,

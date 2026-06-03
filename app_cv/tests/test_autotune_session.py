@@ -36,7 +36,7 @@ class AutotuneSessionTest(unittest.TestCase):
         self.assertEqual(status["progress"]["empty"], "1/2")
         self.assertEqual(status["progress"]["one_card"], "0/2")
 
-    def test_empty_mat_passes_only_when_no_cards_are_seen(self):
+    def test_empty_mat_passes_when_reference_samples_are_collected(self):
         session = AutotuneSession(required_scenarios=("empty",), samples_per_scenario=2)
 
         session.add_sample("empty", {"candidate_count": 0, "accepted_count": 0})
@@ -44,18 +44,26 @@ class AutotuneSessionTest(unittest.TestCase):
 
         status = session.status()
         self.assertEqual(status["stage_result"]["state"], "PASS")
+        self.assertEqual(status["empty_reference_status"], "PASS")
         self.assertIn("pusta", status["stage_result"]["message"].lower())
         self.assertEqual(status["next_action"], "Przejdz do testu 1 karta.")
 
-    def test_empty_mat_fails_when_false_positive_is_seen(self):
+    def test_empty_mat_passes_with_false_positive_diagnostics(self):
         session = AutotuneSession(required_scenarios=("empty",), samples_per_scenario=1)
 
-        session.add_sample("empty", {"candidate_count": 1, "accepted_count": 0})
+        session.add_sample("empty", {
+            "candidate_count": 3,
+            "accepted_count": 2,
+            "false_positive_count": 3,
+        })
 
         status = session.status()
-        self.assertEqual(status["stage_result"]["state"], "FAIL")
-        self.assertIn("false positive", status["stage_result"]["message"].lower())
-        self.assertEqual(status["next_action"], "Kliknij Skalibruj albo popraw swiatlo/mate.")
+        self.assertEqual(status["stage_result"]["state"], "PASS")
+        self.assertEqual(status["empty_reference_status"], "PASS")
+        self.assertIn("referencja", status["stage_result"]["message"].lower())
+        self.assertEqual(status["diagnostics"]["false_positive_count"], 3)
+        self.assertTrue(status["diagnostics"]["legacy_detector_false_positive"])
+        self.assertEqual(status["next_action"], "Przejdz do testu 1 karta.")
 
     def test_one_card_requires_one_accepted_card(self):
         session = AutotuneSession(required_scenarios=("one_card",), samples_per_scenario=1)

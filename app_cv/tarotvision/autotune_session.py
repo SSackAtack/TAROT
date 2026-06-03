@@ -88,6 +88,7 @@ class AutotuneSession:
         return "Sprawdz kolejny etap kalibracji."
 
     def status(self):
+        stage_result = self.stage_result()
         return {
             "state": self.state,
             "scenario": self.current_scenario(),
@@ -95,9 +96,35 @@ class AutotuneSession:
                 scenario: f"{len(self.samples[scenario])}/{self.samples_per_scenario}"
                 for scenario in self.required_scenarios
             },
-            "stage_result": self.stage_result(),
+            "stage_result": stage_result,
+            "empty_reference_status": (
+                stage_result["state"] if self.current_scenario() == "empty" else None
+            ),
             "next_action": self.next_action(),
+            "diagnostics": self.diagnostics(),
             "recommendation": self.recommendation,
+        }
+
+    def diagnostics(self):
+        scenario = self.current_scenario()
+        samples = self.samples.get(scenario, []) if scenario is not None else []
+        false_positive_count = sum(
+            int(sample.get("false_positive_count", 0) or 0)
+            for sample in samples
+        )
+        candidate_count = sum(
+            int(sample.get("candidate_count", 0) or 0)
+            for sample in samples
+        )
+        accepted_count = sum(
+            int(sample.get("accepted_count", 0) or 0)
+            for sample in samples
+        )
+        return {
+            "candidate_count": candidate_count,
+            "accepted_count": accepted_count,
+            "false_positive_count": false_positive_count,
+            "legacy_detector_false_positive": scenario == "empty" and false_positive_count > 0,
         }
 
 
@@ -109,7 +136,7 @@ def _sample_passes_scenario(scenario, sample):
     recognition_rejections = int(sample.get("recognition_rejections", 0))
 
     if scenario == "empty":
-        return candidate_count == 0 and accepted_count == 0 and false_positive_count == 0
+        return True
     if scenario == "one_card":
         return (
             candidate_count == 1
@@ -124,7 +151,7 @@ def _sample_passes_scenario(scenario, sample):
 
 def _pass_message(scenario):
     if scenario == "empty":
-        return "Pusta mata poprawna: system nie widzi kart ani kandydatow."
+        return "Pusta mata poprawna: referencja moze zostac utworzona."
     if scenario == "one_card":
         return "1 karta poprawna: wykryto i zaakceptowano jedna karte."
     if scenario == "three_cards":

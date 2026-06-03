@@ -216,3 +216,10 @@
 - Dodano metrykę `empty_reference_false_positive_hold`, która potwierdza, że false positive został zatrzymany w ścieżce kalibracji pustej maty.
 - Dodano test regresji: false positive w `Pusta mata` ma dawać `candidate_count/accepted_count` w recorderze, ale `cards=[]` w publikowanym statusie.
 - Realny retest z kamerą i ArUco potwierdził brak publikacji fałszywych kart do layoutu, przy zachowaniu `stage_result=FAIL` dla etapu `empty`.
+
+## 2026-06-03 Event-first Empty Reference Status Fix
+
+- Rozdzielono status pustej referencji od diagnostyki starego detektora.
+- `AutotuneSession` traktuje komplet próbek `empty` jako `PASS` dla referencji, nawet gdy próbki zawierają `candidate_count`, `accepted_count` albo `false_positive_count`.
+- Status autotuningu publikuje jawne `empty_reference_status`, a `diagnostics.legacy_detector_false_positive` i `diagnostics.false_positive_count` zachowują informację o halucynacjach starego detektora.
+- Backend dodaje ostrzeżenie operatorskie: referencja pustej maty jest OK, a false positives starego detektora są diagnostyką, nie powodem zablokowania referencji.
