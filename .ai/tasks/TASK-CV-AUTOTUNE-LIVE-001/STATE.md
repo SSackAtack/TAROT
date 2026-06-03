@@ -170,6 +170,16 @@ Co zostało zrobione: `SnapshotAnalyzer` publikuje teraz diagnostykę per ROI dl
 
 Kolejne kroki: po ponownej kalibracji pustej maty uruchomić smoke trzech kart i odczytać nowe pola `roi_diagnostics`. Dopiero na podstawie tej diagnostyki wybrać następny fix.
 
+## Session Status (2026-06-03 ROI Diagnostics Pipeline Passthrough)
+
+Stan aktualny: **mały fix diagnostyczny dodany; Task 7 nadal RED do ponownego smoke trzech kart**. Podczas próby odczytu live po commicie `09db040` okazało się, że `SnapshotAnalyzer` generuje `roi_diagnostics`, ale `SnapshotFirstPipeline` publikuje tylko stare skalarne metryki, więc pola ROI nie były widoczne w WebSocket payload.
+
+Co zostało zrobione: `SnapshotFirstPipeline` kopiuje teraz wymagane pola diagnostyki ROI z `SnapshotAnalyzer.diagnostics` do `metrics_snapshot` publikowanego przez `status_store.update_cv_state`. Nie zmieniano logiki detekcji, progów, ORB, ArUco, pustej referencji ani Studio UI.
+
+Weryfikacja: test kontraktowy najpierw RED z `KeyError: 'roi_count'`, potem PASS po passthrough. Targeted suite `test_snapshot_analyzer + test_pipelines_contract + test_operator_explainability + test_main_static_audit` PASS (`55`).
+
+Kolejne kroki: po commicie i pushu powtórzyć krótki cykl live: `Pusta mata 3/3`, następnie `3 karty`, i odczytać `roi_diagnostics` z payloadu WebSocket.
+
 ## Kolejne kroki
 
 1. Kontynuować pełny `Task 7: Live Smoke` przy widocznych 4 markerach ArUco: jedna karta, trzy karty, no-change, removal i global shift.

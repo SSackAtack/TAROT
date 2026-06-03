@@ -1400,6 +1400,16 @@ Weryfikacja: test RED/GREEN `test_analyze_reports_per_roi_recognition_diagnostic
 
 Kolejne kroki: powtórzyć smoke trzech kart po ponownym `Pusta mata` i odczytać nowe `roi_diagnostics`; dopiero potem implementować właściwy fix.
 
+## Session Status (2026-06-03 ROI Diagnostics Pipeline Passthrough)
+
+Stan aktualny: **mały fix diagnostyczny dodany; Task 7 nadal RED do ponownego smoke trzech kart**. Podczas live odczytu po commicie `09db040` okazało się, że `SnapshotAnalyzer` generuje `roi_diagnostics`, ale pipeline nie przepuszcza tych pól do publikowanego payloadu WebSocket.
+
+Co zostało zrobione: `SnapshotFirstPipeline` kopiuje teraz pola `roi_count`, `roi_diagnostics`, `roi_with_quads_count`, `roi_with_accepted_card_count`, `accepted_cards_before_dedup`, `accepted_cards_after_dedup` z diagnostyki analizatora do `metrics_snapshot`. To jest wyłącznie expose diagnostyki, bez zmiany decyzji detekcji, progów, ORB, ArUco, pustej referencji ani Studio UI.
+
+Weryfikacja: test kontraktowy najpierw RED (`KeyError: 'roi_count'`), potem PASS; `py_compile snapshot_first.py` PASS; targeted suite `test_snapshot_analyzer + test_pipelines_contract + test_operator_explainability + test_main_static_audit` PASS (`55`).
+
+Kolejne kroki: po commicie i pushu powtórzyć krótki live cykl `Pusta mata 3/3 -> 3 karty` i odczytać właściwe `roi_diagnostics`.
+
 ---
 
 ## Kryteria Akceptacji

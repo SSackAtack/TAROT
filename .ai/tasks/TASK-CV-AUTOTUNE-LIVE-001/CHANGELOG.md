@@ -237,3 +237,10 @@
 - Diagnostyka raportuje `roi_index`, `roi_bbox`, `roi_area`, `roi_quads_found`, liczniki walidacji, rozpoznania, zaakceptowanych kart i powody odrzuceń.
 - Dodano agregaty: `roi_with_quads_count`, `roi_with_accepted_card_count`, `accepted_cards_before_dedup`, `accepted_cards_after_dedup`.
 - Dodano test `test_analyze_reports_per_roi_recognition_diagnostics`, który zabezpiecza diagnostykę dla dwóch ROI i mieszanego wyniku rozpoznania.
+
+## 2026-06-03 Event-first ROI Diagnostics Pipeline Passthrough
+
+- Podczas live smoke wykryto, że `SnapshotAnalyzer` liczy `roi_diagnostics`, ale `SnapshotFirstPipeline` nie przepuszcza tych pól do publikowanych metryk WebSocket.
+- Dodano minimalny passthrough pól `roi_count`, `roi_diagnostics`, `roi_with_quads_count`, `roi_with_accepted_card_count`, `accepted_cards_before_dedup`, `accepted_cards_after_dedup`.
+- Dodano test kontraktowy potwierdzający, że diagnostyka ROI z `SnapshotAnalyzer.diagnostics` trafia do `status_store.update_cv_state(..., metrics=...)`.
+- Nie zmieniano progów `ChangeDetector`, ArUco, pustej referencji, ORB ani Studio UI.

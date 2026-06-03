@@ -469,7 +469,25 @@ class TestPipelinesContract(unittest.TestCase):
         analyzed = MagicMock()
         analyzed.card_count = 0
         analyzed.cards = []
-        analyzed.diagnostics = {}
+        analyzed.diagnostics = {
+            "roi_count": 1,
+            "roi_diagnostics": [{
+                "roi_index": 0,
+                "roi_bbox": [40, 30, 80, 120],
+                "roi_area": 9600,
+                "roi_quads_found": 2,
+                "roi_candidates_after_validation": 1,
+                "roi_validation_rejections": 1,
+                "roi_recognition_attempts": 1,
+                "roi_recognition_rejections": 0,
+                "roi_accepted_cards": 0,
+                "roi_reject_reasons": {"small_crop": 1},
+            }],
+            "roi_with_quads_count": 1,
+            "roi_with_accepted_card_count": 0,
+            "accepted_cards_before_dedup": 0,
+            "accepted_cards_after_dedup": 0,
+        }
         snapshot_analyzer.analyze.return_value = analyzed
 
         table_calibration = MagicMock()
@@ -525,6 +543,14 @@ class TestPipelinesContract(unittest.TestCase):
         self.assertEqual(snapshot_analyzer.analyze.call_args.kwargs["roi_hints"], [(40, 30, 80, 120)])
         runtime_metrics.add.assert_any_call("change_region_count", 1)
         runtime_metrics.add.assert_any_call("change_mask_ratio", 0.08)
+        kwargs = status_store.update_cv_state.call_args.kwargs
+        self.assertEqual(kwargs["metrics"]["roi_count"], 1)
+        self.assertEqual(kwargs["metrics"]["roi_with_quads_count"], 1)
+        self.assertEqual(kwargs["metrics"]["roi_with_accepted_card_count"], 0)
+        self.assertEqual(kwargs["metrics"]["accepted_cards_before_dedup"], 0)
+        self.assertEqual(kwargs["metrics"]["accepted_cards_after_dedup"], 0)
+        self.assertEqual(kwargs["metrics"]["roi_diagnostics"][0]["roi_bbox"], [40, 30, 80, 120])
+        self.assertEqual(kwargs["metrics"]["roi_diagnostics"][0]["roi_reject_reasons"], {"small_crop": 1})
 
     def test_snapshot_pipeline_passes_empty_roi_list_without_global_fallback(self):
         camera_session = MagicMock()

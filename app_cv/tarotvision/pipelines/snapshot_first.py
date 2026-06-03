@@ -15,6 +15,25 @@ SNAPSHOT_QUALITY_REJECT_CODES = {
     "blurry": 4,
 }
 
+
+ROI_DIAGNOSTIC_FIELDS = (
+    "roi_count",
+    "roi_diagnostics",
+    "roi_with_quads_count",
+    "roi_with_accepted_card_count",
+    "accepted_cards_before_dedup",
+    "accepted_cards_after_dedup",
+)
+
+
+def _extract_roi_diagnostics(diagnostics):
+    return {
+        field: diagnostics[field]
+        for field in ROI_DIAGNOSTIC_FIELDS
+        if field in diagnostics
+    }
+
+
 class SnapshotFirstPipeline(VisionPipeline):
     def __init__(
         self,
@@ -53,6 +72,7 @@ class SnapshotFirstPipeline(VisionPipeline):
         self.background_model = background_model
         self.empty_reference_frames = []
         self.empty_reference_capture_active = False
+        self.last_roi_diagnostics = {}
 
         # Zmienne stanu rurociągu
         self.last_snapshot_cards = []
@@ -226,6 +246,7 @@ class SnapshotFirstPipeline(VisionPipeline):
                     analysis_start = time.perf_counter()
                     result = self.snapshot_analyzer.analyze(analysis_frame, roi_hints=roi_hints)
                     diagnostics = result.diagnostics if isinstance(result.diagnostics, dict) else {}
+                    self.last_roi_diagnostics = _extract_roi_diagnostics(diagnostics)
                     self.runtime_metrics.add("snapshot_quads_found", diagnostics.get("quads_found", 0))
                     self.runtime_metrics.add("snapshot_recognition_attempts", diagnostics.get("recognition_attempts", 0))
                     self.runtime_metrics.add("snapshot_recognition_rejections", diagnostics.get("recognition_rejections", 0))
@@ -329,6 +350,7 @@ class SnapshotFirstPipeline(VisionPipeline):
                     self.previous_stable_snapshot = analysis_frame.copy()
 
         metrics_snapshot = self.runtime_metrics.snapshot()
+        metrics_snapshot.update(self.last_roi_diagnostics)
         runtime_snapshot = {
             "profile": self.runtime_profile,
             "camera_index": self.camera_session.camera_index,

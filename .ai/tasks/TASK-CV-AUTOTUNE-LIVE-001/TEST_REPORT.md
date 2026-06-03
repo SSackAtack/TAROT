@@ -1150,3 +1150,33 @@ $env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.te
 ```
 
 Wynik: PASS, 55 testów.
+
+### ROI Diagnostics Pipeline Passthrough
+
+#### RED
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_pipelines_contract.TestPipelinesContract.test_snapshot_pipeline_passes_change_rois_to_analyzer -v
+```
+
+Wynik: FAIL oczekiwany. `SnapshotAnalyzer.diagnostics` zawierało pola ROI, ale `status_store.update_cv_state(..., metrics=...)` nie publikowało `roi_count`.
+
+#### GREEN
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_pipelines_contract.TestPipelinesContract.test_snapshot_pipeline_passes_change_rois_to_analyzer -v
+```
+
+Wynik: PASS.
+
+```text
+$env:PYTHONDONTWRITEBYTECODE='1'; python -B -m py_compile app_cv\tarotvision\pipelines\snapshot_first.py
+```
+
+Wynik: PASS.
+
+```text
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv'; python -m unittest app_cv.tests.test_snapshot_analyzer app_cv.tests.test_pipelines_contract app_cv.tests.test_operator_explainability app_cv.tests.test_main_static_audit -v
+```
+
+Wynik: PASS, 55 testów.
