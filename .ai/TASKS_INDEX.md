@@ -52,7 +52,7 @@ Ten plik stanowi centralny rejestr wszystkich zadań (Tasks) realizowanych w pro
 | **TASK-CV-SNAPSHOT-008** | `APPROVED` | `master` | Codex | Lokalny benchmark snapshot recognition dla talii i mat | 2026-06-01 | APPROVED BY CHATGPT SUPERVISOR (PR #14 + master smoke) |
 | **TASK-CV-SNAPSHOT-LIVE-001** | `APPROVED` | `master` | Gemini + Michał | Live smoke test snapshot-first z kamerą i Studio | 2026-06-01 | Test na żywo zakończony pełnym sukcesem (GREEN), potwierdzony po merge |
 | **TASK-CV-GEOMETRY-FALLBACK-001** | `APPROVED` | `master` | Codex | MinAreaRect fallback, diagnostyka detekcji i filtr ArUco dla snapshot-first live | 2026-06-01 | APPROVED BY CHATGPT SUPERVISOR (PR #14 + master smoke) |
-| **TASK-CV-OFFLINE-LAB-STAGE-4-CROP-DESKEW-NORMALIZE-BENCHMARK-001** | `DONE` | `task/cv-event-first-plan-001-clarify-autotune-runtime` | Gemini | Offline benchmark Stage 4 Crop / Deskew / Normalize na zatwierdzonym Stage 1+2+3 | 2026-06-04 | Stage 4 pipeline provisionally recommended: quad_warp_perspective_fixed_aspect; pending Supervisor manual review |
+| **TASK-CV-OFFLINE-LAB-STAGE-4-CROP-DESKEW-NORMALIZE-BENCHMARK-001** | `APPROVED` | `task/cv-event-first-plan-001-clarify-autotune-runtime` | Gemini | Offline benchmark Stage 4 Crop / Deskew / Normalize na zatwierdzonym Stage 1+2+3 | 2026-06-04 | Stage 4 pipeline approved: quad_warp_perspective_fixed_aspect__resize_only_normalization; next: Research Stage 5 |
 
 ---
 

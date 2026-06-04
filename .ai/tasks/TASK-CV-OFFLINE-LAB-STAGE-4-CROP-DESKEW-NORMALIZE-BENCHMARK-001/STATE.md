@@ -115,3 +115,59 @@ Waiting for Supervisor visual review.
 ### Required next action
 
 Michał uploads the six PNG crop debug sheets to ChatGPT Supervisor for manual Stage 4 review.
+
+## TASK-CV-OFFLINE-LAB-STAGE-4-DECISION-001
+
+### Supervisor Manual Review
+
+Manualnie przejrzano crop debug sheets dla pipeline:
+
+`quad_warp_perspective_fixed_aspect__resize_only_normalization`
+
+Pary testowe:
+
+- `empty_to_empty`
+- `empty_to_one_card`
+- `empty_to_three_cards`
+- `one_card_to_three_cards`
+- `one_card_to_empty`
+- `three_cards_to_empty`
+
+### Decision
+
+APPROVED_STAGE_4_PIPELINE: quad_warp_perspective_fixed_aspect__resize_only_normalization
+
+### Scope of Approval
+
+Zatwierdzenie dotyczy tylko Stage 4 Crop / Deskew / Normalize:
+
+- generowanie cropów z geometrii Stage 3,
+- fixed aspect perspective crop,
+- resize-only normalization jako bezpieczny baseline,
+- poprawna liczba cropów dla `added`, `removed` i `no_change`,
+- poprawne użycie `previous_snapshot` dla `removed`,
+- poprawne działanie w modelu kaskadowym `one_card -> three_cards`,
+- przygotowanie cropów wejściowych dla przyszłego Stage 5.
+
+### Known Limitation
+
+Stage 4 nie zatwierdza jeszcze automatycznej walidacji jakości cropa ani identyfikacji kart.
+
+Stage 5 musi dopiero ocenić jakość cropów, m.in.:
+
+- `edge_cut_risk`
+- `background_margin_score`
+- `border_visible_score`
+- `top_reflection_score`
+- `blur_score`
+- `contrast_score`
+- `brightness_score`
+- `card_fill_ratio`
+- `crop_completeness_score`
+- `identification_readiness_score`
+
+### Required Next Action
+
+Utworzyć:
+
+TASK-CV-RESEARCH-STAGE-5-CROP-QUALITY-VALIDATION-001

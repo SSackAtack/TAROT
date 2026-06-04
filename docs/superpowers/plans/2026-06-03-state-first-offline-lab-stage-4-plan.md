@@ -64,3 +64,46 @@ logs/offline_replay/stage4_crop_deskew_normalize/quad_warp_perspective_fixed_asp
 ```
 
 Nie rozpoczynać Stage 5 przed tą decyzją.
+
+## Stage 4 Final Decision
+
+Decision:
+
+APPROVED_STAGE_4_PIPELINE: quad_warp_perspective_fixed_aspect__resize_only_normalization
+
+Reason:
+
+Pipeline poprawnie przeszedł benchmark i manualny crop debug review na parach:
+
+- `empty -> empty`
+- `empty -> one_card`
+- `empty -> three_cards`
+- `one_card -> three_cards`
+- `one_card -> empty`
+- `three_cards -> empty`
+
+Scope:
+
+Stage 4 approval covers Crop / Deskew / Normalize only.
+
+Approved pipeline:
+
+- crop method: `quad_warp_perspective_fixed_aspect`
+- normalization: `resize_only_normalization`
+
+Approved output:
+
+- `raw_crop`
+- `deskewed_crop`
+- `normalized_crop`
+- `crop_metadata`
+- `crop_transform_matrix`
+- `crop_debug_sheet`
+
+Important limitation:
+
+Stage 4 does not approve automatic crop quality validation, card identification or runtime integration.
+
+Next stage:
+
+TASK-CV-RESEARCH-STAGE-5-CROP-QUALITY-VALIDATION-001

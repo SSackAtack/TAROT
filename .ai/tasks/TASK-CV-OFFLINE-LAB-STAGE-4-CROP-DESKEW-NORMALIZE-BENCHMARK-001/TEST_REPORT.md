@@ -162,3 +162,35 @@ No algorithmic tests. Packaging only.
 - README_FOR_SUPERVISOR.md exists: PASS
 - report.md / report.json / matrix.csv copied: PASS
 - ZIP archive exists (6.2 MB): PASS
+
+---
+
+## TASK-CV-OFFLINE-LAB-STAGE-4-DECISION-001
+
+### Manual Review
+
+Reviewed crop debug sheets for `quad_warp_perspective_fixed_aspect__resize_only_normalization`:
+
+- `empty_to_empty`: PASS
+- `empty_to_one_card`: PASS
+- `empty_to_three_cards`: PASS
+- `one_card_to_three_cards`: PASS
+- `one_card_to_empty`: PASS
+- `three_cards_to_empty`: PASS
+
+### Decision
+
+APPROVED_STAGE_4_PIPELINE: quad_warp_perspective_fixed_aspect__resize_only_normalization
+
+### Automated Tests
+
+NOT_RUN — documentation-only stage gate.
+
+### Notes
+
+Automated tests were already executed in:
+
+- `TASK-CV-OFFLINE-LAB-STAGE-4-CROP-DESKEW-NORMALIZE-BENCHMARK-001`
+- `TASK-CV-OFFLINE-LAB-STAGE-4-REVIEW-PATHS-FIX-001`
+
+This task only records the Supervisor decision after manual crop debug review.

@@ -21,3 +21,11 @@
 - Created README_FOR_SUPERVISOR.md with review criteria.
 - Created ZIP archive for distribution.
 - No code changes. Packaging only.
+
+## TASK-CV-OFFLINE-LAB-STAGE-4-DECISION-001
+
+- Supervisor zatwierdził `quad_warp_perspective_fixed_aspect__resize_only_normalization` jako pipeline Stage 4 Crop / Deskew / Normalize.
+- Zatwierdzenie dotyczy wyłącznie crop / deskew / normalize.
+- Nie zatwierdza Crop Quality Validation, Card Identification, State Managera ani Runtime Integration.
+- Znane ograniczenie: Stage 4 generuje cropy, ale Stage 5 musi dopiero ocenić ich jakość i gotowość do identyfikacji.
+- Następny krok: Research Gate Stage 5 Crop Quality Validation.
