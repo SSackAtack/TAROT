@@ -16,6 +16,7 @@ from tools.cv_detection_lab.stage6_real_camera_capture_wizard import (
     append_confirmed_sample,
     build_capture_plan,
     expected_env_commands,
+    resolve_manual_card_identity,
 )
 
 
@@ -155,6 +156,8 @@ class TestStage6RealCameraFixture(unittest.TestCase):
             [step.expected_card_id for step in plan if step.category == "gilded_upright"],
             [step.expected_card_id for step in plan if step.category == "gilded_reversed"],
         )
+        self.assertTrue(all(step.expected_card_id is None for step in plan if step.category == "gilded_yellow"))
+        self.assertTrue(all(step.expected_card_id is None for step in plan if step.category == "gilded_visually_similar"))
 
     def test_capture_wizard_prints_existing_live_capture_env_commands(self):
         step = build_capture_plan()[0]
@@ -228,6 +231,44 @@ class TestStage6RealCameraFixture(unittest.TestCase):
             )
 
         self.assertFalse(os.path.exists(os.path.join(aggregate_dir, "manifest.json")))
+
+    def test_capture_wizard_requires_real_gilded_id_for_manual_categories(self):
+        yellow = next(step for step in build_capture_plan() if step.category == "gilded_yellow")
+
+        resolved = resolve_manual_card_identity(yellow, "Gilded_34", None)
+
+        self.assertEqual(resolved.expected_card_id, "Gilded_34")
+        self.assertEqual(resolved.card_label, "Gilded_34")
+
+        with self.assertRaisesRegex(ValueError, "expected_card_id must match Gilded_<number>"):
+            resolve_manual_card_identity(yellow, "Gilded_YELLOW_01", None)
+        with self.assertRaisesRegex(ValueError, "expected_card_id must match Gilded_<number>"):
+            resolve_manual_card_identity(yellow, "Magic_01", None)
+
+    def test_capture_wizard_requires_similarity_group_for_visually_similar(self):
+        similar = next(step for step in build_capture_plan() if step.category == "gilded_visually_similar")
+
+        resolved = resolve_manual_card_identity(similar, "Gilded_54", "court-wands")
+
+        self.assertEqual(resolved.expected_card_id, "Gilded_54")
+        self.assertEqual(resolved.similarity_group, "court-wands")
+
+        with self.assertRaisesRegex(ValueError, "similarity_group is required"):
+            resolve_manual_card_identity(similar, "Gilded_54", "")
+
+    def test_preflight_blocks_placeholder_expected_card_ids(self):
+        manifest = self._load(self.manifest_path)
+        sample_id = next(item["sample_id"] for item in self.samples if item["category"] == "gilded_yellow")
+        sample = next(item for item in manifest["samples"] if item["sample_id"] == sample_id)
+        sample["expected_card_id"] = "Gilded_YELLOW_01"
+        self._dump(self.manifest_path, manifest)
+        ground_truth = self._load(self.ground_truth_path)
+        ground_truth["labels"][sample_id]["expected_card_id"] = "Gilded_YELLOW_01"
+        self._dump(self.ground_truth_path, ground_truth)
+
+        report = run_preflight(self.manifest_path, self.ground_truth_path)
+
+        self.assertIn("INVALID_EXPECTED_CARD_ID_PLACEHOLDER", {item["code"] for item in report["errors"]})
 
     def _build_minimum_sessions(self):
         specifications = []

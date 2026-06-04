@@ -12,6 +12,11 @@
 The whole task remains `PROVISIONAL_BLOCKED` until the required minimum 28
 physical real-camera sessions are captured and manually confirmed.
 
+`CHANGES_REQUESTED_BY_CHATGPT_SUPERVISOR` for capture wizard commit
+`5f784a63e5d83fe6313356fab08747952a65414c`: fixed by requiring real
+`Gilded_<number>` card IDs for `gilded_yellow` and `gilded_visually_similar`
+before recording manual-confirmed ground truth.
+
 ## Completed
 
 - Implemented read-only aggregate manifest and ground-truth loader.
@@ -21,6 +26,8 @@ physical real-camera sessions are captured and manually confirmed.
 - Added operator capture documentation.
 - Added a manual operator wizard that guides the 28-session capture process
   without changing runtime or auto-starting the backend.
+- Added guards so the wizard and preflight reject placeholder card IDs such as
+  `Gilded_YELLOW_*` and `Gilded_SIM_*`.
 
 ## Blocking Condition
 

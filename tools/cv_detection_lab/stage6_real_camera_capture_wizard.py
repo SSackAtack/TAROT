@@ -11,6 +11,7 @@ import argparse
 from dataclasses import dataclass
 import json
 import os
+import re
 
 from tools.cv_detection_lab.stage6_real_camera_fixture import scenario_required_files, stable_sample_id
 from tools.cv_detection_lab.stage6_real_camera_manual_review_pack import build_manual_review_pack
@@ -19,6 +20,7 @@ from tools.cv_detection_lab.stage6_real_camera_preflight import run_preflight
 
 FIXTURE_ID = "stage6_real_camera_validation"
 SCENARIO = "one_card"
+GILDED_CARD_ID_PATTERN = re.compile(r"^Gilded_\d{1,2}$")
 
 
 @dataclass(frozen=True)
@@ -96,14 +98,13 @@ def build_capture_plan():
             "Poloz jedna karte z talii Marchetti. Oczekiwane zachowanie Stage 6: reject.",
         ))
     for index in range(1, 5):
-        card_id = f"Gilded_YELLOW_{index:02d}"
         steps.append(_step(
             len(steps) + 1,
             f"stage6_real_gilded_yellow_{index:02d}",
             "gilded_yellow",
             "gilded",
-            card_id,
-            card_id,
+            "Gilded YELLOW - wpisz realne ID",
+            None,
             "upright",
             "identify",
             "YELLOW",
@@ -112,14 +113,13 @@ def build_capture_plan():
         ))
     for group_index in range(1, 3):
         for card_index in range(1, 3):
-            card_id = f"Gilded_SIM_{group_index:02d}_{card_index:02d}"
             steps.append(_step(
                 len(steps) + 1,
                 f"stage6_real_gilded_similar_g{group_index:02d}_c{card_index:02d}",
                 "gilded_visually_similar",
                 "gilded",
-                card_id,
-                card_id,
+                f"Gilded visually similar group {group_index}",
+                None,
                 "upright",
                 "identify",
                 "PASS_OR_YELLOW",
@@ -137,10 +137,38 @@ def expected_env_commands(step):
     ])
 
 
+def resolve_manual_card_identity(step, expected_card_id, similarity_group=None):
+    if step.category not in {"gilded_yellow", "gilded_visually_similar"}:
+        return step
+    card_id = (expected_card_id or "").strip()
+    if not GILDED_CARD_ID_PATTERN.fullmatch(card_id):
+        raise ValueError("expected_card_id must match Gilded_<number>")
+    if step.category == "gilded_visually_similar":
+        group = (similarity_group or "").strip()
+        if not group:
+            raise ValueError("similarity_group is required")
+    else:
+        group = step.similarity_group
+    return CaptureStep(
+        index=step.index,
+        session_id=step.session_id,
+        category=step.category,
+        deck=step.deck,
+        card_label=card_id,
+        expected_card_id=card_id,
+        expected_orientation=step.expected_orientation,
+        expected_behavior=step.expected_behavior,
+        quality_expectation=step.quality_expectation,
+        similarity_group=group,
+        operator_instruction=step.operator_instruction,
+    )
+
+
 def append_confirmed_sample(step, session_root, aggregate_dir):
     missing = _missing_required_files(session_root, SCENARIO)
     if missing:
         raise ValueError("missing required capture files: " + ", ".join(missing))
+    _validate_step_identity(step)
 
     os.makedirs(aggregate_dir, exist_ok=True)
     manifest_path = os.path.join(aggregate_dir, "manifest.json")
@@ -196,6 +224,7 @@ def run_wizard(log_dir, aggregate_dir, output_dir):
 
 
 def _run_single_step(step, session_root, aggregate_dir):
+    step = _prompt_manual_identity(step)
     print("\n" + "=" * 72)
     print(f"KROK {step.index}/28: {step.category}")
     print(f"Sesja: {step.session_id}")
@@ -218,6 +247,21 @@ def _run_single_step(step, session_root, aggregate_dir):
     _wait("Sprawdz wizualnie analysis_frame_1.png i raw_frame_1.png. Enter oznacza reczne potwierdzenie etykiety.")
     result = append_confirmed_sample(step, session_root, aggregate_dir)
     print(f"Zapisano: {result['status']} / {result['sample_id']}")
+
+
+def _prompt_manual_identity(step):
+    if step.category not in {"gilded_yellow", "gilded_visually_similar"}:
+        return step
+    while True:
+        card_id = input("Wpisz rzeczywiste ID karty Gilded, np. Gilded_34: ").strip()
+        similarity_group = step.similarity_group
+        if step.category == "gilded_visually_similar":
+            hint = f", sugerowana: {step.similarity_group}" if step.similarity_group else ""
+            similarity_group = input(f"Wpisz similarity_group{hint}: ").strip()
+        try:
+            return resolve_manual_card_identity(step, card_id, similarity_group)
+        except ValueError as exc:
+            print(f"Niepoprawna etykieta: {exc}")
 
 
 def _run_final_validation(aggregate_dir, output_dir):
@@ -251,6 +295,13 @@ def _sample_already_recorded(step, aggregate_dir):
     manifest = _read_json(manifest_path, _empty_manifest())
     sample_id = stable_sample_id(step.session_id, SCENARIO, step.category)
     return any(item.get("sample_id") == sample_id for item in manifest.get("samples", []))
+
+
+def _validate_step_identity(step):
+    if step.expected_behavior != "identify":
+        return
+    if step.deck == "gilded" and not GILDED_CARD_ID_PATTERN.fullmatch(step.expected_card_id or ""):
+        raise ValueError("expected_card_id must match Gilded_<number>")
 
 
 def _step(

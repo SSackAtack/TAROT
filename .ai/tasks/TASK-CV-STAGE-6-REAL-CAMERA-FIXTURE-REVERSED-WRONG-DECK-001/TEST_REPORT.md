@@ -78,3 +78,33 @@ FAIL during import before tests - local dependency target imports `numpy` as an 
 ```
 
 This is an environment/dependency-target issue, not a wizard behavior failure.
+
+## Capture Wizard Ground-Truth Fix Verification
+
+```text
+Initial RED:
+ImportError: cannot import name 'resolve_manual_card_identity'
+
+cmd /c "cd /d E:\Antigravity\Projekty\TAROT && set PYTHONPATH=C:\tmp\tarot_pydeps_stage6;app_cv;.&& python -m unittest app_cv.tests.test_cv_detection_lab_stage6_real_camera_fixture -v"
+PASS - 16 tests
+
+cmd /c "cd /d E:\Antigravity\Projekty\TAROT && set PYTHONPATH=C:\tmp\tarot_pydeps_stage6;app_cv;.&& python -B -m py_compile tools\cv_detection_lab\stage6_real_camera_fixture.py tools\cv_detection_lab\stage6_real_camera_preflight.py tools\cv_detection_lab\stage6_real_camera_manual_review_pack.py tools\cv_detection_lab\stage6_real_camera_capture_wizard.py app_cv\tests\test_cv_detection_lab_stage6_real_camera_fixture.py"
+PASS
+
+cmd /c "cd /d E:\Antigravity\Projekty\TAROT && set PYTHONPATH=C:\tmp\tarot_pydeps_stage6;app_cv;.&& python tools\cv_detection_lab\stage6_real_camera_capture_wizard.py --print-plan"
+PASS - printed 28 planned capture steps with manual labels for YELLOW and visually similar categories
+```
+
+Added checks:
+
+- wizard plan does not prefill `expected_card_id` for `gilded_yellow` and `gilded_visually_similar`,
+- wizard requires real `Gilded_<number>` before recording those categories,
+- visually similar samples require a non-empty `similarity_group`,
+- preflight blocks placeholder IDs with `INVALID_EXPECTED_CARD_ID_PLACEHOLDER`.
+
+Stage 6 regression command was retried:
+
+```text
+cmd /c "cd /d E:\Antigravity\Projekty\TAROT && set PYTHONPATH=C:\tmp\tarot_pydeps_stage6;app_cv;.&& python -m unittest app_cv.tests.test_cv_detection_lab_stage6_preflight app_cv.tests.test_cv_detection_lab_stage6_identification app_cv.tests.test_cv_detection_lab_stage6_synthetic_validation -v"
+FAIL during import before tests - the local dependency target still imports `numpy` as an empty namespace, so `np.ndarray` is missing in `tools/cv_detection_lab/methods.py`.
+```

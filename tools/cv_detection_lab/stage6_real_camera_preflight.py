@@ -22,6 +22,7 @@ REQUIRED_MINIMUMS = {
     "gilded_yellow": 4,
     "gilded_visually_similar": 4,
 }
+PLACEHOLDER_PREFIXES = ("Gilded_YELLOW_", "Gilded_SIM_")
 
 
 def run_preflight(manifest_path, ground_truth_path, output_dir=None):
@@ -70,6 +71,7 @@ def run_preflight(manifest_path, ground_truth_path, output_dir=None):
                     manifest_value=getattr(sample, field),
                     ground_truth_value=label.get(field),
                 )
+        _validate_expected_card_id(sample, label, errors)
         if sample.category.startswith("wrong_deck") and label.get("expected_behavior") != "reject":
             _error(errors, "WRONG_DECK_BEHAVIOR_INVALID", sample_id=sample.sample_id)
         if sample.category == "gilded_reversed" and label.get("expected_orientation") != "reversed":
@@ -100,6 +102,15 @@ def _validate_session(sample, errors):
         path = os.path.join(scenario_dir, name)
         if not os.path.isfile(path):
             _error(errors, "MISSING_CAPTURE_FILE", sample_id=sample.sample_id, path=path)
+
+
+def _validate_expected_card_id(sample, label, errors):
+    card_id = label.get("expected_card_id")
+    if isinstance(card_id, str) and card_id.startswith(PLACEHOLDER_PREFIXES):
+        _error(errors, "INVALID_EXPECTED_CARD_ID_PLACEHOLDER", sample_id=sample.sample_id, expected_card_id=card_id)
+    if sample.expected_behavior == "identify" and sample.expected_deck == "gilded":
+        if not isinstance(card_id, str) or not card_id.startswith("Gilded_") or not card_id[7:].isdigit():
+            _error(errors, "INVALID_EXPECTED_CARD_ID_FORMAT", sample_id=sample.sample_id, expected_card_id=card_id)
 
 
 def _duplicate_errors(values, code, errors):

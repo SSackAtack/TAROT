@@ -309,3 +309,12 @@ fixture capture. Wizard nie uruchamia backendu, nie zmienia runtime i nie
 integruje ORB/AKAZE; tylko prowadzi operatora, sprawdza komplet plików sesji i
 dopisuje ręcznie potwierdzony manifest/ground truth. Status taska pozostaje
 `PROVISIONAL_BLOCKED` do czasu realnego zebrania 28 fizycznych sesji.
+
+## Session Status (2026-06-04 Capture Wizard Ground-Truth Fix)
+
+Po review `5f784a63e5d83fe6313356fab08747952a65414c` usunięto ryzyko
+fałszywego ground truth: wizard nie wypełnia już `expected_card_id`
+placeholderami `Gilded_YELLOW_*` / `Gilded_SIM_*`. Kategorie `gilded_yellow`
+i `gilded_visually_similar` wymagają ręcznego wpisania realnego `Gilded_<number>`
+przed zapisem próbki, a preflight blokuje placeholdery kodem
+`INVALID_EXPECTED_CARD_ID_PLACEHOLDER`.

@@ -22,3 +22,10 @@
 - Wizard prints existing live capture env vars, guides the operator through the 28 required samples and records only complete, manually confirmed sessions.
 - Added OpenCV-unavailable fallback for manual review pack generation in constrained test environments.
 - Kept task `PROVISIONAL_BLOCKED` because physical sessions still have not been captured.
+
+## 2026-06-04 — Capture wizard ground-truth fix
+
+- Removed placeholder card IDs from `gilded_yellow` and `gilded_visually_similar` wizard plan steps.
+- Added manual real-card-ID resolution requiring `Gilded_<number>` before recording those categories.
+- Added preflight guard `INVALID_EXPECTED_CARD_ID_PLACEHOLDER` for blocked placeholder IDs.
+- Kept runtime untouched and task `PROVISIONAL_BLOCKED` pending physical capture.

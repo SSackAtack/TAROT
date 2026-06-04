@@ -29,6 +29,8 @@ Wizard:
 - drukuje właściwe zmienne środowiskowe dla istniejącego live capture,
 - czeka na ręczne potwierdzenie operatora,
 - sprawdza, czy sesja ma wymagane pliki,
+- dla `YELLOW` i `visually similar` wymaga wpisania rzeczywistego ID karty
+  w formacie `Gilded_XX`,
 - dopisuje potwierdzoną próbkę do `manifest.json` i `ground_truth.json`,
 - po zebraniu kompletu uruchamia preflight,
 - po `PASS` generuje manual review pack.
@@ -82,6 +84,11 @@ stage6_real_gilded_similar_group_01_card_01
 - 2 grupy wizualnie podobnych kart Gilded, po minimum 2 karty.
 
 Łączne minimum: 28 sesji.
+
+W kategoriach `YELLOW` i `visually similar` wizard nie zgaduje tożsamości
+karty. Operator musi wpisać realny identyfikator z talii Gilded, np.
+`Gilded_34`. Etykiety techniczne typu `Gilded_YELLOW_01` albo
+`Gilded_SIM_01_01` są zakazane i preflight je zablokuje.
 
 ## Procedura pojedynczej sesji
 
