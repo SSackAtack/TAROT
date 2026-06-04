@@ -146,3 +146,19 @@ OK
 ### Frontend
 
 `NOT_RUN` — task nie zmienia `app_ar/`.
+
+---
+
+## TASK-CV-OFFLINE-LAB-STAGE-4-MANUAL-REVIEW-PACK-001
+
+Data: 2026-06-04
+
+No algorithmic tests. Packaging only.
+
+### Local verification
+
+- 6 PNG files exist: PASS
+- empty_to_empty placeholder exists: PASS
+- README_FOR_SUPERVISOR.md exists: PASS
+- report.md / report.json / matrix.csv copied: PASS
+- ZIP archive exists (6.2 MB): PASS

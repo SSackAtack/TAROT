@@ -14,3 +14,10 @@
 - Added regression test ensuring all `manual_review_paths` files exist.
 - No runtime changes.
 - No card identification changes.
+
+## TASK-CV-OFFLINE-LAB-STAGE-4-MANUAL-REVIEW-PACK-001
+
+- Prepared local review pack with 6 crop debug sheets for Supervisor.
+- Created README_FOR_SUPERVISOR.md with review criteria.
+- Created ZIP archive for distribution.
+- No code changes. Packaging only.

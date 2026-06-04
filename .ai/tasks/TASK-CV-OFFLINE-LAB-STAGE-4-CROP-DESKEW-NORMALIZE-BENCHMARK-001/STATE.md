@@ -77,3 +77,41 @@ Stage 4 remains `PROVISIONAL_RECOMMENDED`.
 ### Required next action
 
 Prepare Stage 4 manual review pack after Supervisor confirms this fix.
+
+## TASK-CV-OFFLINE-LAB-STAGE-4-MANUAL-REVIEW-PACK-001
+
+### Summary
+
+Prepared local manual review pack for Stage 4 `quad_warp_perspective_fixed_aspect__resize_only_normalization` crop debug sheets.
+
+### Files prepared locally
+
+- `logs/offline_replay/stage4_manual_review_pack/quad_warp_perspective_fixed_aspect__resize_only_normalization/01_empty_to_empty_crop_debug_sheet.png`
+- `logs/offline_replay/stage4_manual_review_pack/quad_warp_perspective_fixed_aspect__resize_only_normalization/02_empty_to_one_card_crop_debug_sheet.png`
+- `logs/offline_replay/stage4_manual_review_pack/quad_warp_perspective_fixed_aspect__resize_only_normalization/03_empty_to_three_cards_crop_debug_sheet.png`
+- `logs/offline_replay/stage4_manual_review_pack/quad_warp_perspective_fixed_aspect__resize_only_normalization/04_one_card_to_three_cards_crop_debug_sheet.png`
+- `logs/offline_replay/stage4_manual_review_pack/quad_warp_perspective_fixed_aspect__resize_only_normalization/05_one_card_to_empty_crop_debug_sheet.png`
+- `logs/offline_replay/stage4_manual_review_pack/quad_warp_perspective_fixed_aspect__resize_only_normalization/06_three_cards_to_empty_crop_debug_sheet.png`
+- `logs/offline_replay/stage4_manual_review_pack/README_FOR_SUPERVISOR.md`
+- `logs/offline_replay/stage4_manual_review_pack_quad_warp_perspective_fixed_aspect.zip`
+
+### Tests
+
+No algorithmic tests required. Packaging only.
+
+Verification:
+
+- confirmed all 6 PNG files exist
+- confirmed `empty_to_empty` placeholder exists
+- confirmed README exists
+- confirmed ZIP exists
+
+### Decision
+
+Stage 4 still `PROVISIONAL_RECOMMENDED`.
+
+Waiting for Supervisor visual review.
+
+### Required next action
+
+Michał uploads the six PNG crop debug sheets to ChatGPT Supervisor for manual Stage 4 review.
