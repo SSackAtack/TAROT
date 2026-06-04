@@ -37,6 +37,8 @@ MATRIX_COLUMNS = [
     "confidence_gap",
     "runtime_ms",
     "extracted_ok",
+    "extraction_error",
+    "orb_attempted",
 ]
 
 
@@ -95,6 +97,108 @@ def _load_rws_references(reference_deck_dir):
             raise ValueError(f"Cannot read reference card: {image_path}")
         references.append(ReferenceCard(card_id=card_id, card_name=card_id, image_path=image_path, image=image))
     return references
+
+
+def build_benchmark_summary(results, runtimes, fixture_id):
+    sample_count = len(results)
+    processed_count = sum(1 for r in results if r["extracted_ok"])
+    extraction_failed_count = sum(1 for r in results if not r["extracted_ok"])
+    orb_attempted_count = sum(1 for r in results if r["orb_attempted"])
+
+    # All samples ORB metrics
+    orb_top1_all = sum(1 for r in results if r["top1_correct"]) / sample_count if sample_count > 0 else 0.0
+    orb_top3_all = sum(1 for r in results if r["top3_contains_expected"]) / sample_count if sample_count > 0 else 0.0
+
+    # Extracted only ORB metrics
+    orb_top1_extracted_only = (sum(1 for r in results if r["orb_attempted"] and r["top1_correct"]) / orb_attempted_count) if orb_attempted_count > 0 else None
+    orb_top3_extracted_only = (sum(1 for r in results if r["orb_attempted"] and r["top3_contains_expected"]) / orb_attempted_count) if orb_attempted_count > 0 else None
+
+    # Quality Gate ACCEPT subset metrics
+    accept_subset = [r for r in results if r["quality_gate_decision"] == ACCEPT]
+    accept_count = len(accept_subset)
+    retry_capture_count = sum(1 for r in results if r["quality_gate_decision"] == RETRY)
+    manual_review_count = sum(1 for r in results if r["quality_gate_decision"] == MANUAL)
+
+    orb_top1_accept = (sum(1 for r in accept_subset if r["top1_correct"]) / accept_count) if accept_count > 0 else None
+    orb_top3_accept = (sum(1 for r in accept_subset if r["top3_contains_expected"]) / accept_count) if accept_count > 0 else None
+
+    def get_group_metrics(subset):
+        if not subset:
+            return None
+        sub_accept = [r for r in subset if r["quality_gate_decision"] == ACCEPT]
+        sub_accept_count = len(sub_accept)
+        acc_top1 = (sum(1 for r in sub_accept if r["top1_correct"]) / sub_accept_count) if sub_accept_count > 0 else None
+        
+        sub_extracted = [r for r in subset if r["orb_attempted"]]
+        sub_extracted_count = len(sub_extracted)
+        top1_extracted = (sum(1 for r in sub_extracted if r["top1_correct"]) / sub_extracted_count) if sub_extracted_count > 0 else None
+        top3_extracted = (sum(1 for r in sub_extracted if r["top3_contains_expected"]) / sub_extracted_count) if sub_extracted_count > 0 else None
+
+        return {
+            "count": len(subset),
+            "orb_top1_accuracy": sum(1 for r in subset if r["top1_correct"]) / len(subset),
+            "orb_top3_accuracy": sum(1 for r in subset if r["top3_contains_expected"]) / len(subset),
+            "orb_top1_accuracy_extracted_only": top1_extracted,
+            "orb_top3_accuracy_extracted_only": top3_extracted,
+            "accept_count": sub_accept_count,
+            "retry_capture_count": sum(1 for r in subset if r["quality_gate_decision"] == RETRY),
+            "manual_review_count": sum(1 for r in subset if r["quality_gate_decision"] == MANUAL),
+            "orb_top1_accuracy_accept_subset": acc_top1,
+        }
+
+    categories = ["rws_bright_clear", "rws_bright_glare", "rws_dark_clear", "rws_dark_glare"]
+    category_metrics = {cat: get_group_metrics([r for r in results if r["category"] == cat]) for cat in categories}
+
+    bright_metrics = get_group_metrics([r for r in results if "bright" in r["category"]])
+    dark_metrics = get_group_metrics([r for r in results if "dark" in r["category"]])
+    clear_metrics = get_group_metrics([r for r in results if "clear" in r["category"]])
+    glare_metrics = get_group_metrics([r for r in results if "glare" in r["category"]])
+    upright_metrics = get_group_metrics([r for r in results if r["expected_orientation"] == "upright"])
+    reversed_metrics = get_group_metrics([r for r in results if r["expected_orientation"] == "reversed"])
+
+    return {
+        "stage": "stage6_rws_expansion_benchmark",
+        "fixture_id": fixture_id,
+        "sample_count": sample_count,
+        "processed_count": processed_count,
+        "extraction_failed_count": extraction_failed_count,
+        "orb_attempted_count": orb_attempted_count,
+        "orb_top1_accuracy_all": round(orb_top1_all, 6),
+        "orb_top3_accuracy_all": round(orb_top3_all, 6),
+        "orb_top1_accuracy_extracted_only": round(orb_top1_extracted_only, 6) if orb_top1_extracted_only is not None else None,
+        "orb_top3_accuracy_extracted_only": round(orb_top3_extracted_only, 6) if orb_top3_extracted_only is not None else None,
+        "orb_top1_accuracy_accept_subset": round(orb_top1_accept, 6) if orb_top1_accept is not None else None,
+        "orb_top3_accuracy_accept_subset": round(orb_top3_accept, 6) if orb_top3_accept is not None else None,
+        "accept_count": accept_count,
+        "retry_capture_count": retry_capture_count,
+        "manual_review_count": manual_review_count,
+        "quality_gate_decision_counts": {
+            ACCEPT: accept_count,
+            RETRY: retry_capture_count,
+            MANUAL: manual_review_count,
+        },
+        "bright_clear_metrics": category_metrics["rws_bright_clear"],
+        "bright_glare_metrics": category_metrics["rws_bright_glare"],
+        "dark_clear_metrics": category_metrics["rws_dark_clear"],
+        "dark_glare_metrics": category_metrics["rws_dark_glare"],
+        "bright_vs_dark_summary": {
+            "bright": bright_metrics,
+            "dark": dark_metrics,
+        },
+        "clear_vs_glare_summary": {
+            "clear": clear_metrics,
+            "glare": glare_metrics,
+        },
+        "upright_vs_reversed_summary": {
+            "upright": upright_metrics,
+            "reversed": reversed_metrics,
+        },
+        "wrong_deck_far": "NOT_APPLICABLE",
+        "wrong_deck_reason": "fixture contains no wrong-deck samples",
+        "runtime_proxy_mean_ms": round(statistics.fmean(runtimes), 3) if runtimes else None,
+        "runtime_proxy_p50_ms": round(float(np.percentile(runtimes, 50)), 3) if runtimes else None,
+        "runtime_proxy_p95_ms": round(float(np.percentile(runtimes, 95)), 3) if runtimes else None,
+    }
 
 
 def run_rws_benchmark(manifest_path, ground_truth_path, reference_deck_dir, output_dir):
@@ -165,95 +269,89 @@ def run_rws_benchmark(manifest_path, ground_truth_path, reference_deck_dir, outp
             raise ValueError(f"Cannot read frame {frame_path} for sample {sample.sample_id}")
 
         extracted_ok = True
+        extraction_error = ""
+        crop = None
         try:
             crop = extract_card(frame)
             cv2.imwrite(os.path.join(output_dir, "extracted_crops", f"{sample.sample_id}.png"), crop)
         except Exception as exc:
             extracted_ok = False
-            crop = np.zeros((330, 200, 3), dtype=np.uint8)
+            extraction_error = str(exc)
 
-        # Identification
-        started = time.perf_counter()
-        id_res = run_identification_method("orb_bfmatcher_ratio_test", crop, references)
-        runtime_ms = (time.perf_counter() - started) * 1000.0
-        runtimes.append(runtime_ms)
+        if not extracted_ok:
+            orb_attempted = False
+            runtime_ms = None
+            gate_decision = MANUAL
+            gate_reasons = ["EXTRACTION_FAILED"]
+            predicted_card_id = None
+            top1_correct = False
+            top3_contains_expected = False
+            confidence_score = 0.0
+            confidence_gap = 0.0
 
-        # Quality Gate
-        gate_res, highlight_mask = evaluate_quality_gate(
-            crop, confidence_score=id_res.confidence_score, confidence_gap=id_res.confidence_gap
-        )
+            dummy_crop = np.zeros((330, 200, 3), dtype=np.uint8)
+            # Create a simple gate_res proxy object
+            class GateResultProxy:
+                def __init__(self, decision, reasons):
+                    self.decision = decision
+                    self.reasons = reasons
+                    self.threshold_scope = "BENCHMARK_HEURISTIC_ONLY"
 
-        # Overlay image
-        overlay = build_quality_gate_overlay(crop, highlight_mask, gate_res)
-        cv2.imwrite(os.path.join(output_dir, "quality_gate_review_pack", f"{sample.sample_id}.png"), overlay)
+            gate_res = GateResultProxy(gate_decision, gate_reasons)
+            highlight_mask = np.zeros((330, 200), dtype=np.uint8)
+            overlay = build_quality_gate_overlay(dummy_crop, highlight_mask, gate_res)
+            cv2.imwrite(os.path.join(output_dir, "quality_gate_review_pack", f"{sample.sample_id}.png"), overlay)
+        else:
+            orb_attempted = True
+            started = time.perf_counter()
+            id_res = run_identification_method("orb_bfmatcher_ratio_test", crop, references)
+            runtime_ms = (time.perf_counter() - started) * 1000.0
+            runtimes.append(runtime_ms)
 
-        expected_id = sample.expected_card_id
-        top_ids = [item["card_id"] for item in id_res.top_k_candidates]
+            gate_res, highlight_mask = evaluate_quality_gate(
+                crop, confidence_score=id_res.confidence_score, confidence_gap=id_res.confidence_gap
+            )
+
+            overlay = build_quality_gate_overlay(crop, highlight_mask, gate_res)
+            cv2.imwrite(os.path.join(output_dir, "quality_gate_review_pack", f"{sample.sample_id}.png"), overlay)
+
+            expected_id = sample.expected_card_id
+            top_ids = [item["card_id"] for item in id_res.top_k_candidates]
+            predicted_card_id = id_res.predicted_card_id
+            top1_correct = bool(predicted_card_id == expected_id)
+            top3_contains_expected = bool(expected_id in top_ids)
+            confidence_score = id_res.confidence_score
+            confidence_gap = id_res.confidence_gap
+            gate_decision = gate_res.decision
+            gate_reasons = gate_res.reasons
 
         result = {
             "sample_id": sample.sample_id,
             "category": sample.category,
-            "expected_card_id": expected_id,
+            "expected_card_id": sample.expected_card_id,
             "expected_orientation": sample.expected_orientation,
             "quality_expectation": sample.quality_expectation,
-            "quality_gate_decision": gate_res.decision,
-            "quality_gate_reasons": gate_res.reasons,
-            "predicted_card_id": id_res.predicted_card_id,
-            "top1_correct": bool(id_res.predicted_card_id == expected_id),
-            "top3_contains_expected": bool(expected_id in top_ids),
-            "confidence_score": id_res.confidence_score,
-            "confidence_gap": id_res.confidence_gap,
-            "runtime_ms": round(runtime_ms, 3),
+            "quality_gate_decision": gate_decision,
+            "quality_gate_reasons": gate_reasons,
+            "predicted_card_id": predicted_card_id,
+            "top1_correct": top1_correct,
+            "top3_contains_expected": top3_contains_expected,
+            "confidence_score": confidence_score,
+            "confidence_gap": confidence_gap,
+            "runtime_ms": round(runtime_ms, 3) if runtime_ms is not None else "",
             "extracted_ok": extracted_ok,
+            "extraction_error": extraction_error,
+            "orb_attempted": orb_attempted,
         }
 
         # If Top-1 is incorrect and sample is ACCEPTED, save to error review pack
-        if not result["top1_correct"] and gate_res.decision == ACCEPT:
+        if extracted_ok and not result["top1_correct"] and gate_decision == ACCEPT:
             cv2.imwrite(os.path.join(output_dir, "error_review_pack", f"{sample.sample_id}.png"), crop)
 
         results.append(result)
 
-    # 3. Calculate Metrics
-    sample_count = len(results)
-    processed_count = sum(1 for r in results if r["extracted_ok"])
-    
-    orb_top1_all = sum(1 for r in results if r["top1_correct"]) / sample_count
-    orb_top3_all = sum(1 for r in results if r["top3_contains_expected"]) / sample_count
-
-    accept_subset = [r for r in results if r["quality_gate_decision"] == ACCEPT]
-    accept_count = len(accept_subset)
-    retry_capture_count = sum(1 for r in results if r["quality_gate_decision"] == RETRY)
-    manual_review_count = sum(1 for r in results if r["quality_gate_decision"] == MANUAL)
-
-    orb_top1_accept = (sum(1 for r in accept_subset if r["top1_correct"]) / accept_count) if accept_count > 0 else None
-    orb_top3_accept = (sum(1 for r in accept_subset if r["top3_contains_expected"]) / accept_count) if accept_count > 0 else None
-
-    # Group metrics helpers
-    def get_group_metrics(subset):
-        if not subset:
-            return None
-        sub_accept = [r for r in subset if r["quality_gate_decision"] == ACCEPT]
-        sub_accept_count = len(sub_accept)
-        acc_top1 = (sum(1 for r in sub_accept if r["top1_correct"]) / sub_accept_count) if sub_accept_count > 0 else None
-        return {
-            "count": len(subset),
-            "orb_top1_accuracy": sum(1 for r in subset if r["top1_correct"]) / len(subset),
-            "orb_top3_accuracy": sum(1 for r in subset if r["top3_contains_expected"]) / len(subset),
-            "accept_count": sub_accept_count,
-            "retry_capture_count": sum(1 for r in subset if r["quality_gate_decision"] == RETRY),
-            "manual_review_count": sum(1 for r in subset if r["quality_gate_decision"] == MANUAL),
-            "orb_top1_accuracy_accept_subset": acc_top1,
-        }
-
-    categories = ["rws_bright_clear", "rws_bright_glare", "rws_dark_clear", "rws_dark_glare"]
-    category_metrics = {cat: get_group_metrics([r for r in results if r["category"] == cat]) for cat in categories}
-
-    bright_metrics = get_group_metrics([r for r in results if "bright" in r["category"]])
-    dark_metrics = get_group_metrics([r for r in results if "dark" in r["category"]])
-    clear_metrics = get_group_metrics([r for r in results if "clear" in r["category"]])
-    glare_metrics = get_group_metrics([r for r in results if "glare" in r["category"]])
-    upright_metrics = get_group_metrics([r for r in results if r["expected_orientation"] == "upright"])
-    reversed_metrics = get_group_metrics([r for r in results if r["expected_orientation"] == "reversed"])
+    # 3. Calculate Metrics using helper
+    summary = build_benchmark_summary(results, runtimes, aggregate.fixture_id)
 
     # Connection and review pack README
     review_pack_index = {
@@ -271,46 +369,6 @@ def run_rws_benchmark(manifest_path, ground_truth_path, reference_deck_dir, outp
         else:
             handle.write(f"# Error Review Pack\n\nContains {errors_count} incorrect accepted matches.\n")
 
-    summary = {
-        "stage": "stage6_rws_expansion_benchmark",
-        "fixture_id": aggregate.fixture_id,
-        "sample_count": sample_count,
-        "processed_count": processed_count,
-        "orb_top1_accuracy_all": round(orb_top1_all, 6),
-        "orb_top3_accuracy_all": round(orb_top3_all, 6),
-        "orb_top1_accuracy_accept_subset": round(orb_top1_accept, 6) if orb_top1_accept is not None else None,
-        "orb_top3_accuracy_accept_subset": round(orb_top3_accept, 6) if orb_top3_accept is not None else None,
-        "accept_count": accept_count,
-        "retry_capture_count": retry_capture_count,
-        "manual_review_count": manual_review_count,
-        "quality_gate_decision_counts": {
-            ACCEPT: accept_count,
-            RETRY: retry_capture_count,
-            MANUAL: manual_review_count,
-        },
-        "bright_clear_metrics": category_metrics["rws_bright_clear"],
-        "bright_glare_metrics": category_metrics["rws_bright_glare"],
-        "dark_clear_metrics": category_metrics["rws_dark_clear"],
-        "dark_glare_metrics": category_metrics["rws_dark_glare"],
-        "bright_vs_dark_summary": {
-            "bright": bright_metrics,
-            "dark": dark_metrics,
-        },
-        "clear_vs_glare_summary": {
-            "clear": clear_metrics,
-            "glare": glare_metrics,
-        },
-        "upright_vs_reversed_summary": {
-            "upright": upright_metrics,
-            "reversed": reversed_metrics,
-        },
-        "wrong_deck_far": "NOT_APPLICABLE",
-        "wrong_deck_reason": "fixture contains no wrong-deck samples",
-        "runtime_proxy_mean_ms": round(statistics.fmean(runtimes), 3),
-        "runtime_proxy_p50_ms": round(float(np.percentile(runtimes, 50)), 3),
-        "runtime_proxy_p95_ms": round(float(np.percentile(runtimes, 95)), 3),
-    }
-
     # Write output files
     with open(os.path.join(output_dir, "matrix.csv"), "w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=MATRIX_COLUMNS)
@@ -326,23 +384,35 @@ def run_rws_benchmark(manifest_path, ground_truth_path, reference_deck_dir, outp
     def _acc_str(val):
         return "n/a" if val is None else f"{val * 100:.1f}%"
 
+    categories = ["rws_bright_clear", "rws_bright_glare", "rws_dark_clear", "rws_dark_glare"]
+    bright_metrics = summary["bright_vs_dark_summary"]["bright"]
+    dark_metrics = summary["bright_vs_dark_summary"]["dark"]
+    clear_metrics = summary["clear_vs_glare_summary"]["clear"]
+    glare_metrics = summary["clear_vs_glare_summary"]["glare"]
+    upright_metrics = summary["upright_vs_reversed_summary"]["upright"]
+    reversed_metrics = summary["upright_vs_reversed_summary"]["reversed"]
+
     lines = [
         "# Stage 6 RWS Fixture Expansion Offline Benchmark",
         "",
         "Offline-only benchmark. No runtime thresholds or integration approved.",
         "",
-        f"* **Total samples**: {sample_count}",
-        f"* **Processed samples**: {processed_count}",
-        f"* **ORB Top-1 accuracy (all)**: {_acc_str(orb_top1_all)}",
-        f"* **ORB Top-3 accuracy (all)**: {_acc_str(orb_top3_all)}",
-        f"* **ORB Top-1 accuracy (accept subset)**: {_acc_str(orb_top1_accept)} (Count: {accept_count})",
-        f"* **ORB Top-3 accuracy (accept subset)**: {_acc_str(orb_top3_accept)}",
+        f"* **Total samples**: {summary['sample_count']}",
+        f"* **Processed samples**: {summary['processed_count']}",
+        f"* **Extraction failed count**: {summary['extraction_failed_count']}",
+        f"* **ORB attempted count**: {summary['orb_attempted_count']}",
+        f"* **ORB Top-1 accuracy (all)**: {_acc_str(summary['orb_top1_accuracy_all'])}",
+        f"* **ORB Top-3 accuracy (all)**: {_acc_str(summary['orb_top3_accuracy_all'])}",
+        f"* **ORB Top-1 accuracy (extracted only)**: {_acc_str(summary['orb_top1_accuracy_extracted_only'])}",
+        f"* **ORB Top-3 accuracy (extracted only)**: {_acc_str(summary['orb_top3_accuracy_extracted_only'])}",
+        f"* **ORB Top-1 accuracy (accept subset)**: {_acc_str(summary['orb_top1_accuracy_accept_subset'])} (Count: {summary['accept_count']})",
+        f"* **ORB Top-3 accuracy (accept subset)**: {_acc_str(summary['orb_top3_accuracy_accept_subset'])}",
         "",
         "## Quality Gate Decision Distribution",
         "",
-        f"- **ACCEPT_FOR_IDENTIFICATION**: {accept_count}",
-        f"- **RETRY_CAPTURE**: {retry_capture_count}",
-        f"- **MANUAL_REVIEW**: {manual_review_count}",
+        f"- **ACCEPT_FOR_IDENTIFICATION**: {summary['accept_count']}",
+        f"- **RETRY_CAPTURE**: {summary['retry_capture_count']}",
+        f"- **MANUAL_REVIEW**: {summary['manual_review_count']}",
         "",
         "## Metrics By Category",
         "",
@@ -350,7 +420,7 @@ def run_rws_benchmark(manifest_path, ground_truth_path, reference_deck_dir, outp
         "|---|---:|---:|---:|---:|---:|---:|",
     ]
     for cat in categories:
-        m = category_metrics[cat]
+        m = summary[f"{cat.replace('rws_', '')}_metrics"]
         if m:
             lines.append(
                 f"| {cat} | {m['count']} | {_acc_str(m['orb_top1_accuracy'])} | {m['accept_count']} | "
@@ -382,12 +452,17 @@ def run_rws_benchmark(manifest_path, ground_truth_path, reference_deck_dir, outp
         f"| Upright | {upright_metrics['count']} | {_acc_str(upright_metrics['orb_top1_accuracy'])} | {upright_metrics['accept_count']} | {upright_metrics['retry_capture_count']} | {upright_metrics['manual_review_count']} |",
         f"| Reversed | {reversed_metrics['count']} | {_acc_str(reversed_metrics['orb_top1_accuracy'])} | {reversed_metrics['accept_count']} | {reversed_metrics['retry_capture_count']} | {reversed_metrics['manual_review_count']} |",
         "",
-        "## Runtime Performance (Proxy)",
-        "",
-        f"- **Mean runtime**: {summary['runtime_proxy_mean_ms']:.3f} ms",
-        f"- **p50 runtime**: {summary['runtime_proxy_p50_ms']:.3f} ms",
-        f"- **p95 runtime**: {summary['runtime_proxy_p95_ms']:.3f} ms",
     ])
+
+    if summary['runtime_proxy_mean_ms'] is not None:
+        lines.extend([
+            "## Runtime Performance (Proxy)",
+            "",
+            f"- **Mean runtime**: {summary['runtime_proxy_mean_ms']:.3f} ms",
+            f"- **p50 runtime**: {summary['runtime_proxy_p50_ms']:.3f} ms",
+            f"- **p95 runtime**: {summary['runtime_proxy_p95_ms']:.3f} ms",
+            "",
+        ])
 
     with open(os.path.join(output_dir, "report.md"), "w", encoding="utf-8") as handle:
         handle.write("\n".join(lines) + "\n")
