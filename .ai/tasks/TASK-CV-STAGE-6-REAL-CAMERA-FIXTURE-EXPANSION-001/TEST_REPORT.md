@@ -2,10 +2,6 @@
 
 ## 2026-06-04
 
-# TEST REPORT
-
-## 2026-06-04
-
 - Focused expansion tests: `PASS` — 8 testów.
 - Combined real-camera fixture tests: `PASS` — 29 testów.
 - Full backend suite: `PASS` — 429 testów.

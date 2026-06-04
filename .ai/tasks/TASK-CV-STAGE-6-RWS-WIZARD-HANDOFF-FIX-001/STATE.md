@@ -13,4 +13,4 @@ Prace zostały pomyślnie ukończone:
 - Skorygowano raport testów poprzedniego zadania (`TASK-CV-STAGE-6-REAL-CAMERA-FIXTURE-EXPANSION-001`), oznaczając test jako „static check”.
 
 ## Kolejne kroki
-Zadanie jest gotowe do przekazania do weryfikacji i scalenia do mastera.
+Zadanie jest gotowe do review Supervisora i handoffu.
