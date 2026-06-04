@@ -18,3 +18,5 @@
 - Zakończono fizyczne przechwytywanie 8 próbek RWS na jasnej macie.
 - Spakowano manual review pack do formatu ZIP i obliczono sumę kontrolną SHA-256.
 - Zaktualizowano status zadania na `PROVISIONAL_ACCEPTED_FOR_MANUAL_REVIEW`.
+- Poprawiono fixture_id w plikach manifest.json i ground_truth.json.
+- Ponownie wygenerowano paczkę preflight i spakowano ZIP z nową sumą kontrolną.
