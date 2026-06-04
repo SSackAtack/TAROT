@@ -20,3 +20,11 @@
 - No runtime changes.
 - No card identification changes.
 - No ORB / FLANN / template matching / OCR.
+
+## TASK-CV-OFFLINE-LAB-STAGE-5-MANUAL-REVIEW-PACK-001
+
+- Prepared local manual review pack with 6 Stage 5 debug sheets for `quality_metric_suite_v1`.
+- Pack path: `logs/offline_replay/stage5_crop_quality_validation/manual_review_pack_quality_metric_suite_v1/`.
+- No runtime changes.
+- No benchmark logic changes.
+- No method approval recorded.

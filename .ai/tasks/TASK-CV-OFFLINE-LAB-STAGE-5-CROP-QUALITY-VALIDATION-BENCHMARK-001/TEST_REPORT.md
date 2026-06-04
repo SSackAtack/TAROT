@@ -215,3 +215,27 @@ OK
 ### Frontend
 
 `NOT_RUN` — task nie zmienia `app_ar/`.
+
+---
+
+## TASK-CV-OFFLINE-LAB-STAGE-5-MANUAL-REVIEW-PACK-001
+
+### Artefact check
+
+```powershell
+Get-ChildItem logs\offline_replay\stage5_crop_quality_validation\manual_review_pack_quality_metric_suite_v1 -Filter *.png
+```
+
+Wynik:
+
+```text
+6 PNG files present
+```
+
+### Backend
+
+`NOT_RUN` — task kopiuje istniejace artefakty manual review i aktualizuje dokumentacje.
+
+### Frontend
+
+`NOT_RUN` — task nie zmienia `app_ar/`.

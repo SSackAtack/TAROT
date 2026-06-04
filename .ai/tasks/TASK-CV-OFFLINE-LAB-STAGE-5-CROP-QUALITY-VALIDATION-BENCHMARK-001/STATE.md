@@ -80,3 +80,38 @@ Stage 5 remains `PROVISIONAL_RECOMMENDED`.
 ### Required next action
 
 Supervisor review of this fix. Do not prepare Stage 5 manual review pack until the fix is approved.
+
+## TASK-CV-OFFLINE-LAB-STAGE-5-MANUAL-REVIEW-PACK-001
+
+### Summary
+
+Prepared the Stage 5 manual review pack after Supervisor accepted the foreground/margin fix.
+
+### Output
+
+```text
+logs/offline_replay/stage5_crop_quality_validation/manual_review_pack_quality_metric_suite_v1/
+```
+
+### Files
+
+```text
+empty_to_empty.crop_quality_debug_sheet.png
+empty_to_one_card.crop_quality_debug_sheet.png
+empty_to_three_cards.crop_quality_debug_sheet.png
+one_card_to_three_cards.crop_quality_debug_sheet.png
+one_card_to_empty.crop_quality_debug_sheet.png
+three_cards_to_empty.crop_quality_debug_sheet.png
+```
+
+### Decision
+
+Stage 5 is still not approved in repo. The manual review pack is ready for Michal.
+
+### Required next action
+
+Michal reviews all 6 debug sheets and decides whether to record:
+
+```text
+APPROVED_STAGE_5_METHOD: quality_metric_suite_v1
+```
