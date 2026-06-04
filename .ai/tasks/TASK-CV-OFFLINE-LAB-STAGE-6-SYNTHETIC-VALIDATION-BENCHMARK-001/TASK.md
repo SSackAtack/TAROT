@@ -77,6 +77,6 @@ owner approval if a verified blocking defect is found.
 
 `feat: dodaj syntetyczny benchmark walidacyjny stage6`
 
-## Final Decision
+## Plan Review Status
 
-`APPROVED_BY_CHATGPT_SUPERVISOR`
+`PENDING_SUPERVISOR_REVIEW`
