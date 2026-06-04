@@ -24,6 +24,7 @@ from tools.cv_detection_lab.crop_deskew_methods import (
     available_crop_methods,
     available_normalizations,
     build_debug_sheet,
+    build_no_crop_debug_sheet,
     resize_to_target,
     run_crop_deskew,
     DEFAULT_TARGET_WIDTH,
@@ -201,7 +202,11 @@ def run_benchmark(fixture_dir, output_dir, pipeline_variants=None):
             rows.append(row)
 
             # Write debug outputs
-            _write_debug_outputs(output_dir, variant_key, pair.name, source, stage3, result)
+            _write_debug_outputs(
+                output_dir, variant_key, pair.name, source, stage3, result,
+                expected_crop_count=pair.expected_crop_count,
+                verdict=row["verdict"],
+            )
 
     recommended = _choose_recommended_pipeline(rows, pipeline_variants)
     summary = {
@@ -328,7 +333,7 @@ def _choose_recommended_pipeline(rows, pipeline_variants):
 # Debug output
 # ---------------------------------------------------------------------------
 
-def _write_debug_outputs(output_dir, variant_key, pair_name, source_frame, stage3_result, crop_result):
+def _write_debug_outputs(output_dir, variant_key, pair_name, source_frame, stage3_result, crop_result, expected_crop_count=0, verdict="UNKNOWN"):
     pair_dir = os.path.join(output_dir, variant_key, pair_name)
     os.makedirs(pair_dir, exist_ok=True)
 
@@ -353,10 +358,17 @@ def _write_debug_outputs(output_dir, variant_key, pair_name, source_frame, stage
         if crop.normalized_crop is not None:
             cv2.imwrite(os.path.join(pair_dir, f"{prefix}_normalized.png"), crop.normalized_crop)
 
-    # Debug sheet
+    # Debug sheet — always generate crop_debug_sheet.png so manual_review_paths are valid
     sheet = build_debug_sheet(crop_result.crops, source_frame, DEFAULT_TARGET_WIDTH, DEFAULT_TARGET_HEIGHT)
-    if sheet is not None:
-        cv2.imwrite(os.path.join(pair_dir, "crop_debug_sheet.png"), sheet)
+    if sheet is None:
+        # No crops — write placeholder so manual review path exists
+        sheet = build_no_crop_debug_sheet(
+            pair_name=pair_name,
+            expected_crop_count=expected_crop_count,
+            crop_count=len(crop_result.crops),
+            verdict=verdict,
+        )
+    cv2.imwrite(os.path.join(pair_dir, "crop_debug_sheet.png"), sheet)
 
     # JSON debug
     _write_json(os.path.join(pair_dir, "crop_debug.json"), crop_result.to_dict())

@@ -266,6 +266,65 @@ class TestNoIdentificationFiles(unittest.TestCase):
             for fname in files:
                 self.assertNotIn(fname, forbidden, f"Forbidden identification file found: {fname}")
 
+class TestEmptyToEmptyManualReviewPathExists(unittest.TestCase):
+    """Test 10 — empty_to_empty manual review path exists."""
+
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp(prefix="stage4_review_")
+        _create_synthetic_fixture(self.tmpdir)
+        self.output_dir = os.path.join(self.tmpdir, "output")
+
+    def tearDown(self):
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
+
+    def test_empty_to_empty_manual_review_path_exists(self):
+        summary = run_benchmark(
+            self.tmpdir, self.output_dir,
+            pipeline_variants=[("bbox_crop_resize", "resize_only_normalization", 0.0)],
+        )
+        report_path = os.path.join(self.output_dir, "report.json")
+        with open(report_path, "r", encoding="utf-8") as f:
+            report = json.load(f)
+
+        # Find the path containing empty_to_empty
+        paths = report.get("manual_review_paths", [])
+        empty_paths = [p for p in paths if "empty_to_empty" in p and "crop_debug_sheet.png" in p]
+        self.assertTrue(len(empty_paths) > 0, "No manual_review_path for empty_to_empty")
+
+        for p in empty_paths:
+            self.assertTrue(os.path.exists(p), f"Manual review file does not exist: {p}")
+            img = cv2.imread(p, cv2.IMREAD_COLOR)
+            self.assertIsNotNone(img, f"Cannot read image: {p}")
+
+
+class TestManualReviewPathsAllExist(unittest.TestCase):
+    """Test 11 — all manual_review_paths point to existing files."""
+
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp(prefix="stage4_allpaths_")
+        _create_synthetic_fixture(self.tmpdir)
+        self.output_dir = os.path.join(self.tmpdir, "output")
+
+    def tearDown(self):
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
+
+    def test_manual_review_paths_all_exist(self):
+        summary = run_benchmark(
+            self.tmpdir, self.output_dir,
+            pipeline_variants=[("bbox_crop_resize", "resize_only_normalization", 0.0)],
+        )
+        report_path = os.path.join(self.output_dir, "report.json")
+        with open(report_path, "r", encoding="utf-8") as f:
+            report = json.load(f)
+
+        paths = report.get("manual_review_paths", [])
+        self.assertTrue(len(paths) > 0, "No manual_review_paths in report")
+
+        for p in paths:
+            self.assertTrue(os.path.exists(p), f"Manual review file does not exist: {p}")
+            img = cv2.imread(p, cv2.IMREAD_COLOR)
+            self.assertIsNotNone(img, f"Cannot read image: {p}")
+
 
 if __name__ == "__main__":
     unittest.main()

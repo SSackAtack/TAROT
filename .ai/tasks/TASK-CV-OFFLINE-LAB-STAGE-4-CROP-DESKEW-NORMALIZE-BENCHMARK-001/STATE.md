@@ -55,3 +55,25 @@ logs/offline_replay/stage4_crop_deskew_normalize/quad_warp_perspective_fixed_asp
 ```
 
 Do not start Stage 5 before Supervisor review.
+
+## TASK-CV-OFFLINE-LAB-STAGE-4-REVIEW-PATHS-FIX-001
+
+### Summary
+
+Fixed Stage 4 manual review output completeness.
+
+### Problem
+
+`manual_review_paths` included `empty_to_empty/crop_debug_sheet.png`, but no sheet was generated when crop_count was 0.
+
+### Fix
+
+Benchmark now writes placeholder `crop_debug_sheet.png` for no-crop pairs.
+
+### Decision
+
+Stage 4 remains `PROVISIONAL_RECOMMENDED`.
+
+### Required next action
+
+Prepare Stage 4 manual review pack after Supervisor confirms this fix.

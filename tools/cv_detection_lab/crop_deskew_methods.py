@@ -524,6 +524,35 @@ def build_debug_sheet(crops, source_frame, target_w, target_h):
     return sheet
 
 
+def build_no_crop_debug_sheet(pair_name, expected_crop_count, crop_count, verdict, width=900, height=300):
+    """Build a placeholder debug sheet for pairs with zero crops.
+
+    Renders dark background with diagnostic text so that manual_review_paths
+    always point to an existing, readable image file.
+    """
+    sheet = np.zeros((height, width, 3), dtype=np.uint8)
+    sheet[:, :] = (30, 30, 30)
+
+    lines = [
+        "NO CROPS",
+        f"pair: {pair_name}",
+        f"expected_crop_count: {expected_crop_count}",
+        f"crop_count: {crop_count}",
+        f"verdict: {verdict}",
+    ]
+
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    y_offset = 50
+    for i, line in enumerate(lines):
+        scale = 1.2 if i == 0 else 0.7
+        thickness = 2 if i == 0 else 1
+        color = (0, 200, 255) if i == 0 else (180, 180, 180)
+        cv2.putText(sheet, line, (30, y_offset), font, scale, color, thickness, cv2.LINE_AA)
+        y_offset += 50
+
+    return sheet
+
+
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
