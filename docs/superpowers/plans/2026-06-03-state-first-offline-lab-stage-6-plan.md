@@ -135,3 +135,15 @@ threshold i runtime integration pozostają niezatwierdzone.
 
 Decyzja Supervisora: `APPROVED_BY_CHATGPT_SUPERVISOR`.
 Status metody pozostaje `VALIDATION_PASS_OFFLINE_ONLY`.
+
+## Session Status (2026-06-04 Codex Real-Camera Fixture Phase A)
+
+Stan aktualny: offline tooling real-camera aggregate jest gotowy, ale task
+pozostaje `PROVISIONAL_BLOCKED`.
+
+Co zostało zrobione: dodano read-only kontrakt manifestu/ground truth,
+fingerprint sesji, preflight, manual review pack generator i instrukcję
+operatorską.
+
+Kolejne kroki: operator musi zebrać minimum 28 fizycznych sesji i ręcznie
+potwierdzić ground truth. Bez tego nie wolno raportować `PASS`.

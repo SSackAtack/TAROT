@@ -273,3 +273,9 @@ Commit tooling i dokumentację dopiero po testach. Dane w ignorowanych
 - Collision safety: preflight blokuje duplicate `sample_id` oraz więcej niż jedną próbkę na sesję.
 - Scope safety: brak zmian mechanizmu capture i runtime.
 - Status safety: tooling bez fizycznego capture pozostaje `PROVISIONAL_BLOCKED`.
+
+## Session Status (2026-06-04 Phase A)
+
+Faza A offline tooling została wykonana. Faza B wymaga operator-assisted
+capture minimum 28 realnych sesji. Do czasu ich zebrania status pozostaje
+`PROVISIONAL_BLOCKED`.
