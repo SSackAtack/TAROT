@@ -165,6 +165,19 @@ Kolejne kroki: ręcznie potwierdzić podejrzaną etykietę przed ponownym
 przeliczeniem metryk. Nie wolno zmieniać ground truth automatycznie ani
 integrować metody z runtime.
 
+## Session Status (2026-06-04 Codex Ground Truth Review)
+
+Stan aktualny: podejrzana próbka `f8d6d84b5ddb5729fa07` została ręcznie
+potwierdzona jako `Gilded_67` (Cesarz), nie `Gilded_45` (Sprawiedliwość).
+
+Co zostało zrobione: skorygowano lokalny manifest i ground truth, uruchomiono
+preflight (`PASS`), benchmark oraz error analysis ponownie. ORB osiąga teraz
+Top-1 `0.85`, Top-3 `0.90`, wrong-deck FAR `0.00`. Pozostały trzy błędy Top-1,
+wszystkie sklasyfikowane jako `image_quality_or_crop`.
+
+Kolejne kroki: Supervisor zatwierdza korektę danych i nowe metryki offline-only.
+Nadal brak zgody na runtime integration.
+
 ## Session Status (2026-06-04 Codex Real-Camera Fixture Phase A)
 
 Stan aktualny: offline tooling real-camera aggregate jest gotowy, ale task
