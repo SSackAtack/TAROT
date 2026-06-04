@@ -40,6 +40,7 @@
   <header class="hero" id="hero">
     <div class="hero__particles" id="hero-particles"></div>
     <div class="hero__overlay"></div>
+    <div class="hero__light-leak"></div>
     <div class="hero__floating-cards" id="hero-cards">
       <img src="/images/cards/RWS_00_thumb.webp" alt="" class="hero__float-card" data-speed="0.03" data-rotate="-12" style="top:15%;left:8%;">
       <img src="/images/cards/RWS_01_thumb.webp" alt="" class="hero__float-card" data-speed="0.05" data-rotate="8" style="top:20%;right:5%;">
@@ -394,6 +395,23 @@
         </div>
         <div class="daily-card__interpretation" id="daily-card-interpretation">
           <p id="daily-card-message">Gwiazda mówi o nadziei i inspiracji. Dziś jest dobry dzień na snucie planów — Twoje marzenia mają mocny fundament. Zaufaj procesowi.</p>
+          
+          <!-- Generator Wróżby Wideo (html-video) -->
+          <div class="video-generator" id="video-generator">
+            <button class="btn btn--outline btn--sm" id="btn-generate-video">
+              <span class="btn-icon">❖</span> Generuj Wróżbę Wideo (MP4)
+            </button>
+            <div class="video-generator__progress" id="video-progress">
+              <div class="video-generator__bar-wrap">
+                <div class="video-generator__bar" id="video-bar"></div>
+              </div>
+              <span class="video-generator__status" id="video-status">Łączenie z silnikiem html-video...</span>
+            </div>
+            <div class="video-generator__result" id="video-result">
+              <p>✦ Twoje wideo zostało wygenerowane pomyślnie!</p>
+              <a href="#" class="btn btn--primary btn--sm" id="btn-download-video" download="wrozba_dnia.mp4">Pobierz plik wideo</a>
+            </div>
+          </div>
         </div>
       </div>
     </div>

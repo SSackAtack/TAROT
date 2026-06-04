@@ -89,6 +89,12 @@ function initDailyCard() {
   const name = document.getElementById('daily-card-name');
   const message = document.getElementById('daily-card-message');
   const interpretation = document.getElementById('daily-card-interpretation');
+  
+  // Elementy generatora wideo do resetu
+  const btnGenerate = document.getElementById('btn-generate-video');
+  const progress = document.getElementById('video-progress');
+  const bar = document.getElementById('video-bar');
+  const result = document.getElementById('video-result');
 
   if (!card) return;
 
@@ -99,7 +105,31 @@ function initDailyCard() {
   img.src = `/images/cards/RWS_${todayCard.id}_thumb.webp`;
   img.alt = todayCard.name;
   name.textContent = todayCard.name;
-  message.textContent = todayCard.message;
+  message.textContent = ''; // startuje puste dla typewriter
+
+  let typewriterTimeout = null;
+  let isTyping = false;
+
+  function startTypewriter(element, text) {
+    element.textContent = '';
+    element.classList.add('typewriter-cursor');
+    let i = 0;
+    isTyping = true;
+    
+    if (typewriterTimeout) clearTimeout(typewriterTimeout);
+    
+    function type() {
+      if (i < text.length) {
+        element.textContent += text.charAt(i);
+        i++;
+        typewriterTimeout = setTimeout(type, 25);
+      } else {
+        element.classList.remove('typewriter-cursor');
+        isTyping = false;
+      }
+    }
+    type();
+  }
 
   card.addEventListener('click', () => {
     card.classList.toggle('daily-card__card--flipped');
@@ -107,9 +137,20 @@ function initDailyCard() {
     if (card.classList.contains('daily-card__card--flipped')) {
       setTimeout(() => {
         interpretation.classList.add('daily-card__interpretation--visible');
+        startTypewriter(message, todayCard.message);
       }, 500);
     } else {
+      if (typewriterTimeout) clearTimeout(typewriterTimeout);
+      isTyping = false;
+      message.textContent = '';
+      message.classList.remove('typewriter-cursor');
       interpretation.classList.remove('daily-card__interpretation--visible');
+      
+      // Reset generatora wideo
+      if (btnGenerate) btnGenerate.style.display = 'inline-flex';
+      if (progress) progress.style.display = 'none';
+      if (bar) bar.style.width = '0%';
+      if (result) result.style.display = 'none';
     }
   });
 }
@@ -299,6 +340,47 @@ function initHeroParallax() {
   animate();
 }
 
+// ═══════════ VIDEO GENERATOR (html-video) ═══════════
+function initVideoGenerator() {
+  const btnGenerate = document.getElementById('btn-generate-video');
+  const progress = document.getElementById('video-progress');
+  const bar = document.getElementById('video-bar');
+  const status = document.getElementById('video-status');
+  const result = document.getElementById('video-result');
+
+  if (!btnGenerate) return;
+
+  const steps = [
+    { percent: 15, text: 'Łączenie z silnikiem html-video...' },
+    { percent: 35, text: 'Wczytywanie szablonu frame-light-leak-cinema...' },
+    { percent: 55, text: 'Wstrzykiwanie tekstu interpretacji...' },
+    { percent: 75, text: 'Generowanie ścieżki dźwiękowej z lektorem AI...' },
+    { percent: 90, text: 'Kompresja wideo MP4 przez FFmpeg...' },
+    { percent: 100, text: 'Gotowe!' }
+  ];
+
+  btnGenerate.addEventListener('click', () => {
+    btnGenerate.style.display = 'none';
+    progress.style.display = 'block';
+
+    let stepIdx = 0;
+
+    function runStep() {
+      if (stepIdx < steps.length) {
+        const step = steps[stepIdx];
+        bar.style.width = `${step.percent}%`;
+        status.textContent = step.text;
+        stepIdx++;
+        setTimeout(runStep, stepIdx === steps.length ? 1500 : 1000);
+      } else {
+        progress.style.display = 'none';
+        result.style.display = 'block';
+      }
+    }
+    runStep();
+  });
+}
+
 // ═══════════ INIT ═══════════
 document.addEventListener('DOMContentLoaded', () => {
   initNavigation();
@@ -309,4 +391,5 @@ document.addEventListener('DOMContentLoaded', () => {
   initContactForm();
   initSmoothScroll();
   initHeroParallax();
+  initVideoGenerator();
 });
