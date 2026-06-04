@@ -29,6 +29,9 @@ deklarowania dalszego postępu walidacji.
 - Kroki ekspansji pokazują `1/8`, a nie `1/28`.
 - RWS zapisuje rzeczywiste `expected_card_id` i `expected_behavior: identify`.
 - Preflight blokuje błędną etykietę i brakujące pliki capture.
+- Zdiagnozowano błąd MSMF `-1072875772`: backend `python main.py` zajmował kamerę.
+- Stabilny starter wykrywa aktywny backend przed capture i blokuje start z PID.
+- Wizard wyjaśnia zajęcie kamery przy błędzie odczytu strumienia.
 
 ## Required Next Action
 

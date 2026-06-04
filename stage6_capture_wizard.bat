@@ -14,6 +14,18 @@ if /I "%~1"=="rws" goto RUN_EXPANSION
 if /I "%~1"=="legacy" goto RUN_LEGACY
 if /I "%~1"=="legacy-plan" goto PRINT_LEGACY_PLAN
 
+set "CAMERA_OWNER_PID="
+for /f %%P in ('powershell -NoProfile -Command "$p = @(Get-CimInstance Win32_Process).Where({ $_.Name -eq 'python.exe' -and $_.CommandLine -match 'main\.py' }); if ($p.Count -gt 0) { $p[0].ProcessId }"') do set "CAMERA_OWNER_PID=%%P"
+if defined CAMERA_OWNER_PID (
+  echo ============================================================
+  echo [BLOKADA] Kamera jest zajeta przez backend TarotVision.
+  echo Proces: python main.py, PID !CAMERA_OWNER_PID!
+  echo Zamknij backend przed uruchomieniem wizarda.
+  echo ============================================================
+  pause
+  exit /b 2
+)
+
 echo ============================================================
 echo    TAROTVISION - Minimal RWS Expansion - 8 samples
 echo ============================================================

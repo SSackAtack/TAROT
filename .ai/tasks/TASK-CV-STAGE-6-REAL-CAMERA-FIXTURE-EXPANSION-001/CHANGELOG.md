@@ -14,4 +14,6 @@
 - Główny launcher Stage 6 domyślnie uruchamia RWS 8 próbek; legacy wymaga
   jawnego potwierdzenia.
 - Poprawiono licznik kroków, ground truth RWS i rygor preflightu.
+- Dodano czytelną diagnostykę zajętej kamery po błędzie Windows MSMF.
+- Stabilny starter blokuje start, gdy działa backend `python main.py`.
 - Nie zmieniono benchmarków ani runtime.

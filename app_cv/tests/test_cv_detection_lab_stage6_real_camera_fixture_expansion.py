@@ -69,6 +69,15 @@ class TestStage6RealCameraFixtureExpansion(unittest.TestCase):
         self.assertIn("Minimal RWS Expansion - 8 samples", text)
         self.assertIn('if /I "%~1"=="legacy"', text)
         self.assertIn("stage6_real_camera_fixture_expansion_wizard.py", text)
+        self.assertIn("CAMERA_OWNER_PID", text)
+
+    def test_branch_independent_starter_blocks_when_backend_main_owns_camera(self):
+        starter = Path(r"E:\Antigravity\Projekty\START_TAROT_STAGE6_RWS_8_PROBEK.bat")
+        text = starter.read_text(encoding="utf-8")
+
+        self.assertIn("CAMERA_OWNER_PID", text)
+        self.assertIn("Zamknij backend TarotVision", text)
+        self.assertIn("exit /b 2", text)
 
     def test_expansion_preflight_passes_complete_eight_sample_pack(self):
         for step in build_expansion_plan():

@@ -218,6 +218,11 @@ E:\Antigravity\Projekty\START_TAROT_STAGE6_RWS_8_PROBEK.bat
 Starter zawsze uruchamia izolowany worktree Stage 6 i zapisuje dane do
 wspólnych `logs/` głównego repo.
 
+Przed uruchomieniem zamknij backend TarotVision, Studio, OBS i inne aplikacje
+korzystające z kamery. Wizard potrzebuje wyłącznego dostępu do urządzenia.
+Stabilny starter wykryje aktywny proces `python main.py` i zatrzyma się przed
+capture z komunikatem zawierającym PID.
+
 Wizard prowadzi przez tylko 8 zdjęć RWS:
 
 - 4 ujęcia kontrolne bez celowego odblasku,

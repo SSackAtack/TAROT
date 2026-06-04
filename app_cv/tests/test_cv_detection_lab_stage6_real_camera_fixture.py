@@ -298,6 +298,32 @@ class TestStage6RealCameraFixture(unittest.TestCase):
             ("close",),
         ])
 
+    def test_capture_wizard_explains_camera_stream_read_failure(self):
+        class UnreadableCameraSession:
+            def __init__(self, _log_dir, camera_width, camera_height):
+                self.frame_width = camera_width
+                self.frame_height = camera_height
+
+            def open(self, _index):
+                return True
+
+            def read(self):
+                return False, None
+
+            def close(self):
+                pass
+
+        with self.assertRaisesRegex(
+            RuntimeError,
+            "kamera jest zajeta przez backend TarotVision",
+        ):
+            capture_frame_from_camera(
+                camera_index=0,
+                log_dir=self.tmpdir,
+                camera_session_cls=UnreadableCameraSession,
+                warmup_frames=1,
+            )
+
     def test_capture_wizard_explains_missing_session_folder(self):
         step = build_capture_plan()[0]
         session_root = os.path.join(self.sessions_dir, step.session_id)

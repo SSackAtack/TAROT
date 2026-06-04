@@ -232,7 +232,12 @@ def capture_frame_from_camera(
             if ok:
                 frame = current
         if frame is None:
-            raise RuntimeError(f"Cannot read frame from camera index {camera_index}.")
+            raise RuntimeError(
+                f"Cannot read frame from camera index {camera_index}. "
+                "Na Windows najczestsza przyczyna: kamera jest zajeta przez backend TarotVision "
+                "(python main.py), Studio, OBS albo inna aplikacje. Zamknij proces korzystajacy "
+                "z kamery, odczekaj kilka sekund i sprobuj ponownie."
+            )
         return frame
     finally:
         session.close()
