@@ -34,7 +34,7 @@ Kolejne kroki: preflight może przejść do `PASS`, ale benchmark Stage 6 będzi
 
 Stan aktualny: Stage 6 ground truth został ręcznie potwierdzony na podstawie debug sheetów Stage 5 i referencji Gilded.
 
-Co zostało zrobione: zastąpiono `UNKNOWN_DECK` etykietami `Gilded_34`, `Gilded_54`, `Gilded_72` i `Gilded_73` dla 10 cropów. `ground_truth.json` ma teraz `label_status: manual_confirmed`.
+Co zostało zrobione: zastąpiono `UNKNOWN_DECK` etykietami `Gilded_34`, `Gilded_54` i `Gilded_73` dla 10 cropów. `ground_truth.json` ma teraz `label_status: manual_confirmed`.
 
 Kolejne kroki: można utworzyć `TASK-CV-OFFLINE-LAB-STAGE-6-CARD-IDENTIFICATION-BENCHMARK-001`, ponieważ preflight i ręczne etykiety są gotowe do pomiaru top1/top3 accuracy.
 
