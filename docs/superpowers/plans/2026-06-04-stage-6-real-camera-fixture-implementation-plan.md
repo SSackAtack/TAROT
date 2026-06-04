@@ -25,7 +25,7 @@
 - Create: `tools/cv_detection_lab/stage6_real_camera_fixture.py`
 - Create: `app_cv/tests/test_cv_detection_lab_stage6_real_camera_fixture.py`
 
-- [ ] **Step 1: Write failing tests for stable sample IDs**
+- [x] **Step 1: Write failing tests for stable sample IDs**
 
 Testy definiują API:
 
@@ -37,7 +37,7 @@ load_aggregate(manifest_path, ground_truth_path)
 Wymagaj identycznego ID dla identycznych danych oraz innego ID po zmianie
 któregokolwiek składnika.
 
-- [ ] **Step 2: Run focused tests and verify RED**
+- [x] **Step 2: Run focused tests and verify RED**
 
 Run:
 
@@ -47,18 +47,18 @@ python -m unittest app_cv.tests.test_cv_detection_lab_stage6_real_camera_fixture
 
 Expected: brak modułu `stage6_real_camera_fixture`.
 
-- [ ] **Step 3: Implement manifest and ground-truth models**
+- [x] **Step 3: Implement manifest and ground-truth models**
 
 Modele muszą przechowywać wszystkie pola ze specyfikacji. Loader nie może
 zapisywać ani poprawiać wejściowych JSON-ów.
 
-- [ ] **Step 4: Implement session fingerprint**
+- [x] **Step 4: Implement session fingerprint**
 
 Dodaj deterministyczny fingerprint listy plików sesji oparty o względną
 ścieżkę, rozmiar i SHA-256 zawartości. Fingerprint służy wyłącznie do wykrycia
 modyfikacji podczas działania narzędzia.
 
-- [ ] **Step 5: Verify GREEN**
+- [x] **Step 5: Verify GREEN**
 
 Expected: testy kontraktu i fingerprintu PASS.
 
@@ -68,7 +68,7 @@ Expected: testy kontraktu i fingerprintu PASS.
 - Create: `tools/cv_detection_lab/stage6_real_camera_preflight.py`
 - Modify: `app_cv/tests/test_cv_detection_lab_stage6_real_camera_fixture.py`
 
-- [ ] **Step 1: Write failing tests for blocking conditions**
+- [x] **Step 1: Write failing tests for blocking conditions**
 
 Dodaj osobne testy wymagające `PROVISIONAL_BLOCKED` dla:
 
@@ -81,16 +81,16 @@ Dodaj osobne testy wymagające `PROVISIONAL_BLOCKED` dla:
 - brak `manual_confirmed`,
 - brak wymaganej kategorii lub minimalnej liczby próbek.
 
-- [ ] **Step 2: Write immutability test**
+- [x] **Step 2: Write immutability test**
 
 Test uruchamia preflight i porównuje fingerprint sesji przed/po. Wymagaj
 identyczności oraz braku jakichkolwiek plików utworzonych wewnątrz sesji.
 
-- [ ] **Step 3: Run tests and verify RED**
+- [x] **Step 3: Run tests and verify RED**
 
 Expected: brak preflightu lub brak wymaganych błędów.
 
-- [ ] **Step 4: Implement preflight**
+- [x] **Step 4: Implement preflight**
 
 Preflight zwraca:
 
@@ -103,7 +103,7 @@ PROVISIONAL_BLOCKED
 oraz listę stabilnych kodów błędów i ostrzeżeń. Preflight może zapisywać
 raporty wyłącznie do wskazanego output dir poza sesjami capture.
 
-- [ ] **Step 5: Add CLI and report writers**
+- [x] **Step 5: Add CLI and report writers**
 
 CLI:
 
@@ -114,7 +114,7 @@ python tools/cv_detection_lab/stage6_real_camera_preflight.py `
   --output logs/offline_replay/stage6_real_camera_validation
 ```
 
-- [ ] **Step 6: Verify GREEN**
+- [x] **Step 6: Verify GREEN**
 
 Expected: poprawny minimalny agregat daje `PASS`; każdy przypadek blokujący
 zwraca właściwy kod.
@@ -125,7 +125,7 @@ zwraca właściwy kod.
 - Create: `tools/cv_detection_lab/stage6_real_camera_manual_review_pack.py`
 - Modify: `app_cv/tests/test_cv_detection_lab_stage6_real_camera_fixture.py`
 
-- [ ] **Step 1: Write failing pack tests**
+- [x] **Step 1: Write failing pack tests**
 
 Testy wymagają:
 
@@ -137,17 +137,17 @@ Testy wymagają:
 - indeksu similarity groups,
 - braku zmian wewnątrz sesji.
 
-- [ ] **Step 2: Run tests and verify RED**
+- [x] **Step 2: Run tests and verify RED**
 
 Expected: brak generatora packa.
 
-- [ ] **Step 3: Implement pack generator**
+- [x] **Step 3: Implement pack generator**
 
 Generator czyta `analysis_frame_<count>.png`, `payload.json`, `metrics.json`
 i ground truth. Tworzy planszę z obrazem oraz expected deck/card/orientation/
 behavior, category, quality expectation i similarity group.
 
-- [ ] **Step 4: Implement CLI**
+- [x] **Step 4: Implement CLI**
 
 ```powershell
 python tools/cv_detection_lab/stage6_real_camera_manual_review_pack.py `
@@ -157,7 +157,7 @@ python tools/cv_detection_lab/stage6_real_camera_manual_review_pack.py `
   --output logs/offline_replay/stage6_real_camera_validation/manual_review_pack
 ```
 
-- [ ] **Step 5: Verify GREEN**
+- [x] **Step 5: Verify GREEN**
 
 Expected: kompletny pack i niezmienione fingerprinty sesji.
 
@@ -169,7 +169,7 @@ Expected: kompletny pack i niezmienione fingerprinty sesji.
 - Output locally: `logs/live_fixtures/stage6_real_camera_validation/ground_truth.json`
 - Output locally: `logs/live_fixtures/stage6_real_camera_validation/README_FOR_SUPERVISOR.md`
 
-- [ ] **Step 1: Document capture procedure**
+- [x] **Step 1: Document capture procedure**
 
 Instrukcja musi zawierać:
 
@@ -181,12 +181,12 @@ Instrukcja musi zawierać:
 - procedurę zastąpienia błędnej sesji nową,
 - sposób ręcznego potwierdzenia ground truth.
 
-- [ ] **Step 2: Add aggregate templates**
+- [x] **Step 2: Add aggregate templates**
 
 Utwórz lokalne szablony manifestu i ground truth zgodne z kontraktem. Nie
 oznaczaj brakujących 28 sesji jako gotowych ani `manual_confirmed`.
 
-- [ ] **Step 3: Verify templates with preflight**
+- [x] **Step 3: Verify templates with preflight**
 
 Oczekiwany status przed fizycznym capture: `PROVISIONAL_BLOCKED` z jasną listą
 brakujących sesji/próbek. To jest poprawny wynik etapu tooling.
@@ -237,32 +237,32 @@ Expected: `PASS` oraz kompletna paczka dla minimum 28 próbek.
 - Modify: `.ai/TASKS_INDEX.md`
 - Modify: `docs/superpowers/plans/2026-06-03-state-first-offline-lab-stage-6-plan.md`
 
-- [ ] **Step 1: Run focused tests**
+- [x] **Step 1: Run focused tests**
 
 ```powershell
 python -m unittest app_cv.tests.test_cv_detection_lab_stage6_real_camera_fixture -v
 python -m unittest app_cv.tests.test_cv_detection_lab_stage6_preflight app_cv.tests.test_cv_detection_lab_stage6_identification app_cv.tests.test_cv_detection_lab_stage6_synthetic_validation -v
 ```
 
-- [ ] **Step 2: Run compile and full backend suite**
+- [x] **Step 2: Run compile and full backend suite**
 
 ```powershell
 python -B -m py_compile tools/cv_detection_lab/stage6_real_camera_fixture.py tools/cv_detection_lab/stage6_real_camera_preflight.py tools/cv_detection_lab/stage6_real_camera_manual_review_pack.py app_cv/tests/test_cv_detection_lab_stage6_real_camera_fixture.py
 python -m unittest discover -s app_cv/tests -v
 ```
 
-- [ ] **Step 3: Verify forbidden scope**
+- [x] **Step 3: Verify forbidden scope**
 
 `git diff --name-only` nie może zawierać `app_cv/main.py`,
 `app_cv/tarotvision/*` ani `app_ar/*`.
 
-- [ ] **Step 4: Record status accurately**
+- [x] **Step 4: Record status accurately**
 
 Jeśli tooling jest gotowy, ale 28 realnych sesji nie zostało jeszcze zebranych,
 status taska musi pozostać `PROVISIONAL_BLOCKED` i wskazywać działania
 operatorskie. Nie wolno raportować `PASS` bez realnego capture.
 
-- [ ] **Step 5: Commit and push**
+- [x] **Step 5: Commit and push**
 
 Commit tooling i dokumentację dopiero po testach. Dane w ignorowanych
 `logs/` pozostają lokalne i są przekazywane przez manual review pack.
@@ -279,3 +279,15 @@ Commit tooling i dokumentację dopiero po testach. Dane w ignorowanych
 Faza A offline tooling została wykonana. Faza B wymaga operator-assisted
 capture minimum 28 realnych sesji. Do czasu ich zebrania status pozostaje
 `PROVISIONAL_BLOCKED`.
+
+## Session Status (2026-06-04 ChatGPT Supervisor Review)
+
+Review commitu `db744e74fbddbae2086f17c97acc962d379cf077` zakończył się decyzją
+`APPROVED_PHASE_A_BY_CHATGPT_SUPERVISOR`. Zakres Phase A jest zgodny z planem:
+tooling offline, preflight, manual review pack i instrukcja operatora są gotowe,
+a task jako całość pozostaje `PROVISIONAL_BLOCKED`, ponieważ brakuje minimum 28
+fizycznych sesji real-camera i ręcznie potwierdzonego ground truth.
+
+Kolejny bezpieczny krok: Michał/operator wykonuje capture zgodnie z
+`docs/operator/stage6_real_camera_fixture_capture.md`, po czym agent uruchamia
+preflight i generuje manual review pack.

@@ -4,6 +4,14 @@
 
 `PROVISIONAL_BLOCKED`
 
+## Supervisor Review
+
+`APPROVED_PHASE_A_BY_CHATGPT_SUPERVISOR` for commit
+`db744e74fbddbae2086f17c97acc962d379cf077`.
+
+The whole task remains `PROVISIONAL_BLOCKED` until the required minimum 28
+physical real-camera sessions are captured and manually confirmed.
+
 ## Completed
 
 - Implemented read-only aggregate manifest and ground-truth loader.
