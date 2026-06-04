@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TarotKA — Sesje tarota z wizualizacją AR | Katarzyna</title>
+  <meta name="description" content="TarotKA to nowa jakość w czytaniu tarota. Sesje live z wizualizacją AR — karty ożywają na Twoich oczach. Zarezerwuj sesję z Katarzyną." />
+  <meta property="og:title" content="TarotKA — Sesje tarota z wizualizacją AR" />
+  <meta property="og:description" content="Karty ożywają na Twoich oczach. Sesje live z kinową wizualizacją 3D." />
+  <meta property="og:type" content="website" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <!-- ═══════════ NAWIGACJA ═══════════ -->
+  <nav class="nav" id="main-nav">
+    <div class="nav__container">
+      <a href="#" class="nav__logo">
+        <span class="nav__logo-icon">✦</span>
+        <span class="nav__logo-text">Tarot<span class="nav__logo-accent">KA</span></span>
+      </a>
+      <button class="nav__toggle" id="nav-toggle" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
+      <ul class="nav__links" id="nav-links">
+        <li><a href="#jak-to-dziala">Jak to działa</a></li>
+        <li><a href="#pakiety">Pakiety</a></li>
+        <li><a href="#o-mnie">O mnie</a></li>
+        <li><a href="#opinie">Opinie</a></li>
+        <li><a href="#faq">FAQ</a></li>
+        <li><a href="#kontakt" class="nav__cta">Zarezerwuj sesję</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- ═══════════ HERO ═══════════ -->
+  <header class="hero" id="hero">
+    <div class="hero__particles" id="hero-particles"></div>
+    <div class="hero__overlay"></div>
+    <div class="hero__floating-cards" id="hero-cards">
+      <img src="/images/cards/RWS_00_thumb.webp" alt="" class="hero__float-card" data-speed="0.03" data-rotate="-12" style="top:15%;left:8%;">
+      <img src="/images/cards/RWS_01_thumb.webp" alt="" class="hero__float-card" data-speed="0.05" data-rotate="8" style="top:20%;right:5%;">
+      <img src="/images/cards/RWS_17_thumb.webp" alt="" class="hero__float-card" data-speed="0.02" data-rotate="-5" style="bottom:25%;left:12%;">
+      <img src="/images/cards/RWS_13_thumb.webp" alt="" class="hero__float-card" data-speed="0.04" data-rotate="15" style="bottom:20%;right:10%;">
+      <img src="/images/cards/RWS_06_thumb.webp" alt="" class="hero__float-card" data-speed="0.06" data-rotate="-18" style="top:55%;left:3%;">
+    </div>
+    <div class="hero__content">
+      <p class="hero__tagline">Nowa jakość w czytaniu tarota</p>
+      <h1 class="hero__title">
+        Karty ożywają<br/>
+        <span class="hero__title-accent">na Twoich oczach</span>
+      </h1>
+      <p class="hero__subtitle">
+        Sesje tarota z wizualizacją AR — filmowe doświadczenie,<br class="hero__br-desktop"/>
+        którego nie znajdziesz nigdzie indziej.
+      </p>
+      <div class="hero__actions">
+        <a href="#pakiety" class="btn btn--primary">Zobacz pakiety</a>
+        <a href="#jak-to-dziala" class="btn btn--ghost">Jak to działa</a>
+      </div>
+    </div>
+    <div class="hero__scroll-hint">
+      <span>Przewiń</span>
+      <div class="hero__scroll-arrow"></div>
+    </div>
+  </header>
+
+  <!-- ═══════════ JAK TO DZIAŁA ═══════════ -->
+  <section class="section steps" id="jak-to-dziala">
+    <div class="container">
+      <h2 class="section__title">Jak to działa</h2>
+      <svg class="ornament-svg" viewBox="0 0 200 12" aria-hidden="true">
+        <path d="M0 6 Q25 0, 50 6 T100 6 T150 6 T200 6" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.3"/>
+        <circle cx="100" cy="6" r="2" fill="currentColor" opacity="0.4"/>
+        <circle cx="80" cy="6" r="1" fill="currentColor" opacity="0.2"/>
+        <circle cx="120" cy="6" r="1" fill="currentColor" opacity="0.2"/>
+      </svg>
+      <div class="steps__grid">
+        <div class="step" data-animate="fade-up" data-delay="0">
+          <div class="step__number">I</div>
+          <div class="step__icon">✦</div>
+          <h3 class="step__title">Zarezerwuj termin</h3>
+          <p class="step__text">Wybierz pakiet i termin. Sesje odbywają się przez Google Meet — potrzebujesz tylko internetu.</p>
+        </div>
+        <div class="step" data-animate="fade-up" data-delay="150">
+          <div class="step__number">II</div>
+          <div class="step__icon">◆</div>
+          <h3 class="step__title">Połącz się na sesję</h3>
+          <p class="step__text">W trakcie sesji widzisz karty w wizualizacji AR — złote ramki, świece, cząsteczki — jak w profesjonalnym studiu.</p>
+        </div>
+        <div class="step" data-animate="fade-up" data-delay="300">
+          <div class="step__number">III</div>
+          <div class="step__icon">❖</div>
+          <h3 class="step__title">Odbierz nagranie</h3>
+          <p class="step__text">Po sesji dostajesz nagranie w HD — możesz wrócić do interpretacji kiedykolwiek chcesz. Premium obejmuje też raport PDF.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ WYRÓŻNIK — AR ═══════════ -->
+  <section class="section showcase" id="wyroznik">
+    <div class="container">
+      <h2 class="section__title">Czym TarotKA się wyróżnia</h2>
+      <svg class="ornament-svg" viewBox="0 0 200 12" aria-hidden="true">
+        <path d="M0 6 Q25 0, 50 6 T100 6 T150 6 T200 6" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.3"/>
+        <circle cx="100" cy="6" r="2" fill="currentColor" opacity="0.4"/>
+        <circle cx="80" cy="6" r="1" fill="currentColor" opacity="0.2"/>
+        <circle cx="120" cy="6" r="1" fill="currentColor" opacity="0.2"/>
+      </svg>
+      <div class="showcase__comparison">
+        <div class="showcase__side showcase__side--before" data-animate="fade-right">
+          <div class="showcase__label">Tradycyjne czytanie</div>
+          <div class="showcase__image-wrap">
+            <div class="showcase__traditional">
+              <img src="/images/cards/RWS_17_thumb.webp" alt="Karta Gwiazda" class="showcase__card-flat" />
+              <img src="/images/cards/RWS_01_thumb.webp" alt="Karta Mag" class="showcase__card-flat" />
+              <img src="/images/cards/RWS_06_thumb.webp" alt="Karta Kochankowie" class="showcase__card-flat" />
+            </div>
+          </div>
+          <p class="showcase__desc">Zdjęcie kart na stole, opowieść przez telefon</p>
+        </div>
+        <div class="showcase__vs">versus</div>
+        <div class="showcase__side showcase__side--after" data-animate="fade-left">
+          <div class="showcase__label showcase__label--accent">TarotKA Vision</div>
+          <div class="showcase__image-wrap showcase__image-wrap--glow">
+            <img src="/images/studio/studio-concept.png" alt="TarotVision Studio — wizualizacja AR kart tarota" class="showcase__studio" />
+          </div>
+          <p class="showcase__desc">Kinowa wizualizacja AR, karta po karcie, na żywo</p>
+        </div>
+      </div>
+      <div class="showcase__features">
+        <div class="showcase__feature" data-animate="fade-up" data-delay="0">
+          <span class="showcase__feature-icon">✦</span>
+          <span>Wizualizacja 3D w czasie rzeczywistym</span>
+        </div>
+        <div class="showcase__feature" data-animate="fade-up" data-delay="100">
+          <span class="showcase__feature-icon">✦</span>
+          <span>Nagranie sesji w jakości HD</span>
+        </div>
+        <div class="showcase__feature" data-animate="fade-up" data-delay="200">
+          <span class="showcase__feature-icon">✦</span>
+          <span>7 talii do wyboru</span>
+        </div>
+        <div class="showcase__feature" data-animate="fade-up" data-delay="300">
+          <span class="showcase__feature-icon">✦</span>
+          <span>Atmosfera prawdziwego studia</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ PAKIETY / CENNIK ═══════════ -->
+  <section class="section pricing" id="pakiety">
+    <div class="container">
+      <h2 class="section__title">Pakiety sesji</h2>
+      <svg class="ornament-svg" viewBox="0 0 200 12" aria-hidden="true">
+        <path d="M0 6 Q25 0, 50 6 T100 6 T150 6 T200 6" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.3"/>
+        <circle cx="100" cy="6" r="2" fill="currentColor" opacity="0.4"/>
+        <circle cx="80" cy="6" r="1" fill="currentColor" opacity="0.2"/>
+        <circle cx="120" cy="6" r="1" fill="currentColor" opacity="0.2"/>
+      </svg>
+      <div class="pricing__grid">
+        <!-- Jedno Pytanie -->
+        <div class="pricing__card" data-animate="fade-up" data-delay="0">
+          <div class="pricing__card-header">
+            <span class="pricing__card-icon">I</span>
+            <h3 class="pricing__card-name">Jedno Pytanie</h3>
+            <p class="pricing__card-format">mail · WhatsApp</p>
+          </div>
+          <div class="pricing__card-price">
+            <span class="pricing__amount">39</span>
+            <span class="pricing__currency">zł</span>
+          </div>
+          <ul class="pricing__features">
+            <li>Odpowiedź w ciągu 24h</li>
+            <li>1 karta z interpretacją</li>
+            <li>Zdjęcie rozkładu</li>
+            <li>Kontakt tekstowy</li>
+          </ul>
+          <a href="#kontakt" class="btn btn--outline">Wybieram</a>
+        </div>
+
+        <!-- Sesja TarotKA — wyróżniona -->
+        <div class="pricing__card pricing__card--featured" data-animate="fade-up" data-delay="150">
+          <div class="pricing__card-badge">Najpopularniejszy</div>
+          <div class="pricing__card-header">
+            <span class="pricing__card-icon">II</span>
+            <h3 class="pricing__card-name">Sesja TarotKA</h3>
+            <p class="pricing__card-format">live video · wizualizacja AR</p>
+          </div>
+          <div class="pricing__card-price">
+            <span class="pricing__amount">149</span>
+            <span class="pricing__currency">zł</span>
+          </div>
+          <ul class="pricing__features">
+            <li>45 minut na żywo</li>
+            <li>Wizualizacja AR w czasie rzeczywistym</li>
+            <li>Nagranie sesji w HD</li>
+            <li>3–5 kart w rozkładzie</li>
+            <li>Google Meet / WhatsApp</li>
+          </ul>
+          <a href="#kontakt" class="btn btn--primary">Zarezerwuj</a>
+        </div>
+
+        <!-- Premium -->
+        <div class="pricing__card" data-animate="fade-up" data-delay="300">
+          <div class="pricing__card-header">
+            <span class="pricing__card-icon">III</span>
+            <h3 class="pricing__card-name">Sesja Premium</h3>
+            <p class="pricing__card-format">live video · AR · raport PDF</p>
+          </div>
+          <div class="pricing__card-price">
+            <span class="pricing__amount">229</span>
+            <span class="pricing__currency">zł</span>
+          </div>
+          <ul class="pricing__features">
+            <li>60–75 minut na żywo</li>
+            <li>Wizualizacja AR w czasie rzeczywistym</li>
+            <li>2 rozkłady — pogłębiona analiza</li>
+            <li>Nagranie HD + raport PDF</li>
+            <li>Wybór talii spośród 7 dostępnych</li>
+          </ul>
+          <a href="#kontakt" class="btn btn--outline">Wybieram</a>
+        </div>
+      </div>
+
+      <!-- Dodatkowe opcje -->
+      <div class="pricing__extras" data-animate="fade-up">
+        <h3 class="pricing__extras-title">Inne formy kontaktu</h3>
+        <div class="pricing__extras-grid">
+          <div class="pricing__extra">
+            <span class="pricing__extra-icon">✦</span>
+            <div>
+              <strong>Rozkład Express</strong>
+              <span class="pricing__extra-price">69 zł</span>
+              <p>3 karty z interpretacją audio — WhatsApp / SMS — odpowiedź w 24h</p>
+            </div>
+          </div>
+          <div class="pricing__extra">
+            <span class="pricing__extra-icon">✦</span>
+            <div>
+              <strong>Sesja Telefoniczna</strong>
+              <span class="pricing__extra-price">99 zł</span>
+              <p>30 minut rozmowy live — 3–5 kart — notatki po sesji</p>
+            </div>
+          </div>
+          <div class="pricing__extra">
+            <span class="pricing__extra-icon">✦</span>
+            <div>
+              <strong>Pakiet 3 sesji</strong>
+              <span class="pricing__extra-price">399 zł <s>447 zł</s></span>
+              <p>3 × Sesja TarotKA w dowolnym terminie — oszczędzasz 11%</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Promocja startowa -->
+      <div class="pricing__promo" data-animate="fade-up">
+        <div class="pricing__promo-inner">
+          <span class="pricing__promo-icon">✦</span>
+          <div>
+            <strong>Pierwsza karta gratis</strong>
+            <p>Wyślij swoje pytanie — pierwszą kartę z interpretacją otrzymasz całkowicie za darmo. Zero zobowiązań.</p>
+          </div>
+          <a href="#kontakt" class="btn btn--primary btn--sm">Wyślij pytanie</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ O MNIE ═══════════ -->
+  <section class="section about" id="o-mnie">
+    <div class="container">
+      <div class="about__grid">
+        <div class="about__image-wrap" data-animate="fade-right">
+          <div class="about__image-frame">
+            <div class="about__image-placeholder">
+              <span class="about__image-icon">✦</span>
+              <span>Katarzyna</span>
+            </div>
+          </div>
+          <div class="about__image-glow"></div>
+        </div>
+        <div class="about__content" data-animate="fade-left">
+          <h2 class="section__title section__title--left">Cześć, jestem Katarzyna</h2>
+          <svg class="ornament-svg" style="margin-left:0;margin-right:auto;" viewBox="0 0 200 12" aria-hidden="true">
+            <path d="M0 6 Q25 0, 50 6 T100 6 T150 6 T200 6" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.3"/>
+            <circle cx="100" cy="6" r="2" fill="currentColor" opacity="0.4"/>
+            <circle cx="80" cy="6" r="1" fill="currentColor" opacity="0.2"/>
+            <circle cx="120" cy="6" r="1" fill="currentColor" opacity="0.2"/>
+          </svg>
+          <p class="about__text">
+            Tarot towarzyszy mi od ponad dziesięciu lat. Traktuję go jako <strong>narzędzie refleksji</strong> — nie przepowiadam przyszłości, pomagam uporządkować myśli i spojrzeć na sytuację z nowej perspektywy.
+          </p>
+          <p class="about__text">
+            TarotKA to połączenie mojej pasji do kart z nowoczesną technologią. Dzięki <strong>wizualizacji AR</strong> stworzonej przez mój zespół, każda sesja to wyjątkowe doświadczenie — widzisz karty jak nigdy wcześniej.
+          </p>
+          <p class="about__text">
+            Wierzę, że tarot może być mostem między intuicją a racjonalnym myśleniem. Bez magii, bez przepowiedni — z uważnością i szacunkiem dla Twojej historii.
+          </p>
+          <div class="about__values">
+            <div class="about__value">
+              <span class="about__value-icon">✦</span>
+              <span>Szczerość i uważność</span>
+            </div>
+            <div class="about__value">
+              <span class="about__value-icon">✦</span>
+              <span>Pełna dyskrecja</span>
+            </div>
+            <div class="about__value">
+              <span class="about__value-icon">✦</span>
+              <span>Refleksja, nie przepowiednia</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ OPINIE ═══════════ -->
+  <section class="section testimonials" id="opinie">
+    <div class="container">
+      <h2 class="section__title">Co mówią klientki</h2>
+      <svg class="ornament-svg" viewBox="0 0 200 12" aria-hidden="true">
+        <path d="M0 6 Q25 0, 50 6 T100 6 T150 6 T200 6" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.3"/>
+        <circle cx="100" cy="6" r="2" fill="currentColor" opacity="0.4"/>
+        <circle cx="80" cy="6" r="1" fill="currentColor" opacity="0.2"/>
+        <circle cx="120" cy="6" r="1" fill="currentColor" opacity="0.2"/>
+      </svg>
+      <div class="testimonials__grid">
+        <div class="testimonial" data-animate="fade-up" data-delay="0">
+          <div class="testimonial__stars">✦ ✦ ✦ ✦ ✦</div>
+          <p class="testimonial__text">„Byłam sceptyczna, ale wizualizacja kart zrobiła na mnie ogromne wrażenie. Sesja była spokojna, przemyślana, bez żadnego nacisku. Wracam na pewno."</p>
+          <div class="testimonial__author">
+            <div class="testimonial__avatar">M</div>
+            <div>
+              <div class="testimonial__name">Marta K.</div>
+              <div class="testimonial__type">Sesja TarotKA</div>
+            </div>
+          </div>
+        </div>
+        <div class="testimonial" data-animate="fade-up" data-delay="150">
+          <div class="testimonial__stars">✦ ✦ ✦ ✦ ✦</div>
+          <p class="testimonial__text">„To naprawdę inna liga. Nagranie z sesji oglądam do dziś — pomogło mi podjąć decyzję, z którą długo się biłam. Katarzyna ma dar tłumaczenia symboli."</p>
+          <div class="testimonial__author">
+            <div class="testimonial__avatar">A</div>
+            <div>
+              <div class="testimonial__name">Anna W.</div>
+              <div class="testimonial__type">Sesja Premium</div>
+            </div>
+          </div>
+        </div>
+        <div class="testimonial" data-animate="fade-up" data-delay="300">
+          <div class="testimonial__stars">✦ ✦ ✦ ✦ ✦</div>
+          <p class="testimonial__text">„Szybka odpowiedź, trafna interpretacja. Za 39 zł — wartość nie do pobicia. Polecam na start, żeby poczuć czy to coś dla Was."</p>
+          <div class="testimonial__author">
+            <div class="testimonial__avatar">J</div>
+            <div>
+              <div class="testimonial__name">Joanna D.</div>
+              <div class="testimonial__type">Jedno Pytanie</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ INTERAKTYWNA KARTA DNIA ═══════════ -->
+  <section class="section daily-card" id="karta-dnia">
+    <div class="container">
+      <div class="daily-card__inner">
+        <div class="daily-card__content">
+          <h2 class="section__title section__title--left">Karta Dnia</h2>
+          <p class="daily-card__text">Kliknij kartę, by odkryć przesłanie na dziś. Codziennie nowa karta z krótką interpretacją.</p>
+        </div>
+        <div class="daily-card__card-wrap">
+          <div class="daily-card__card" id="daily-card-flip">
+            <div class="daily-card__card-inner">
+              <div class="daily-card__card-front">
+                <img src="/images/cards/RWS_back_thumb.webp" alt="Rewers karty tarota" />
+                <span class="daily-card__tap-hint">Odkryj kartę</span>
+              </div>
+              <div class="daily-card__card-back" id="daily-card-face">
+                <img src="/images/cards/RWS_17_thumb.webp" alt="Karta dnia" id="daily-card-img" />
+                <div class="daily-card__card-name" id="daily-card-name">Gwiazda</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="daily-card__interpretation" id="daily-card-interpretation">
+          <p id="daily-card-message">Gwiazda mówi o nadziei i inspiracji. Dziś jest dobry dzień na snucie planów — Twoje marzenia mają mocny fundament. Zaufaj procesowi.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ FAQ ═══════════ -->
+  <section class="section faq" id="faq">
+    <div class="container">
+      <h2 class="section__title">Najczęściej zadawane pytania</h2>
+      <svg class="ornament-svg" viewBox="0 0 200 12" aria-hidden="true">
+        <path d="M0 6 Q25 0, 50 6 T100 6 T150 6 T200 6" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.3"/>
+        <circle cx="100" cy="6" r="2" fill="currentColor" opacity="0.4"/>
+        <circle cx="80" cy="6" r="1" fill="currentColor" opacity="0.2"/>
+        <circle cx="120" cy="6" r="1" fill="currentColor" opacity="0.2"/>
+      </svg>
+      <div class="faq__list">
+        <div class="faq__item" data-animate="fade-up" data-delay="0">
+          <button class="faq__question" id="faq-q1">
+            <span>Czym jest TarotKA i jak działa wizualizacja AR?</span>
+            <span class="faq__chevron">▾</span>
+          </button>
+          <div class="faq__answer" id="faq-a1">
+            <p>TarotKA łączy tradycyjne czytanie tarota z nowoczesną wizualizacją AR (Augmented Reality). W trakcie sesji live kamera rozpoznaje fizyczne karty na stole i zamienia je w piękną wizualizację 3D — ze złotymi ramkami, świecami, cząsteczkami. Widzisz to w czasie rzeczywistym przez Google Meet.</p>
+          </div>
+        </div>
+        <div class="faq__item" data-animate="fade-up" data-delay="50">
+          <button class="faq__question" id="faq-q2">
+            <span>Czy tarot przepowiada przyszłość?</span>
+            <span class="faq__chevron">▾</span>
+          </button>
+          <div class="faq__answer" id="faq-a2">
+            <p>Nie traktuję tarota jako narzędzia do przepowiadania przyszłości. Karty to lustro — pomagają zobaczyć sytuację z innej perspektywy, nazwać emocje i uporządkować myśli. To narzędzie refleksji, nie wyrocznia.</p>
+          </div>
+        </div>
+        <div class="faq__item" data-animate="fade-up" data-delay="100">
+          <button class="faq__question" id="faq-q3">
+            <span>Czego potrzebuję do sesji live?</span>
+            <span class="faq__chevron">▾</span>
+          </button>
+          <div class="faq__answer" id="faq-a3">
+            <p>Tylko stabilnego internetu i urządzenia z przeglądarką. Sesje odbywają się przez Google Meet — dostajesz link po rezerwacji. Nie musisz nic instalować.</p>
+          </div>
+        </div>
+        <div class="faq__item" data-animate="fade-up" data-delay="150">
+          <button class="faq__question" id="faq-q4">
+            <span>Jakie pytania mogę zadać?</span>
+            <span class="faq__chevron">▾</span>
+          </button>
+          <div class="faq__answer" id="faq-a4">
+            <p>Możesz pytać o relacje, rozwój osobisty, karierę, decyzje życiowe, kreatywność — właściwie o wszystko, nad czym chcesz się zastanowić. Nie odpowiadam na pytania dotyczące zdrowia, ciąży, spraw prawnych ani osób trzecich bez ich zgody.</p>
+          </div>
+        </div>
+        <div class="faq__item" data-animate="fade-up" data-delay="200">
+          <button class="faq__question" id="faq-q5">
+            <span>Czy mogę dostać fakturę?</span>
+            <span class="faq__chevron">▾</span>
+          </button>
+          <div class="faq__answer" id="faq-a5">
+            <p>Tak. Na życzenie wystawiam paragon lub fakturę. Płatność przelewem lub BLIK-iem przed sesją.</p>
+          </div>
+        </div>
+        <div class="faq__item" data-animate="fade-up" data-delay="250">
+          <button class="faq__question" id="faq-q6">
+            <span>Czy sesja jest nagrywana?</span>
+            <span class="faq__chevron">▾</span>
+          </button>
+          <div class="faq__answer" id="faq-a6">
+            <p>Tak — sesje TarotKA i Premium są nagrywane w HD. Nagranie dostępne jest wyłącznie dla Ciebie, przez prywatny link. Możesz wrócić do interpretacji w dowolnym momencie.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ KONTAKT / REZERWACJA ═══════════ -->
+  <section class="section contact" id="kontakt">
+    <div class="container">
+      <h2 class="section__title">Zarezerwuj sesję</h2>
+      <p class="section__subtitle">Napisz — odezwę się w ciągu 24 godzin</p>
+      <div class="contact__grid">
+        <form class="contact__form" id="contact-form">
+          <div class="form__group">
+            <label for="contact-name" class="form__label">Imię</label>
+            <input type="text" id="contact-name" class="form__input" placeholder="Twoje imię" required />
+          </div>
+          <div class="form__group">
+            <label for="contact-email" class="form__label">Email</label>
+            <input type="email" id="contact-email" class="form__input" placeholder="twoj@email.com" required />
+          </div>
+          <div class="form__group">
+            <label for="contact-package" class="form__label">Wybrany pakiet</label>
+            <select id="contact-package" class="form__input form__select">
+              <option value="">— Wybierz pakiet —</option>
+              <option value="karta-gratis">Pierwsza karta gratis</option>
+              <option value="pytanie">Jedno Pytanie — 39 zł</option>
+              <option value="express">Rozkład Express — 69 zł</option>
+              <option value="telefon">Sesja Telefoniczna — 99 zł</option>
+              <option value="tarotka">Sesja TarotKA — 149 zł</option>
+              <option value="premium">Sesja Premium — 229 zł</option>
+              <option value="pakiet3">Pakiet 3 sesji — 399 zł</option>
+            </select>
+          </div>
+          <div class="form__group">
+            <label for="contact-message" class="form__label">Twoje pytanie lub wiadomość</label>
+            <textarea id="contact-message" class="form__input form__textarea" rows="4" placeholder="Napisz, co Cię nurtuje..."></textarea>
+          </div>
+          <div class="form__group form__group--consent">
+            <label class="form__checkbox">
+              <input type="checkbox" id="contact-consent" required />
+              <span class="form__checkmark"></span>
+              <span>Wyrażam zgodę na przetwarzanie moich danych osobowych w celu obsługi rezerwacji. <a href="#" class="form__link">Polityka prywatności</a></span>
+            </label>
+          </div>
+          <button type="submit" class="btn btn--primary btn--full" id="contact-submit">Wyślij wiadomość</button>
+          <div class="form__success" id="form-success">
+            <span class="form__success-icon">✓</span>
+            <p>Dziękuję. Odezwę się w ciągu 24 godzin.</p>
+          </div>
+        </form>
+        <div class="contact__info" data-animate="fade-left">
+          <div class="contact__info-item">
+            <span class="contact__info-icon">✦</span>
+            <div>
+              <strong>Email</strong>
+              <p>kontakt@tarotka.art</p>
+            </div>
+          </div>
+          <div class="contact__info-item">
+            <span class="contact__info-icon">✦</span>
+            <div>
+              <strong>WhatsApp</strong>
+              <p>+48 XXX XXX XXX</p>
+            </div>
+          </div>
+          <div class="contact__info-item">
+            <span class="contact__info-icon">✦</span>
+            <div>
+              <strong>Sesje dostępne</strong>
+              <p>Pon–Sob: 10:00–20:00</p>
+            </div>
+          </div>
+          <div class="contact__info-item">
+            <span class="contact__info-icon">✦</span>
+            <div>
+              <strong>Czas odpowiedzi</strong>
+              <p>Do 24 godzin</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ FOOTER ═══════════ -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer__grid">
+        <div class="footer__brand">
+          <span class="nav__logo-icon">✦</span>
+          <span class="nav__logo-text">Tarot<span class="nav__logo-accent">KA</span></span>
+          <p class="footer__tagline">Nowa jakość w czytaniu tarota</p>
+        </div>
+        <div class="footer__links">
+          <a href="#jak-to-dziala">Jak to działa</a>
+          <a href="#pakiety">Pakiety</a>
+          <a href="#o-mnie">O mnie</a>
+          <a href="#opinie">Opinie</a>
+          <a href="#faq">FAQ</a>
+          <a href="#kontakt">Kontakt</a>
+        </div>
+        <div class="footer__legal">
+          <a href="#">Regulamin</a>
+          <a href="#">Polityka prywatności</a>
+        </div>
+      </div>
+      <div class="footer__bottom">
+        <p>© 2025 TarotKA. Sesje tarota mają charakter refleksyjno-rozrywkowy i nie zastępują porad psychologicznych, medycznych ani prawnych.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
