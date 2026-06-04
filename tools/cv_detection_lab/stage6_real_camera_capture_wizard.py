@@ -209,6 +209,44 @@ def append_confirmed_sample(step, session_root, aggregate_dir):
     return {"status": "RECORDED", "sample_id": sample_id}
 
 
+def capture_status_message(step, session_root):
+    scenario_dir = os.path.join(session_root, SCENARIO)
+    lines = [
+        "Capture nie jest jeszcze gotowy dla tej próbki.",
+        "",
+        f"Oczekiwana sesja: {step.session_id}",
+        f"Oczekiwana ścieżka: {session_root}",
+    ]
+    if not os.path.isdir(session_root):
+        lines.extend([
+            "",
+            "Folder sesji jeszcze nie istnieje.",
+            "Najczęstsza przyczyna: backend nie został uruchomiony z env vars pokazanymi przez wizard.",
+            "Sprawdź w terminalu backendu:",
+            expected_env_commands(step),
+        ])
+        return "\n".join(lines)
+    if not os.path.isdir(scenario_dir):
+        lines.extend([
+            "",
+            "Folder sesji istnieje, ale brakuje folderu scenariusza one_card.",
+            "Sprawdź TAROTVISION_LIVE_FIXTURE_SCENARIO oraz czy backend wykonał snapshot.",
+            "Wymagana wartość:",
+            '$env:TAROTVISION_LIVE_FIXTURE_SCENARIO = "one_card"',
+        ])
+        return "\n".join(lines)
+    missing = _missing_required_files(session_root, SCENARIO)
+    if missing:
+        lines.extend([
+            "",
+            "Folder scenariusza istnieje, ale capture jest niekompletny.",
+            "Brakujące pliki: " + ", ".join(missing),
+            "Poczekaj na zapis snapshotu albo popraw ustawienie karty/kamery i wykonaj capture ponownie.",
+        ])
+        return "\n".join(lines)
+    return "Capture gotowy: znaleziono komplet wymaganych plików."
+
+
 def run_wizard(log_dir, aggregate_dir, output_dir):
     _print_header()
     _wait("Ustaw kamere, ostrosc i ekspozycje. Upewnij sie, ze widzisz wszystkie markery ArUco.")
@@ -234,16 +272,30 @@ def _run_single_step(step, session_root, aggregate_dir):
     print(f"Instrukcja: {step.operator_instruction}")
     print("\nUstaw te zmienne w terminalu backendu przed capture:")
     print(expected_env_commands(step))
-    _wait("Poloz karte zgodnie z instrukcja. Gdy jest stabilnie, uruchom istniejacy capture i poczekaj na zapis snapshotu.")
+    _wait(
+        "Poloz karte zgodnie z instrukcja. Upewnij sie, ze backend jest uruchomiony "
+        "z powyzszymi env vars. Gdy snapshot zapisze sie w logach, wroc tutaj."
+    )
     while True:
         if not _missing_required_files(session_root, SCENARIO):
             break
-        print("\nNie widze kompletu plikow sesji:")
-        print(session_root)
-        print("Wymagane: " + ", ".join(scenario_required_files(SCENARIO)))
-        answer = input("Nacisnij Enter po ponownym capture albo wpisz skip, aby pominac ten krok: ").strip().lower()
-        if answer == "skip":
+        print("\n" + capture_status_message(step, session_root))
+        print("\nCo teraz?")
+        print("[1] Sprawdz ponownie po uruchomieniu/powtorzeniu capture")
+        print("[2] Pokaz env vars dla backendu jeszcze raz")
+        print("[3] Pomin ten krok")
+        print("[4] Przerwij wizard")
+        answer = input("Wybor [1-4] [domyslnie 1]: ").strip().lower()
+        if answer in {"", "1"}:
+            continue
+        if answer == "2":
+            print("\nUstaw w terminalu backendu:")
+            print(expected_env_commands(step))
+            continue
+        if answer == "3":
             return
+        if answer == "4":
+            raise SystemExit(1)
     _wait("Sprawdz wizualnie analysis_frame_1.png i raw_frame_1.png. Enter oznacza reczne potwierdzenie etykiety.")
     result = append_confirmed_sample(step, session_root, aggregate_dir)
     print(f"Zapisano: {result['status']} / {result['sample_id']}")

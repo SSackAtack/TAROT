@@ -38,6 +38,18 @@ Wizard:
 Wizard nie uruchamia backendu automatycznie i nie zmienia runtime. Jest tylko
 warstwą prowadzącą operatora po istniejącym mechanizmie live fixture capture.
 
+Jeśli wizard pokazuje komunikat, że nie widzi kompletu plików sesji, oznacza to,
+że backend nie zapisał jeszcze snapshotu w oczekiwanym folderze. Najczęściej
+trzeba wtedy:
+
+1. Skopiować env vars pokazane przez wizard do terminala backendu.
+2. Uruchomić lub zrestartować backend z tymi env vars.
+3. Ustawić kartę stabilnie w Studio.
+4. Poczekać, aż backend zapisze snapshot.
+5. Wrócić do wizarda i wybrać ponowne sprawdzenie.
+
+Samo naciśnięcie Enter w wizardzie nie robi zdjęcia. Snapshot zapisuje backend.
+
 Podgląd planu bez rozpoczęcia capture:
 
 ```powershell

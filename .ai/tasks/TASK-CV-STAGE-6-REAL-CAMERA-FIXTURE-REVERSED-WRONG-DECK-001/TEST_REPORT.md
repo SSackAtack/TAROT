@@ -115,3 +115,19 @@ FAIL during import before tests - the local dependency target still imports `num
 cmd /c "cd /d E:\Antigravity\Projekty\TAROT && stage6_capture_wizard.bat plan"
 PASS - printed 28 planned capture steps
 ```
+
+## Capture Wizard Diagnostics Verification
+
+```text
+Initial RED:
+ImportError: cannot import name 'capture_status_message'
+
+cmd /c "cd /d E:\Antigravity\Projekty\TAROT && set PYTHONPATH=C:\tmp\tarot_pydeps_stage6;app_cv;.&& python -m unittest app_cv.tests.test_cv_detection_lab_stage6_real_camera_fixture -v"
+PASS - 18 tests
+```
+
+Added checks:
+
+- missing session folder explains that backend did not write the session and shows env vars,
+- incomplete `one_card` capture lists missing required files,
+- retry prompt now offers explicit choices instead of a blind Enter loop.

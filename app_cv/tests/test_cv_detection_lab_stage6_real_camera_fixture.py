@@ -15,6 +15,7 @@ from tools.cv_detection_lab.stage6_real_camera_preflight import run_preflight
 from tools.cv_detection_lab.stage6_real_camera_capture_wizard import (
     append_confirmed_sample,
     build_capture_plan,
+    capture_status_message,
     expected_env_commands,
     resolve_manual_card_identity,
 )
@@ -231,6 +232,29 @@ class TestStage6RealCameraFixture(unittest.TestCase):
             )
 
         self.assertFalse(os.path.exists(os.path.join(aggregate_dir, "manifest.json")))
+
+    def test_capture_wizard_explains_missing_session_folder(self):
+        step = build_capture_plan()[0]
+        session_root = os.path.join(self.sessions_dir, step.session_id)
+
+        message = capture_status_message(step, session_root)
+
+        self.assertIn("Folder sesji jeszcze nie istnieje", message)
+        self.assertIn(step.session_id, message)
+        self.assertIn("TAROTVISION_LIVE_FIXTURE_NAME", message)
+        self.assertIn("backend", message)
+
+    def test_capture_wizard_explains_missing_required_files(self):
+        step = build_capture_plan()[0]
+        session_root = os.path.join(self.sessions_dir, step.session_id)
+        os.makedirs(os.path.join(session_root, "one_card"))
+
+        message = capture_status_message(step, session_root)
+
+        self.assertIn("Folder scenariusza istnieje", message)
+        self.assertIn("Brakujące pliki", message)
+        self.assertIn("analysis_frame_1.png", message)
+        self.assertIn("raw_frame_1.png", message)
 
     def test_capture_wizard_requires_real_gilded_id_for_manual_categories(self):
         yellow = next(step for step in build_capture_plan() if step.category == "gilded_yellow")

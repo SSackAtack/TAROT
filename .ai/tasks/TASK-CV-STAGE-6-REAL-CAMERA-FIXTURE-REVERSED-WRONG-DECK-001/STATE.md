@@ -30,6 +30,8 @@ before recording manual-confirmed ground truth.
   `Gilded_YELLOW_*` and `Gilded_SIM_*`.
 - Added root launcher `stage6_capture_wizard.bat` so the operator can start the
   wizard without typing the long Python path.
+- Added capture diagnostics so missing session files explain whether backend
+  env vars, scenario folder or required snapshot files are missing.
 
 ## Blocking Condition
 

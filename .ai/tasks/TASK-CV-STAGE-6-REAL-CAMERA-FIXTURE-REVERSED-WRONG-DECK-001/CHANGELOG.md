@@ -34,3 +34,9 @@
 
 - Added `stage6_capture_wizard.bat` in the repository root for simpler operator startup.
 - Launcher supports menu mode plus `plan` and `run` arguments.
+
+## 2026-06-04 — Capture wizard diagnostics
+
+- Added explicit diagnostics when the expected session folder, `one_card` folder or required capture files are missing.
+- Replaced the unclear retry prompt with an operator menu: check again, show env vars, skip step or abort wizard.
+- Documented that Enter in the wizard does not take a snapshot; backend live capture writes the files.
