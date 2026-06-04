@@ -22,6 +22,14 @@ Co zostało zrobione: dodano `tools/cv_detection_lab/stage6_preflight.py`, testy
 
 Kolejne kroki: realny preflight jest `PROVISIONAL_BLOCKED`, dopóki repo nie zawiera wymaganego `deck_profile.json` i `ground_truth.json` dla fixture Stage 6. Po usunięciu blokady można utworzyć benchmark Stage 6 Card Identification.
 
+## Session Status (2026-06-04 Codex Stage 6 Deck Profile + Ground Truth)
+
+Stan aktualny: dodano dane wejściowe wymagane przez preflight Stage 6 dla talii Gilded.
+
+Co zostało zrobione: utworzono `biblioteka_talii/gilded/deck_profile.json` na podstawie `biblioteka_talii/gilded/info.json` oraz `logs/live_fixtures/event_first_current_debug_verified/ground_truth.json` z kompletem sześciu par state-first. Ponieważ ręczne tożsamości kart nie są potwierdzone, wszystkie niepuste etykiety używają `UNKNOWN_DECK`.
+
+Kolejne kroki: preflight może przejść do `PASS`, ale benchmark Stage 6 będzie mierzył tylko unknown/reject behavior, dopóki Michał nie uzupełni ręcznych `expected_card_id`.
+
 ## Session Status (2026-06-04 Codex Stage 6 Research Gate)
 
 Stan aktualny: przygotowano research summary dla Stage 6 Card Identification.
@@ -41,12 +49,14 @@ Kolejne kroki: Supervisor powinien zaakceptować albo skorygować shortlistę `T
 - [x] Przeanalizowano ORB, FLANN LSH, AKAZE, BRISK, SIFT, template matching, histogram, edge/layout, hash, SSIM-like i hybrydy.
 - [x] Wskazano shortlistę `TEST_NOW`.
 - [x] Dodano preflight wymaganych wejść Stage 6: reference deck, `deck_profile.json`, `ground_truth.json`.
+- [x] Dodano `deck_profile.json` i strukturalny `ground_truth.json` dla Gilded.
 
 ## Taski
 
 - [x] `TASK-CV-RESEARCH-STAGE-6-CARD-IDENTIFICATION-001`: Research Gate Stage 6 Card Identification.
 - [x] `TASK-CV-OFFLINE-LAB-STAGE-6-REFERENCE-GROUNDTRUTH-PREFLIGHT-001`: izolowany preflight wejść Stage 6.
-- [ ] `TASK-CV-OFFLINE-LAB-STAGE-6-REFERENCE-GROUNDTRUTH-DATA-001`: uzupełnienie realnego `deck_profile.json` i `ground_truth.json` dla fixture Stage 6.
+- [x] `TASK-CV-OFFLINE-LAB-STAGE-6-DECK-PROFILE-GROUNDTRUTH-001`: uzupełnienie `deck_profile.json` i strukturalnego `ground_truth.json` dla fixture Stage 6.
+- [ ] `TASK-CV-OFFLINE-LAB-STAGE-6-MANUAL-LABEL-CONFIRMATION-001`: opcjonalne ręczne uzupełnienie realnych `expected_card_id`.
 - [ ] `TASK-CV-OFFLINE-LAB-STAGE-6-CARD-IDENTIFICATION-BENCHMARK-001`: benchmark po akceptacji shortlisty.
 
 ## Shortlista TEST_NOW
@@ -74,4 +84,4 @@ ground_truth.json
 
 Natychmiastowy następny krok dla kolejnego modelu: przekazać shortlistę `TEST_NOW` Supervisorowi. Po akceptacji dopiero wtedy utworzyć i zaimplementować offline benchmark Stage 6 w izolowanym `tools/cv_detection_lab/`, bez zmian runtime.
 
-Aktualizacja po preflight: przed benchmarkiem trzeba dodać lub naprawić realny `deck_profile.json` i `ground_truth.json`, a następnie ponownie uruchomić preflight do statusu `PASS`.
+Aktualizacja po danych wejściowych: strukturalny preflight może przejść na `PASS`, ale accuracy top1/top3 wymaga ręcznego potwierdzenia etykiet zamiast `UNKNOWN_DECK`.
