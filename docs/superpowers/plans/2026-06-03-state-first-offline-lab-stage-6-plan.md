@@ -210,6 +210,31 @@ Wynik pozostaje `BENCHMARK_HEURISTIC_ONLY`; obowiązują
 Kolejne kroki: rozszerzyć real-camera fixture i kontynuować walidację offline.
 Progi nie mogą zostać przeniesione do runtime bez osobnej decyzji.
 
+## Session Status (2026-06-04 Fixture Expansion Preparation)
+
+Stan aktualny: `QUALITY_GATE_BENCHMARK_APPROVED_OFFLINE_ONLY`. Obecny fixture
+został wykorzystany do maksimum; dalsze przeliczanie benchmarków bez nowych
+fizycznych zdjęć nie wniesie wiarygodnej walidacji.
+
+Co zostało zrobione: przygotowano organizacyjno-operatorski task
+`TASK-CV-STAGE-6-REAL-CAMERA-FIXTURE-EXPANSION-001`, wykorzystujący istniejący
+capture wizard, preflight i generator manual review pack.
+
+Kolejne kroki: Michał/operator zbiera nowe sesje real-camera. Po capture należy
+przygotować manifest i ręcznie potwierdzony ground truth, uruchomić preflight
+i wygenerować manual review pack. Nie wolno uruchamiać kolejnego benchmarku
+przed zatwierdzeniem tej paczki.
+
+Status: `WAITING_FOR_NEW_REAL_CAMERA_CAPTURE`.
+
+Granice:
+
+```text
+NO_RUNTIME_INTEGRATION
+NO_RUNTIME_THRESHOLD_APPROVAL
+NO_NEW_BENCHMARK_BEFORE_REVIEW_PACK_APPROVAL
+```
+
 ## Session Status (2026-06-04 Codex Real-Camera Fixture Phase A)
 
 Stan aktualny: offline tooling real-camera aggregate jest gotowy, ale task
