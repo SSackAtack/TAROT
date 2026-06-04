@@ -157,3 +157,21 @@ Added checks:
 
 Physical camera capture was not run automatically; it still requires operator
 setup of the real camera, mat and cards.
+
+## Camera Snapshot Settings Parity Verification
+
+```text
+Initial RED:
+TypeError: capture_frame_from_camera() got an unexpected keyword argument 'log_dir'
+
+cmd /c "cd /d E:\Antigravity\Projekty\TAROT && set PYTHONPATH=C:\tmp\tarot_pydeps_stage6;app_cv;.&& python -m unittest app_cv.tests.test_cv_detection_lab_stage6_real_camera_fixture.TestStage6RealCameraFixture.test_capture_wizard_uses_project_camera_session_settings -v"
+PASS
+
+cmd /c "cd /d E:\Antigravity\Projekty\TAROT && set PYTHONPATH=C:\tmp\tarot_pydeps_stage6;app_cv;.&& python -m unittest app_cv.tests.test_cv_detection_lab_stage6_real_camera_fixture -v"
+PASS - 20 tests
+```
+
+Root cause from the operator screenshot: wizard snapshot capture used plain
+`cv2.VideoCapture`, while backend preview used `CameraSession`, which requests
+`1280x720` and restores `logs/camera_settings.json`. Wizard capture now uses
+`CameraSession` too.

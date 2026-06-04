@@ -204,28 +204,38 @@ def write_camera_snapshot_session(step, frame, session_root, image_writer=None):
     return {"status": "CAPTURED", "path": scenario_dir}
 
 
-def capture_frame_from_camera(camera_index=0, warmup_frames=5):
-    import cv2
+def capture_frame_from_camera(
+    camera_index=0,
+    warmup_frames=5,
+    log_dir="logs",
+    camera_width=1280,
+    camera_height=720,
+    camera_session_cls=None,
+):
+    if camera_session_cls is None:
+        try:
+            from tarotvision.camera import CameraSession
+        except ImportError as exc:
+            raise RuntimeError(
+                "Cannot import tarotvision.camera.CameraSession. "
+                "Run the wizard with PYTHONPATH including app_cv or use stage6_capture_wizard.bat."
+            ) from exc
+        camera_session_cls = CameraSession
 
-    if not hasattr(cv2, "VideoCapture"):
-        raise RuntimeError(
-            "OpenCV does not expose VideoCapture in this Python environment. "
-            "Install or repair opencv-python before running camera snapshot mode."
-        )
-    capture = cv2.VideoCapture(camera_index)
-    if not capture.isOpened():
+    session = camera_session_cls(log_dir, camera_width=camera_width, camera_height=camera_height)
+    if not session.open(camera_index):
         raise RuntimeError(f"Cannot open camera index {camera_index}.")
     try:
         frame = None
         for _index in range(max(1, warmup_frames)):
-            ok, current = capture.read()
+            ok, current = session.read()
             if ok:
                 frame = current
         if frame is None:
             raise RuntimeError(f"Cannot read frame from camera index {camera_index}.")
         return frame
     finally:
-        capture.release()
+        session.close()
 
 
 def _cv2_image_writer(path, frame):
@@ -331,11 +341,11 @@ def run_wizard(log_dir, aggregate_dir, output_dir, capture_mode="camera_snapshot
             print(f"\n[{step.index}/28] {step.session_id} jest juz w agregacie. Pomijam.")
             continue
         session_root = os.path.join(log_dir, "live_fixtures", step.session_id)
-        _run_single_step(step, session_root, aggregate_dir, capture_mode, camera_index)
+        _run_single_step(step, session_root, aggregate_dir, capture_mode, camera_index, log_dir)
     _run_final_validation(aggregate_dir, output_dir)
 
 
-def _run_single_step(step, session_root, aggregate_dir, capture_mode, camera_index):
+def _run_single_step(step, session_root, aggregate_dir, capture_mode, camera_index, log_dir):
     step = _prompt_manual_identity(step)
     print("\n" + "=" * 72)
     print(f"KROK {step.index}/28: {step.category}")
@@ -345,7 +355,7 @@ def _run_single_step(step, session_root, aggregate_dir, capture_mode, camera_ind
     print(f"Orientacja: {step.expected_orientation}")
     print(f"Instrukcja: {step.operator_instruction}")
     if capture_mode == "camera_snapshot":
-        _run_camera_snapshot_step(step, session_root, aggregate_dir, camera_index)
+        _run_camera_snapshot_step(step, session_root, aggregate_dir, camera_index, log_dir)
         return
 
     print("\nUstaw te zmienne w terminalu backendu przed capture:")
@@ -379,13 +389,13 @@ def _run_single_step(step, session_root, aggregate_dir, capture_mode, camera_ind
     print(f"Zapisano: {result['status']} / {result['sample_id']}")
 
 
-def _run_camera_snapshot_step(step, session_root, aggregate_dir, camera_index):
+def _run_camera_snapshot_step(step, session_root, aggregate_dir, camera_index, log_dir):
     while True:
         _wait(
             "Poloz karte zgodnie z instrukcja. Gdy karta lezy stabilnie, Enter zrobi zdjecie z kamery."
         )
         try:
-            frame = capture_frame_from_camera(camera_index)
+            frame = capture_frame_from_camera(camera_index, log_dir=log_dir)
             result = write_camera_snapshot_session(step, frame, session_root)
         except Exception as exc:
             print(f"\nNie udalo sie wykonac zdjecia: {exc}")

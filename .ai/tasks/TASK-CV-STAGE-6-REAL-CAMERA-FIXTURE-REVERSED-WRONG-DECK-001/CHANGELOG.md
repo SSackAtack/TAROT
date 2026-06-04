@@ -47,3 +47,9 @@
 - In default mode backend and Studio can stay off; Enter takes one OpenCV camera photo.
 - Added operator choices after every photo: accept, repeat, skip or abort.
 - Kept backend-driven live fixture capture as an explicit fallback via `--capture-mode backend`.
+
+## 2026-06-04 — Camera snapshot settings parity
+
+- Fixed wizard camera snapshot capture to use the same `CameraSession` path as the backend.
+- Wizard photos now restore `logs/camera_settings.json` controls and request `1280x720`, matching the backend preview setup.
+- Added a focused regression test for project camera session usage.

@@ -42,6 +42,11 @@ W domyślnym trybie backend i Studio mogą być wyłączone. Wizard nie zmienia
 runtime i nie uruchamia aplikacji. Kamera musi być dostępna dla OpenCV jako
 indeks `0`, chyba że uruchomisz skrypt z innym `--camera-index`.
 
+Wizard otwiera kamerę przez tę samą klasę `CameraSession`, której używa backend:
+wymusza rozdzielczość `1280x720` i odtwarza zapisane ustawienia z
+`logs/camera_settings.json`, między innymi focus, exposure, brightness i
+contrast.
+
 Jeżeli zdjęcie jest błędne, wybierz `r` i zrób je ponownie. Wizard nadpisuje
 niezaakceptowane pliki tej samej sesji i dopisuje próbkę do agregatu dopiero po
 ręcznym zaakceptowaniu zdjęcia.

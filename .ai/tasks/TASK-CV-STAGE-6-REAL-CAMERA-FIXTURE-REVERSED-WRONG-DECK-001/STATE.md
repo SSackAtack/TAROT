@@ -35,6 +35,9 @@ before recording manual-confirmed ground truth.
 - Changed the wizard default flow to camera snapshot mode: backend and Studio
   can stay off, Enter takes one OpenCV camera photo, and the operator can
   accept, repeat, skip or abort before the sample is recorded.
+- Fixed camera snapshot capture to use the project `CameraSession`, so wizard
+  photos use the same `1280x720` resolution and restored `logs/camera_settings.json`
+  camera controls as the backend preview.
 
 ## Blocking Condition
 

@@ -15,6 +15,7 @@ from tools.cv_detection_lab.stage6_real_camera_preflight import run_preflight
 from tools.cv_detection_lab.stage6_real_camera_capture_wizard import (
     append_confirmed_sample,
     build_capture_plan,
+    capture_frame_from_camera,
     capture_status_message,
     expected_env_commands,
     resolve_manual_card_identity,
@@ -261,6 +262,41 @@ class TestStage6RealCameraFixture(unittest.TestCase):
         self.assertEqual(metrics["capture_mode"], "camera_snapshot")
         manifest = self._load(os.path.join(session_root, "manifest.json"))
         self.assertEqual(manifest["fixture_id"], step.session_id)
+
+    def test_capture_wizard_uses_project_camera_session_settings(self):
+        events = []
+
+        class FakeCameraSession:
+            def __init__(self, log_dir, camera_width, camera_height):
+                events.append(("init", log_dir, camera_width, camera_height))
+                self.frame_width = camera_width
+                self.frame_height = camera_height
+
+            def open(self, index):
+                events.append(("open", index))
+                return True
+
+            def read(self):
+                events.append(("read",))
+                return True, {"frame": "from_project_session"}
+
+            def close(self):
+                events.append(("close",))
+
+        frame = capture_frame_from_camera(
+            camera_index=2,
+            log_dir=self.tmpdir,
+            camera_session_cls=FakeCameraSession,
+            warmup_frames=1,
+        )
+
+        self.assertEqual(frame, {"frame": "from_project_session"})
+        self.assertEqual(events, [
+            ("init", self.tmpdir, 1280, 720),
+            ("open", 2),
+            ("read",),
+            ("close",),
+        ])
 
     def test_capture_wizard_explains_missing_session_folder(self):
         step = build_capture_plan()[0]
