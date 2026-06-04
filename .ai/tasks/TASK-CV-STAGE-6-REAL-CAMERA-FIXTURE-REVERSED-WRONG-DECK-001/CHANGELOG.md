@@ -53,3 +53,11 @@
 - Fixed wizard camera snapshot capture to use the same `CameraSession` path as the backend.
 - Wizard photos now restore `logs/camera_settings.json` controls and request `1280x720`, matching the backend preview setup.
 - Added a focused regression test for project camera session usage.
+
+## 2026-06-04 — Physical capture complete
+
+- Operator captured the required 28 physical real-camera sessions.
+- Aggregate manifest and ground truth contain 28 manually confirmed samples.
+- Preflight passed with `sample_count: 28`, no errors and no warnings.
+- Manual review pack was generated under `logs/offline_replay/stage6_real_camera_validation/manual_review_pack`.
+- Task status moved from `PROVISIONAL_BLOCKED` to `DONE`; runtime integration remains out of scope.

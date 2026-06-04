@@ -2,15 +2,16 @@
 
 ## Status
 
-`PROVISIONAL_BLOCKED`
+`DONE`
 
 ## Supervisor Review
 
 `APPROVED_PHASE_A_BY_CHATGPT_SUPERVISOR` for commit
 `db744e74fbddbae2086f17c97acc962d379cf077`.
 
-The whole task remains `PROVISIONAL_BLOCKED` until the required minimum 28
-physical real-camera sessions are captured and manually confirmed.
+The required minimum 28 physical real-camera sessions have been captured,
+manually confirmed by the operator, passed preflight and produced a manual
+review pack.
 
 `CHANGES_REQUESTED_BY_CHATGPT_SUPERVISOR` for capture wizard commit
 `5f784a63e5d83fe6313356fab08747952a65414c`: fixed by requiring real
@@ -38,11 +39,18 @@ before recording manual-confirmed ground truth.
 - Fixed camera snapshot capture to use the project `CameraSession`, so wizard
   photos use the same `1280x720` resolution and restored `logs/camera_settings.json`
   camera controls as the backend preview.
+- Captured the required 28 physical real-camera sessions.
+- Generated aggregate manifest and ground truth with 28 manually confirmed
+  labels.
+- Preflight result: `PASS`, `sample_count: 28`, `errors: []`, `warnings: []`.
+- Generated manual review pack at
+  `logs/offline_replay/stage6_real_camera_validation/manual_review_pack`.
 
-## Blocking Condition
+## Review Condition
 
-The required minimum 28 physical real-camera sessions have not been captured
-and manually confirmed.
+Manual review of the generated pack is still required before any downstream
+Stage 6 method or runtime decision. This task does not approve runtime
+thresholds, ORB/AKAZE runtime integration or app behavior changes.
 
 ## Runtime Safety
 
@@ -54,16 +62,8 @@ and manually confirmed.
 
 ## Required Next Action
 
-Operator-assisted capture with the wizard:
+Review the generated manual review pack:
 
-`stage6_capture_wizard.bat`
+`logs/offline_replay/stage6_real_camera_validation/manual_review_pack`
 
-Use option `2`. In the default mode the wizard works like a camera: place the
-requested card, press Enter to take the photo, then accept or repeat it.
-
-Detailed procedure:
-
-`docs/operator/stage6_real_camera_fixture_capture.md`
-
-After all 28 sessions and manual labels exist, run preflight and generate the
-manual review pack.
+After manual review, record the supervisor decision for the real-camera data.

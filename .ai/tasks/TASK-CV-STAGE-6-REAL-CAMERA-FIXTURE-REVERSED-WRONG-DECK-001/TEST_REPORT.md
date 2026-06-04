@@ -175,3 +175,43 @@ Root cause from the operator screenshot: wizard snapshot capture used plain
 `cv2.VideoCapture`, while backend preview used `CameraSession`, which requests
 `1280x720` and restores `logs/camera_settings.json`. Wizard capture now uses
 `CameraSession` too.
+
+## Physical Capture And Preflight Verification
+
+Operator capture completed through `stage6_capture_wizard.bat`.
+
+Generated reports:
+
+```text
+logs/live_fixtures/stage6_real_camera_validation/manifest.json
+logs/live_fixtures/stage6_real_camera_validation/ground_truth.json
+logs/offline_replay/stage6_real_camera_validation/preflight_report.json
+logs/offline_replay/stage6_real_camera_validation/preflight_report.md
+logs/offline_replay/stage6_real_camera_validation/manual_review_pack/
+```
+
+Preflight report:
+
+```json
+{
+  "stage": "stage6_real_camera_fixture_preflight",
+  "status": "PASS",
+  "sample_count": 28,
+  "errors": [],
+  "warnings": [],
+  "required_next_action": "Generate manual review pack."
+}
+```
+
+Manual review pack check:
+
+```text
+manual_review_pack/samples contains 28 PNG files
+category_index.json contains all required categories
+similarity_groups.json contains similar-1 and similar-2 with 2 samples each
+README_FOR_SUPERVISOR.md reports Samples: 28
+```
+
+The task is no longer blocked by missing physical capture data. Remaining
+action is manual review of the generated pack; runtime threshold and runtime
+integration approval remain out of scope.
