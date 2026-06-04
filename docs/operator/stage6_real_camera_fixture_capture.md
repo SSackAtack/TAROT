@@ -190,3 +190,31 @@ python tools/cv_detection_lab/stage6_real_camera_manual_review_pack.py `
 ```
 
 Manual review pack nie zatwierdza runtime thresholdów ani runtime integration.
+
+## Minimalna paczka ekspansji RWS na jasnej macie
+
+Do kolejnej walidacji offline użyj osobnego launchera:
+
+```powershell
+.\stage6_capture_expansion_rws.bat
+```
+
+Wizard prowadzi przez tylko 8 zdjęć RWS:
+
+- 4 ujęcia kontrolne bez celowego odblasku,
+- 4 ujęcia z widocznym odblaskiem,
+- jasne i ciemne grafiki,
+- upright i reversed,
+- różne pozycje na jasnej macie.
+
+Podgląd listy zdjęć:
+
+```powershell
+.\stage6_capture_expansion_rws.bat plan
+```
+
+Dane trafiają do osobnego agregatu
+`logs/live_fixtures/stage6_real_camera_fixture_expansion_rws_minimal`.
+Po ósmym zdjęciu wizard uruchamia osobny preflight i generuje manual review
+pack. Nie uruchamia benchmarku. Po wygenerowaniu paczki należy zatrzymać pracę
+i przekazać ją Supervisorowi.

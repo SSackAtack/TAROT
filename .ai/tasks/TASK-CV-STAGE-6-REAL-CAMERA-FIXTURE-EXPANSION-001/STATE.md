@@ -20,11 +20,14 @@ deklarowania dalszego postępu walidacji.
 - Przygotowano zakres operator-assisted fixture expansion.
 - Potwierdzono ponowne użycie istniejących narzędzi capture, preflight i review.
 - Utrwalono zakaz uruchamiania benchmarku przed zatwierdzeniem review pack.
+- Dodano osobny minimalny wizard dla 8 zdjęć RWS na jasnej macie.
+- Dodano osobny preflight, który wymaga kompletnej paczki ośmiu nowych sesji.
+- Oddzielono manifest, ground truth i output ekspansji od wcześniejszych 28 próbek.
 
 ## Required Next Action
 
-Michał/operator zbiera nowe fizyczne sesje zgodnie z `TASK.md` i istniejącą
-instrukcją operatorską.
+Michał/operator uruchamia `stage6_capture_expansion_rws.bat` i wykonuje osiem
+zdjęć zgodnie z instrukcjami wizarda.
 
 ## Runtime Safety
 

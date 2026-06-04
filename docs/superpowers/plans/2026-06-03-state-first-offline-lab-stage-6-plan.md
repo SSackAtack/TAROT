@@ -227,6 +227,11 @@ przed zatwierdzeniem tej paczki.
 
 Status: `WAITING_FOR_NEW_REAL_CAMERA_CAPTURE`.
 
+Aktualizacja: przygotowano osobny minimalny wizard ekspansji dla 8 zdjęć RWS
+na jasnej macie. Paczka obejmuje jasne/ciemne grafiki, clear/glare,
+upright/reversed i różne pozycje. Używa osobnego agregatu i preflightu.
+Tooling jest gotowy, ale status pozostaje `BLOCKED_BY_OPERATOR_CAPTURE`.
+
 Granice:
 
 ```text

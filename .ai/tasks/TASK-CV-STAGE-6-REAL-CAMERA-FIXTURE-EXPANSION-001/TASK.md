@@ -15,6 +15,7 @@ WAITING_FOR_NEW_REAL_CAMERA_CAPTURE
 ## Scope
 
 - użyć istniejącego capture wizard, preflight i generatora manual review pack,
+- dodać osobny minimalny wizard ekspansji RWS i osobny preflight paczki,
 - zebrać nowe fizyczne sesje przez Michała/operatora,
 - przygotować agregujący manifest i ręcznie potwierdzony ground truth,
 - uruchomić preflight,
@@ -23,14 +24,14 @@ WAITING_FOR_NEW_REAL_CAMERA_CAPTURE
 
 ## Target Capture Coverage
 
-- więcej przypadków `YELLOW` i glare,
-- różne kąty światła,
-- różne pozycje kart na stole,
-- reversed,
-- wrong-deck,
-- visually similar,
-- jasne grafiki do kontroli false positive quality gate,
-- ciemne grafiki do kontroli `usable_detail_ratio`.
+Minimalna paczka 8 zdjęć RWS na jasnej macie:
+
+- 2 jasne karty bez celowego glare,
+- 2 jasne karty z glare,
+- 2 ciemne karty bez celowego glare,
+- 2 ciemne karty z glare,
+- po 4 upright i reversed,
+- centrum, lewa i prawa strona maty.
 
 ## Out of Scope
 
@@ -42,7 +43,7 @@ WAITING_FOR_NEW_REAL_CAMERA_CAPTURE
 - zmiany `app_cv/tarotvision/*`,
 - zmiany `app_ar/*`,
 - zmiany WebSocket,
-- modyfikowanie istniejącego capture wizard, preflight lub review pack tooling.
+- modyfikowanie istniejącego 28-próbkowego capture wizard i jego preflightu.
 
 ## Files Allowed to Change During Capture Phase
 
@@ -51,6 +52,10 @@ WAITING_FOR_NEW_REAL_CAMERA_CAPTURE
 - `.ai/tasks/TASK-CV-STAGE-6-REAL-CAMERA-FIXTURE-EXPANSION-001/*`,
 - `.ai/TASKS_INDEX.md`,
 - `docs/superpowers/plans/2026-06-03-state-first-offline-lab-stage-6-plan.md`.
+- `tools/cv_detection_lab/stage6_real_camera_fixture_expansion_wizard.py`,
+- `app_cv/tests/test_cv_detection_lab_stage6_real_camera_fixture_expansion.py`,
+- `stage6_capture_expansion_rws.bat`,
+- `docs/operator/stage6_real_camera_fixture_capture.md`.
 
 ## Acceptance Criteria
 
@@ -63,14 +68,14 @@ WAITING_FOR_NEW_REAL_CAMERA_CAPTURE
 
 ## Operator Procedure
 
-Użyć istniejącej instrukcji:
-
-```text
-docs/operator/stage6_real_camera_fixture_capture.md
-```
-
-oraz istniejącego launchera:
+Uruchomić osobny launcher:
 
 ```powershell
-.\stage6_capture_wizard.bat
+.\stage6_capture_expansion_rws.bat
+```
+
+Podgląd planu bez zdjęć:
+
+```powershell
+.\stage6_capture_expansion_rws.bat plan
 ```
