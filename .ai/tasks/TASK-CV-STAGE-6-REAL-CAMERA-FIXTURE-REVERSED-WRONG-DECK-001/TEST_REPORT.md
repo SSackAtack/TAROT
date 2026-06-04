@@ -131,3 +131,29 @@ Added checks:
 - missing session folder explains that backend did not write the session and shows env vars,
 - incomplete `one_card` capture lists missing required files,
 - retry prompt now offers explicit choices instead of a blind Enter loop.
+
+## Camera Snapshot Wizard Mode Verification
+
+```text
+Initial RED:
+ImportError: cannot import name 'write_camera_snapshot_session'
+
+cmd /c "cd /d E:\Antigravity\Projekty\TAROT && set PYTHONPATH=C:\tmp\tarot_pydeps_stage6;app_cv;.&& python -m unittest app_cv.tests.test_cv_detection_lab_stage6_real_camera_fixture -v"
+PASS - 19 tests
+
+cmd /c "cd /d E:\Antigravity\Projekty\TAROT && set PYTHONPATH=C:\tmp\tarot_pydeps_stage6;app_cv;.&& python -B -m py_compile tools\cv_detection_lab\stage6_real_camera_capture_wizard.py app_cv\tests\test_cv_detection_lab_stage6_real_camera_fixture.py"
+PASS
+
+cmd /c "cd /d E:\Antigravity\Projekty\TAROT && stage6_capture_wizard.bat plan"
+PASS - printed 28 planned capture steps
+```
+
+Added checks:
+
+- wizard can write a complete camera snapshot fixture session without backend output,
+- session includes `raw_frame_1.png`, `analysis_frame_1.png`, `payload.json`,
+  `metrics.json`, `roi_diagnostics.json` and session `manifest.json`,
+- payload and metrics mark `capture_mode: camera_snapshot`.
+
+Physical camera capture was not run automatically; it still requires operator
+setup of the real camera, mat and cards.

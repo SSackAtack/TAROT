@@ -32,6 +32,9 @@ before recording manual-confirmed ground truth.
   wizard without typing the long Python path.
 - Added capture diagnostics so missing session files explain whether backend
   env vars, scenario folder or required snapshot files are missing.
+- Changed the wizard default flow to camera snapshot mode: backend and Studio
+  can stay off, Enter takes one OpenCV camera photo, and the operator can
+  accept, repeat, skip or abort before the sample is recorded.
 
 ## Blocking Condition
 
@@ -51,6 +54,9 @@ and manually confirmed.
 Operator-assisted capture with the wizard:
 
 `stage6_capture_wizard.bat`
+
+Use option `2`. In the default mode the wizard works like a camera: place the
+requested card, press Enter to take the photo, then accept or repeat it.
 
 Detailed procedure:
 

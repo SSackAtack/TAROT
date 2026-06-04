@@ -14,46 +14,54 @@ jedna niezmienna sesja capture = jedna próbka agregatu
 Po dodaniu sesji do agregującego manifestu nie edytuj jej plików. Błędną sesję
 zastąp nową sesją o nowym `session_id`, a następnie zaktualizuj manifest.
 
-## Zalecany tryb: wizard operatorski
+## Zalecany tryb: wizard jako aparat
 
-Najbezpieczniejsza ścieżka to uruchomienie wizarda:
+Najbezpieczniejsza ścieżka to uruchomienie launchera z głównego katalogu
+repozytorium:
 
 ```powershell
-python tools/cv_detection_lab/stage6_real_camera_capture_wizard.py
+.\stage6_capture_wizard.bat
 ```
 
 Wizard:
 
 - prowadzi przez 28 kroków capture,
 - pokazuje, którą talię, kartę i orientację przygotować,
-- drukuje właściwe zmienne środowiskowe dla istniejącego live capture,
+- używa kamery jak aparatu fotograficznego,
+- po naciśnięciu Enter robi jedno zdjęcie,
+- zapisuje komplet wymaganych plików sesji,
 - czeka na ręczne potwierdzenie operatora,
-- sprawdza, czy sesja ma wymagane pliki,
+- pozwala zaakceptować zdjęcie, powtórzyć je, pominąć krok albo przerwać,
 - dla `YELLOW` i `visually similar` wymaga wpisania rzeczywistego ID karty
   w formacie `Gilded_XX`,
 - dopisuje potwierdzoną próbkę do `manifest.json` i `ground_truth.json`,
 - po zebraniu kompletu uruchamia preflight,
 - po `PASS` generuje manual review pack.
 
-Wizard nie uruchamia backendu automatycznie i nie zmienia runtime. Jest tylko
-warstwą prowadzącą operatora po istniejącym mechanizmie live fixture capture.
+W domyślnym trybie backend i Studio mogą być wyłączone. Wizard nie zmienia
+runtime i nie uruchamia aplikacji. Kamera musi być dostępna dla OpenCV jako
+indeks `0`, chyba że uruchomisz skrypt z innym `--camera-index`.
 
-Jeśli wizard pokazuje komunikat, że nie widzi kompletu plików sesji, oznacza to,
-że backend nie zapisał jeszcze snapshotu w oczekiwanym folderze. Najczęściej
-trzeba wtedy:
-
-1. Skopiować env vars pokazane przez wizard do terminala backendu.
-2. Uruchomić lub zrestartować backend z tymi env vars.
-3. Ustawić kartę stabilnie w Studio.
-4. Poczekać, aż backend zapisze snapshot.
-5. Wrócić do wizarda i wybrać ponowne sprawdzenie.
-
-Samo naciśnięcie Enter w wizardzie nie robi zdjęcia. Snapshot zapisuje backend.
+Jeżeli zdjęcie jest błędne, wybierz `r` i zrób je ponownie. Wizard nadpisuje
+niezaakceptowane pliki tej samej sesji i dopisuje próbkę do agregatu dopiero po
+ręcznym zaakceptowaniu zdjęcia.
 
 Podgląd planu bez rozpoczęcia capture:
 
 ```powershell
-python tools/cv_detection_lab/stage6_real_camera_capture_wizard.py --print-plan
+.\stage6_capture_wizard.bat plan
+```
+
+Bez launchera można uruchomić bezpośrednio:
+
+```powershell
+python tools/cv_detection_lab/stage6_real_camera_capture_wizard.py
+```
+
+Jeżeli system ma więcej kamer:
+
+```powershell
+python tools/cv_detection_lab/stage6_real_camera_capture_wizard.py --camera-index 1
 ```
 
 Jeżeli używasz niestandardowych katalogów:
@@ -65,7 +73,17 @@ python tools/cv_detection_lab/stage6_real_camera_capture_wizard.py `
   --output-dir logs/offline_replay/stage6_real_camera_validation
 ```
 
-## Uruchomienie istniejącego capture
+## Tryb legacy: istniejący backend capture
+
+Ten tryb jest opcją awaryjną. Użyj go tylko wtedy, gdy świadomie chcesz, żeby
+snapshot zapisywał backend zamiast wizarda:
+
+```powershell
+python tools/cv_detection_lab/stage6_real_camera_capture_wizard.py --capture-mode backend
+```
+
+W tym trybie samo naciśnięcie Enter w wizardzie nie robi zdjęcia. Snapshot
+zapisuje backend.
 
 Przed uruchomieniem backendu ustaw:
 
@@ -107,8 +125,8 @@ karty. Operator musi wpisać realny identyfikator z talii Gilded, np.
 W trybie wizarda poniższe kroki wykonujesz wtedy, kiedy wizard o to poprosi.
 
 1. Przygotuj wyłącznie jedną kartę i wymaganą orientację.
-2. Ustaw nowy unikalny `TAROTVISION_LIVE_FIXTURE_NAME`.
-3. Uruchom istniejący capture i poczekaj na zapis scenariusza `one_card`.
+2. Sprawdź nazwę sesji pokazaną przez wizard.
+3. W domyślnym trybie naciśnij Enter w wizardzie, żeby zrobić zdjęcie.
 4. Sprawdź `analysis_frame_1.png`, `raw_frame_1.png`, `payload.json`,
    `metrics.json` i `roi_diagnostics.json`.
 5. Potwierdź, że obraz przedstawia oczekiwaną kartę i kategorię.

@@ -15,13 +15,14 @@ echo ============================================================
 echo    TAROTVISION - Stage 6 Real-Camera Capture Wizard
 echo ============================================================
 echo.
-echo This launcher starts the manual capture wizard.
-echo The wizard does not start backend automatically and does not change runtime.
+echo This launcher starts the camera snapshot wizard.
+echo Default mode: backend and Studio can be OFF. Enter takes one camera photo.
+echo The wizard does not change runtime.
 echo.
 echo Choose action:
 echo ------------------------------------------------------------
 echo [1] Print 28-step plan
-echo [2] Run capture wizard
+echo [2] Run camera snapshot wizard
 echo [3] Exit
 echo ------------------------------------------------------------
 echo.

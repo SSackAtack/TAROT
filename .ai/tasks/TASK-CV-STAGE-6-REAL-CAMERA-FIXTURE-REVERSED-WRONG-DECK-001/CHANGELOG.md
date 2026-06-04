@@ -40,3 +40,10 @@
 - Added explicit diagnostics when the expected session folder, `one_card` folder or required capture files are missing.
 - Replaced the unclear retry prompt with an operator menu: check again, show env vars, skip step or abort wizard.
 - Documented that Enter in the wizard does not take a snapshot; backend live capture writes the files.
+
+## 2026-06-04 — Camera snapshot wizard mode
+
+- Changed the wizard default from backend-driven capture to camera snapshot capture.
+- In default mode backend and Studio can stay off; Enter takes one OpenCV camera photo.
+- Added operator choices after every photo: accept, repeat, skip or abort.
+- Kept backend-driven live fixture capture as an explicit fallback via `--capture-mode backend`.

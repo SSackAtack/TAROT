@@ -18,6 +18,7 @@ from tools.cv_detection_lab.stage6_real_camera_capture_wizard import (
     capture_status_message,
     expected_env_commands,
     resolve_manual_card_identity,
+    write_camera_snapshot_session,
 )
 
 
@@ -232,6 +233,34 @@ class TestStage6RealCameraFixture(unittest.TestCase):
             )
 
         self.assertFalse(os.path.exists(os.path.join(aggregate_dir, "manifest.json")))
+
+    def test_capture_wizard_writes_camera_snapshot_fixture_files(self):
+        step = build_capture_plan()[0]
+        session_root = os.path.join(self.sessions_dir, step.session_id)
+        writes = []
+
+        def fake_writer(path, frame):
+            writes.append((os.path.basename(path), frame))
+            self._write_bytes(path, b"snapshot")
+            return True
+
+        result = write_camera_snapshot_session(step, frame={"fake": "frame"}, session_root=session_root, image_writer=fake_writer)
+
+        self.assertEqual(result["status"], "CAPTURED")
+        scenario_dir = os.path.join(session_root, "one_card")
+        self.assertTrue(os.path.isfile(os.path.join(scenario_dir, "analysis_frame_1.png")))
+        self.assertTrue(os.path.isfile(os.path.join(scenario_dir, "raw_frame_1.png")))
+        self.assertTrue(os.path.isfile(os.path.join(scenario_dir, "payload.json")))
+        self.assertTrue(os.path.isfile(os.path.join(scenario_dir, "metrics.json")))
+        self.assertTrue(os.path.isfile(os.path.join(scenario_dir, "roi_diagnostics.json")))
+        self.assertEqual({name for name, _frame in writes}, {"analysis_frame_1.png", "raw_frame_1.png"})
+        payload = self._load(os.path.join(scenario_dir, "payload.json"))
+        self.assertEqual(payload["scenario"], "one_card")
+        self.assertEqual(payload["capture_mode"], "camera_snapshot")
+        metrics = self._load(os.path.join(scenario_dir, "metrics.json"))
+        self.assertEqual(metrics["capture_mode"], "camera_snapshot")
+        manifest = self._load(os.path.join(session_root, "manifest.json"))
+        self.assertEqual(manifest["fixture_id"], step.session_id)
 
     def test_capture_wizard_explains_missing_session_folder(self):
         step = build_capture_plan()[0]

@@ -1,16 +1,17 @@
 """Operator wizard for Stage 6 real-camera capture.
 
-The wizard is intentionally a manual wrapper around the existing live fixture
-capture. It prints the exact environment variables for one immutable session,
-waits for the operator to run capture, then records only sessions that already
-contain the required files.
+The default mode treats the camera as a simple photo camera: the operator places
+one card, presses Enter, and the wizard saves one immutable snapshot session.
+The legacy backend-driven capture remains available as an explicit fallback.
 """
 from __future__ import annotations
 
 import argparse
 from dataclasses import dataclass
+from datetime import datetime, timezone
 import json
 import os
+import platform
 import re
 
 from tools.cv_detection_lab.stage6_real_camera_fixture import scenario_required_files, stable_sample_id
@@ -164,6 +165,75 @@ def resolve_manual_card_identity(step, expected_card_id, similarity_group=None):
     )
 
 
+def write_camera_snapshot_session(step, frame, session_root, image_writer=None):
+    writer = image_writer or _cv2_image_writer
+    scenario_dir = os.path.join(session_root, SCENARIO)
+    os.makedirs(scenario_dir, exist_ok=True)
+    _write_json(os.path.join(session_root, "manifest.json"), {
+        "fixture_id": step.session_id,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "camera": os.environ.get("TAROTVISION_CAMERA_NAME", "camera_snapshot"),
+        "machine": os.environ.get("TAROTVISION_MACHINE_NAME", platform.node() or "unknown"),
+        "deck": step.deck,
+        "scenarios": [SCENARIO],
+        "notes": "stage6 camera snapshot wizard fixture",
+    })
+    raw_path = os.path.join(scenario_dir, "raw_frame_1.png")
+    analysis_path = os.path.join(scenario_dir, "analysis_frame_1.png")
+    if not writer(raw_path, frame):
+        raise OSError(f"failed to write image: {raw_path}")
+    if not writer(analysis_path, frame):
+        raise OSError(f"failed to write image: {analysis_path}")
+    _write_json(os.path.join(scenario_dir, "payload.json"), {
+        "scenario": SCENARIO,
+        "capture_mode": "camera_snapshot",
+        "cards": [],
+        "cards_len": 0,
+        "detected": False,
+        "table_calibrated": False,
+        "marker_ids": [],
+        "expected_cards_count": 1,
+        "actual_cards_count": 0,
+    })
+    _write_json(os.path.join(scenario_dir, "metrics.json"), {
+        "capture_mode": "camera_snapshot",
+        "quality_expectation": step.quality_expectation,
+        "operator_category": step.category,
+    })
+    _write_json(os.path.join(scenario_dir, "roi_diagnostics.json"), [])
+    return {"status": "CAPTURED", "path": scenario_dir}
+
+
+def capture_frame_from_camera(camera_index=0, warmup_frames=5):
+    import cv2
+
+    if not hasattr(cv2, "VideoCapture"):
+        raise RuntimeError(
+            "OpenCV does not expose VideoCapture in this Python environment. "
+            "Install or repair opencv-python before running camera snapshot mode."
+        )
+    capture = cv2.VideoCapture(camera_index)
+    if not capture.isOpened():
+        raise RuntimeError(f"Cannot open camera index {camera_index}.")
+    try:
+        frame = None
+        for _index in range(max(1, warmup_frames)):
+            ok, current = capture.read()
+            if ok:
+                frame = current
+        if frame is None:
+            raise RuntimeError(f"Cannot read frame from camera index {camera_index}.")
+        return frame
+    finally:
+        capture.release()
+
+
+def _cv2_image_writer(path, frame):
+    import cv2
+
+    return bool(cv2.imwrite(path, frame))
+
+
 def append_confirmed_sample(step, session_root, aggregate_dir):
     missing = _missing_required_files(session_root, SCENARIO)
     if missing:
@@ -247,21 +317,25 @@ def capture_status_message(step, session_root):
     return "Capture gotowy: znaleziono komplet wymaganych plików."
 
 
-def run_wizard(log_dir, aggregate_dir, output_dir):
+def run_wizard(log_dir, aggregate_dir, output_dir, capture_mode="camera_snapshot", camera_index=0):
     _print_header()
-    _wait("Ustaw kamere, ostrosc i ekspozycje. Upewnij sie, ze widzisz wszystkie markery ArUco.")
-    _wait("Potwierdz, ze mata jest pusta i stabilna. Wykonaj testowy podglad w Studio, jesli trzeba.")
+    if capture_mode == "camera_snapshot":
+        _wait("Ustaw kamere, ostrosc i ekspozycje. Backend i Studio moga byc wylaczone.")
+        _wait("Potwierdz, ze mata jest pusta, stabilna i widzisz wszystkie markery ArUco.")
+    else:
+        _wait("Ustaw kamere, ostrosc i ekspozycje. Upewnij sie, ze widzisz wszystkie markery ArUco.")
+        _wait("Potwierdz, ze mata jest pusta i stabilna. Wykonaj testowy podglad w Studio, jesli trzeba.")
     plan = build_capture_plan()
     for step in plan:
         if _sample_already_recorded(step, aggregate_dir):
             print(f"\n[{step.index}/28] {step.session_id} jest juz w agregacie. Pomijam.")
             continue
         session_root = os.path.join(log_dir, "live_fixtures", step.session_id)
-        _run_single_step(step, session_root, aggregate_dir)
+        _run_single_step(step, session_root, aggregate_dir, capture_mode, camera_index)
     _run_final_validation(aggregate_dir, output_dir)
 
 
-def _run_single_step(step, session_root, aggregate_dir):
+def _run_single_step(step, session_root, aggregate_dir, capture_mode, camera_index):
     step = _prompt_manual_identity(step)
     print("\n" + "=" * 72)
     print(f"KROK {step.index}/28: {step.category}")
@@ -270,6 +344,10 @@ def _run_single_step(step, session_root, aggregate_dir):
     print(f"Karta: {step.card_label}")
     print(f"Orientacja: {step.expected_orientation}")
     print(f"Instrukcja: {step.operator_instruction}")
+    if capture_mode == "camera_snapshot":
+        _run_camera_snapshot_step(step, session_root, aggregate_dir, camera_index)
+        return
+
     print("\nUstaw te zmienne w terminalu backendu przed capture:")
     print(expected_env_commands(step))
     _wait(
@@ -299,6 +377,38 @@ def _run_single_step(step, session_root, aggregate_dir):
     _wait("Sprawdz wizualnie analysis_frame_1.png i raw_frame_1.png. Enter oznacza reczne potwierdzenie etykiety.")
     result = append_confirmed_sample(step, session_root, aggregate_dir)
     print(f"Zapisano: {result['status']} / {result['sample_id']}")
+
+
+def _run_camera_snapshot_step(step, session_root, aggregate_dir, camera_index):
+    while True:
+        _wait(
+            "Poloz karte zgodnie z instrukcja. Gdy karta lezy stabilnie, Enter zrobi zdjecie z kamery."
+        )
+        try:
+            frame = capture_frame_from_camera(camera_index)
+            result = write_camera_snapshot_session(step, frame, session_root)
+        except Exception as exc:
+            print(f"\nNie udalo sie wykonac zdjecia: {exc}")
+            answer = input("Enter - sprobuj ponownie, skip - pomin, quit - przerwij: ").strip().lower()
+            if answer == "skip":
+                return
+            if answer == "quit":
+                raise SystemExit(1) from exc
+            continue
+
+        print(f"\nZdjecie zapisane: {result['path']}")
+        print("Sprawdz wizualnie raw_frame_1.png i analysis_frame_1.png w folderze sesji.")
+        answer = input("Akceptujesz zdjecie? [Enter/y] tak, r - powtorz, skip - pomin, quit - przerwij: ").strip().lower()
+        if answer in {"", "y", "yes", "t", "tak"}:
+            recorded = append_confirmed_sample(step, session_root, aggregate_dir)
+            print(f"Zapisano: {recorded['status']} / {recorded['sample_id']}")
+            return
+        if answer == "r":
+            continue
+        if answer == "skip":
+            return
+        if answer == "quit":
+            raise SystemExit(1)
 
 
 def _prompt_manual_identity(step):
@@ -415,7 +525,8 @@ def _wait(message):
 
 def _print_header():
     print("# Stage 6 Real-Camera Capture Wizard")
-    print("Tryb: manualny, bez zmian runtime i bez automatycznego startu backendu.")
+    print("Tryb domyslny: aparat po Enter, bez backendu i bez zmian runtime.")
+    print("Tryb backendowy jest dostepny tylko przez --capture-mode backend.")
     print("Jedna sesja capture = jedna probka agregatu.")
 
 
@@ -433,12 +544,19 @@ def main(argv=None):
         help="Preflight and manual review pack output directory.",
     )
     parser.add_argument("--print-plan", action="store_true", help="Print the 28-step plan and exit.")
+    parser.add_argument(
+        "--capture-mode",
+        choices=("camera_snapshot", "backend"),
+        default="camera_snapshot",
+        help="camera_snapshot saves one photo after Enter; backend waits for existing live fixture files.",
+    )
+    parser.add_argument("--camera-index", type=int, default=0, help="OpenCV camera index used by camera_snapshot mode.")
     args = parser.parse_args(argv)
     if args.print_plan:
         for step in build_capture_plan():
             print(f"{step.index:02d}. {step.session_id} | {step.category} | {step.card_label}")
         return 0
-    run_wizard(args.log_dir, args.aggregate_dir, args.output_dir)
+    run_wizard(args.log_dir, args.aggregate_dir, args.output_dir, args.capture_mode, args.camera_index)
     return 0
 
 
