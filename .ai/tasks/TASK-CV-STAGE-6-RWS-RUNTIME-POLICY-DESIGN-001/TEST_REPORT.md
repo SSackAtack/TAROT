@@ -10,3 +10,9 @@
 * **Benchmark:** NOT_RERUN
 * **Runtime:** NOT_CHANGED
 * **Frontend build:** NOT_RUN
+
+---
+
+## 4. Decyzja Zatwierdzająca
+* **Supervisor decision:** APPROVED_RWS_RUNTIME_POLICY_DESIGN_ONLY
+* **Code tests:** NOT_RERUN — approval doc only

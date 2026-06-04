@@ -6,3 +6,9 @@
 - Documented AR/OBS stability rules.
 - No code changes.
 - No runtime changes.
+
+---
+
+## Decyzje i Zatwierdzenia
+- Zatwierdzono przez ChatGPT Supervisora jako `APPROVED_RWS_RUNTIME_POLICY_DESIGN_ONLY` (`RWS_RUNTIME_POLICY_DESIGN_APPROVED_ONLY`).
+- Utrzymano brak zgody na runtime integration, runtime thresholds oraz zmiany w WebSocket.

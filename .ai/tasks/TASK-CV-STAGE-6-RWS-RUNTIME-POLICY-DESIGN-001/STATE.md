@@ -1,7 +1,7 @@
 # Stan Prac — TASK-CV-STAGE-6-RWS-RUNTIME-POLICY-DESIGN-001
 
 ## 1. Status Ogólny
-* **Status:** `DONE`
+* **Status:** `APPROVED`
 * **Realizator (Owner):** Gemini
 * **Gałąź Git:** task/cv-stage-6-rws-expansion-benchmark-001
 
@@ -9,7 +9,8 @@
 
 ## 2. Metadane Zadania
 
-* **Decision:** PENDING_SUPERVISOR_REVIEW
+* **Decision:** APPROVED_RWS_RUNTIME_POLICY_DESIGN_ONLY
+* **Supervisor status:** RWS_RUNTIME_POLICY_DESIGN_APPROVED_ONLY
 * **Scope:** Documentation-only runtime policy design
 * **Runtime:** NOT_CHANGED
 * **Benchmark:** NOT_RERUN
