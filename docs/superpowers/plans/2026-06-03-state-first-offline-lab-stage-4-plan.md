@@ -10,8 +10,13 @@ Stage 2 approved: contour_external.
 Stage 3 approved: hybrid_edge_plus_contour.
 ```
 
-Stage 4 benchmark has been implemented and run. Result is `PROVISIONAL_RECOMMENDED`.
-Awaiting Supervisor manual review of crop debug sheets.
+Stage 4 final decision:
+
+```text
+APPROVED_STAGE_4_PIPELINE: quad_warp_perspective_fixed_aspect__resize_only_normalization
+```
+
+Next gate: `TASK-CV-RESEARCH-STAGE-5-CROP-QUALITY-VALIDATION-001`.
 
 ## Session Status (2026-06-03 Codex)
 
@@ -107,3 +112,11 @@ Stage 4 does not approve automatic crop quality validation, card identification 
 Next stage:
 
 TASK-CV-RESEARCH-STAGE-5-CROP-QUALITY-VALIDATION-001
+
+## Session Status (2026-06-04 Codex Stage 5 Research Gate)
+
+Stan aktualny: Stage 1 approved: `gray_absdiff_gaussian`. Stage 2 approved: `contour_external`. Stage 3 approved: `hybrid_edge_plus_contour`. Stage 4 approved: `quad_warp_perspective_fixed_aspect__resize_only_normalization`. Next gate: Stage 5 Crop Quality Validation research.
+
+Co zostało zrobione: utworzono `TASK-CV-RESEARCH-STAGE-5-CROP-QUALITY-VALIDATION-001` i zapisano shortlistę metryk jakości cropa do decyzji Supervisora. Nie zmieniono `tools/cv_detection_lab/`, runtime, Studio ani frontendu.
+
+Kolejne kroki: Stage 5 benchmark must not begin until Supervisor accepts TEST_NOW shortlist. Po akceptacji należy utworzyć `TASK-CV-OFFLINE-LAB-STAGE-5-CROP-QUALITY-VALIDATION-BENCHMARK-001`.
