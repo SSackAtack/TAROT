@@ -10,8 +10,6 @@ set "EXPANSION_WIZARD=tools\cv_detection_lab\stage6_real_camera_fixture_expansio
 set "LEGACY_WIZARD=tools\cv_detection_lab\stage6_real_camera_capture_wizard.py"
 
 if /I "%~1"=="plan" goto PRINT_EXPANSION_PLAN
-if /I "%~1"=="rws" goto RUN_EXPANSION
-if /I "%~1"=="legacy" goto RUN_LEGACY
 if /I "%~1"=="legacy-plan" goto PRINT_LEGACY_PLAN
 
 set "CAMERA_OWNER_PID="
@@ -25,6 +23,9 @@ if defined CAMERA_OWNER_PID (
   pause
   exit /b 2
 )
+
+if /I "%~1"=="rws" goto RUN_EXPANSION
+if /I "%~1"=="legacy" goto RUN_LEGACY
 
 echo ============================================================
 echo    TAROTVISION - Minimal RWS Expansion - 8 samples
