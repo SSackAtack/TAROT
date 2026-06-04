@@ -3,10 +3,7 @@
 ## Status
 
 ```text
-PROVISIONAL_ACCEPTED_FOR_MANUAL_REVIEW
-MANUAL_REVIEW_PACK_READY
-BENCHMARK_NOT_RUN
-WAITING_FOR_SUPERVISOR_MANUAL_REVIEW
+APPROVED_RWS_EXPANSION_FIXTURE_OFFLINE_ONLY
 ```
 
 ## Completed
@@ -28,6 +25,7 @@ WAITING_FOR_SUPERVISOR_MANUAL_REVIEW
 - Przeprowadzono fizyczną procedurę capture 8 próbek RWS na jasnej macie.
 - Zweryfikowano pomyślny przebieg preflightu (preflight_report.json status: PASS).
 - Spakowano manual_review_pack do pliku ZIP i wyznaczono sumę kontrolną SHA-256.
+- Paczka została manualnie sprawdzona i zatwierdzona decyzją `APPROVED_RWS_EXPANSION_FIXTURE_OFFLINE_ONLY_BY_CHATGPT_SUPERVISOR`.
 
 ## Manual Review Pack Information
 
@@ -35,17 +33,16 @@ WAITING_FOR_SUPERVISOR_MANUAL_REVIEW
 - **SHA-256:** `1DE6E7FE4750ECBFE1DCFD092B05149B7D6503D40E7BB746B3B3D52C965B1DA8`
 - **Sample Count:** `8`
 - **Preflight Status:** `PASS`
-- **Benchmark:** `NOT_RUN` — zablokowany do czasu manualnego zatwierdzenia przez Supervisora.
+- **Benchmark:** `NOT_RUN` — zablokowany podczas weryfikacji paczki; do uruchomienia w kolejnym tasku offline.
 - **Runtime:** `NOT_CHANGED`
 
 ## Required Next Action
 
-Przekazanie pliku ZIP do ChatGPT Supervisor w celu wykonania manualnego review. Oczekiwanie na zatwierdzenie przed uruchomieniem jakichkolwiek benchmarków.
+Uruchomienie zadania offline benchmarku: `TASK-CV-STAGE-6-RWS-EXPANSION-BENCHMARK-001` (bez integracji runtime).
 
 ## Runtime Safety
 
 ```text
 NO_RUNTIME_INTEGRATION
 NO_RUNTIME_THRESHOLD_APPROVAL
-NO_NEW_BENCHMARK_BEFORE_REVIEW_PACK_APPROVAL
 ```

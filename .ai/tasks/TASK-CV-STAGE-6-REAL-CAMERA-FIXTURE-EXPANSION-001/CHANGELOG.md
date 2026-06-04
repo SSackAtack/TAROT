@@ -20,3 +20,4 @@
 - Zaktualizowano status zadania na `PROVISIONAL_ACCEPTED_FOR_MANUAL_REVIEW`.
 - Poprawiono fixture_id w plikach manifest.json i ground_truth.json.
 - Ponownie wygenerowano paczkę preflight i spakowano ZIP z nową sumą kontrolną.
+- Zatwierdzono paczkę RWS expansion manual review pack decyzją `APPROVED_RWS_EXPANSION_FIXTURE_OFFLINE_ONLY_BY_CHATGPT_SUPERVISOR`.

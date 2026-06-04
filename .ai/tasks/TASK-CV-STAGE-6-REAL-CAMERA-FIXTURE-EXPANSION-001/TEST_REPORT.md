@@ -17,3 +17,4 @@
   - SHA-256: `1DE6E7FE4750ECBFE1DCFD092B05149B7D6503D40E7BB746B3B3D52C965B1DA8`
 - Benchmark: `NOT_RUN` — celowo zablokowany do zatwierdzenia review pack.
 - `git diff --check`: `PASS`.
+- Manual review decision: `APPROVED_RWS_EXPANSION_FIXTURE_OFFLINE_ONLY_BY_CHATGPT_SUPERVISOR`
