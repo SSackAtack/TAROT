@@ -11,9 +11,9 @@ Stage 3 approved: hybrid_edge_plus_contour.
 Stage 4 approved: quad_warp_perspective_fixed_aspect__resize_only_normalization.
 ```
 
-Next gate: Stage 5 Crop Quality Validation research.
+Stage 5 benchmark has been implemented and run. Result is `PROVISIONAL_RECOMMENDED`.
 
-Stage 5 benchmark must not begin until Supervisor accepts TEST_NOW shortlist.
+Stage 6 must not begin until Supervisor reviews Stage 5 crop quality debug sheets.
 
 ## Session Status (2026-06-04 Codex)
 
@@ -36,7 +36,7 @@ Kolejne kroki: Supervisor powinien zaakceptować albo skorygować shortlistę `T
 ## Taski
 
 - [x] `TASK-CV-RESEARCH-STAGE-5-CROP-QUALITY-VALIDATION-001`: Research Gate Stage 5 Crop Quality Validation.
-- [ ] `TASK-CV-OFFLINE-LAB-STAGE-5-CROP-QUALITY-VALIDATION-BENCHMARK-001`: implementacja benchmarku po akceptacji shortlisty.
+- [x] `TASK-CV-OFFLINE-LAB-STAGE-5-CROP-QUALITY-VALIDATION-BENCHMARK-001`: implementacja benchmarku — DONE, 6 rows, recommended: `quality_metric_suite_v1`.
 
 ## Shortlista TEST_NOW
 
@@ -70,6 +70,22 @@ Kolejne kroki: Supervisor powinien zaakceptować albo skorygować shortlistę `T
 
 ## Kolejne kroki
 
-Natychmiastowy następny krok dla kolejnego modelu: przekazać shortlistę `TEST_NOW` Supervisorowi.
+Natychmiastowy następny krok dla kolejnego modelu: wykonać manual review crop quality debug sheets:
 
-Po akceptacji dopiero wtedy utworzyć i zaimplementować offline benchmark Stage 5 w izolowanym `tools/cv_detection_lab/`, bez zmian runtime, bez Studio i bez identyfikacji kart.
+```text
+logs/offline_replay/stage5_crop_quality_validation/quality_metric_suite_v1/*/crop_quality_debug_sheet.png
+```
+
+Nie rozpoczynać Stage 6 przed tą decyzją.
+
+## Session Status (2026-06-04 Codex Stage 5 Benchmark)
+
+Stan aktualny: zaimplementowano i uruchomiono izolowany offline benchmark Stage 5 Crop Quality Validation.
+
+Co zostało zrobione: dodano `crop_quality_methods.py`, `stage5_crop_quality_validation_benchmark.py` oraz testy `test_cv_detection_lab_stage5.py`. Benchmark korzysta z `gray_absdiff_gaussian`, `contour_external`, `hybrid_edge_plus_contour` i `quad_warp_perspective_fixed_aspect__resize_only_normalization`, generuje `matrix.csv`, `report.json`, `report.md`, `crop_quality_debug_sheet.png`, `crop_XX_quality_overlay.png` i `crop_XX_metrics.json`.
+
+Wynik: `quality_metric_suite_v1` jest `PROVISIONAL_RECOMMENDED`, `threshold_status=BENCHMARK_HEURISTIC_ONLY`, `rows=6`. `empty_to_empty` ma `PASS`, a pary z kartami maja `YELLOW`, przy poprawnych liczbach cropow i poprawnym `previous` dla `removed`.
+
+Weryfikacja: 11 testow Stage 5 PASS, 34 testy regresji Stage 1-4 PASS, py_compile PASS, benchmark CLI PASS, full backend suite 361 testow PASS.
+
+Kolejne kroki: Supervisor powinien recznie sprawdzic crop quality debug sheets. Nie rozpoczynac Stage 6 przed review.
