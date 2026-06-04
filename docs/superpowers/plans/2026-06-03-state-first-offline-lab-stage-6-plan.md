@@ -150,6 +150,21 @@ Kolejne kroki: Supervisor ocenia wynik. Benchmark nie zatwierdza progu ani
 integracji runtime; trudne próbki YELLOW pozostają głównym ograniczeniem
 (ORB Top-1 `0.50`).
 
+## Session Status (2026-06-04 Codex Real-Camera Error Analysis)
+
+Stan aktualny: wykonano offline analizę czterech błędów Top-1 ORB.
+
+Co zostało zrobione: wygenerowano review pack z pełnym `matrix.csv`, raportem
+benchmarku, 28 extracted crops oraz czterema planszami porównującymi crop,
+oczekiwaną referencję i predykcję. Trzy błędy mają bardzo słaby sygnał i są
+związane z jakością obrazu/cropu. Dla próbki `f8d6d84b5ddb5729fa07` wykryto
+podejrzenie błędnego ground truth: etykieta mówi `Gilded_45`, ale crop wizualnie
+przedstawia `Gilded_67`, zgodnie z silną predykcją ORB.
+
+Kolejne kroki: ręcznie potwierdzić podejrzaną etykietę przed ponownym
+przeliczeniem metryk. Nie wolno zmieniać ground truth automatycznie ani
+integrować metody z runtime.
+
 ## Session Status (2026-06-04 Codex Real-Camera Fixture Phase A)
 
 Stan aktualny: offline tooling real-camera aggregate jest gotowy, ale task
