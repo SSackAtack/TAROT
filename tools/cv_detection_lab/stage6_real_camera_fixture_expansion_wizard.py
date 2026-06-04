@@ -12,6 +12,7 @@ from tools.cv_detection_lab.stage6_real_camera_capture_wizard import (
 )
 from tools.cv_detection_lab.stage6_real_camera_fixture import (
     load_aggregate,
+    scenario_required_files,
     session_fingerprint,
     stable_sample_id,
 )
@@ -24,17 +25,17 @@ SCENARIO = "one_card"
 
 def build_expansion_plan():
     specifications = (
-        ("bright_clear", "RWS_00", "upright", "centrum maty, bez celowego odblasku"),
-        ("bright_clear", "RWS_17", "reversed", "lewa strona maty, bez celowego odblasku"),
-        ("bright_glare", "RWS_06", "upright", "prawa strona maty, ustaw widoczny odblask"),
-        ("bright_glare", "RWS_19", "reversed", "centrum maty, ustaw widoczny odblask"),
-        ("dark_clear", "RWS_13", "upright", "prawa strona maty, bez celowego odblasku"),
-        ("dark_clear", "RWS_15", "reversed", "centrum maty, bez celowego odblasku"),
-        ("dark_glare", "RWS_16", "upright", "lewa strona maty, ustaw widoczny odblask"),
-        ("dark_glare", "RWS_18", "reversed", "prawa strona maty, ustaw widoczny odblask"),
+        ("bright_clear", "RWS_12", "Wisielec", "upright", "centrum maty, bez celowego odblasku"),
+        ("bright_clear", "RWS_20", "Sad Ostateczny", "reversed", "lewa strona maty, bez celowego odblasku"),
+        ("bright_glare", "RWS_03", "Cesarzowa", "upright", "prawa strona maty, ustaw widoczny odblask"),
+        ("bright_glare", "RWS_06", "Kochankowie", "reversed", "centrum maty, ustaw widoczny odblask"),
+        ("dark_clear", "RWS_08", "Sila", "upright", "prawa strona maty, bez celowego odblasku"),
+        ("dark_clear", "RWS_04", "Cesarz", "reversed", "centrum maty, bez celowego odblasku"),
+        ("dark_glare", "RWS_21", "Swiat", "upright", "lewa strona maty, ustaw widoczny odblask"),
+        ("dark_glare", "RWS_15", "Diabel", "reversed", "prawa strona maty, ustaw widoczny odblask"),
     )
     steps = []
-    for index, (variant, card_id, orientation, placement) in enumerate(specifications, start=1):
+    for index, (variant, card_id, card_name, orientation, placement) in enumerate(specifications, start=1):
         category = f"rws_{variant}"
         steps.append(CaptureStep(
             index=index,
@@ -42,14 +43,14 @@ def build_expansion_plan():
             category=category,
             deck="rider-waite-smith",
             card_label=card_id,
-            expected_card_id=None,
+            expected_card_id=card_id,
             expected_orientation=orientation,
-            expected_behavior="reject",
+            expected_behavior="identify",
             quality_expectation="YELLOW" if variant.endswith("glare") else "PASS_OR_YELLOW",
             similarity_group=None,
             operator_instruction=(
-                f"Poloz {card_id} ({orientation}), {placement}. "
-                "RWS jest wrong-deck dla aktualnej walidacji Gilded."
+                f"Poloz {card_id} / {card_name} ({orientation}), {placement}. "
+                "Potwierdz wizualnie rzeczywiste ID karty RWS."
             ),
         ))
     return tuple(steps)
@@ -76,10 +77,38 @@ def run_expansion_preflight(aggregate_dir, output_dir=None):
         label = aggregate.labels.get(sample.sample_id, {})
         if label.get("label_status") != "manual_confirmed":
             errors.append({"code": "LABEL_NOT_MANUALLY_CONFIRMED", "session_id": session_id})
-        if label.get("expected_behavior") != "reject":
-            errors.append({"code": "WRONG_DECK_BEHAVIOR_INVALID", "session_id": session_id})
+        expected_fields = {
+            "category": step.category,
+            "expected_deck": step.deck,
+            "expected_card_id": step.expected_card_id,
+            "expected_orientation": step.expected_orientation,
+            "expected_behavior": step.expected_behavior,
+        }
+        for field, expected_value in expected_fields.items():
+            if getattr(sample, field) != expected_value:
+                errors.append({
+                    "code": "EXPANSION_SAMPLE_CONTRACT_MISMATCH",
+                    "session_id": session_id,
+                    "field": field,
+                })
+        for field in ("expected_deck", "expected_card_id", "expected_orientation", "expected_behavior"):
+            if label.get(field) != getattr(sample, field):
+                errors.append({
+                    "code": "GROUND_TRUTH_LABEL_MISMATCH",
+                    "session_id": session_id,
+                    "field": field,
+                })
         if not os.path.isdir(sample.resolved_session_path) or not session_fingerprint(sample.resolved_session_path):
             errors.append({"code": "MISSING_OR_EMPTY_SESSION", "session_id": session_id})
+            continue
+        scenario_dir = os.path.join(sample.resolved_session_path, sample.scenario)
+        for filename in scenario_required_files(sample.scenario):
+            if not os.path.isfile(os.path.join(scenario_dir, filename)):
+                errors.append({
+                    "code": "MISSING_CAPTURE_FILE",
+                    "session_id": session_id,
+                    "filename": filename,
+                })
     for session_id in sorted(set(actual) - set(expected)):
         errors.append({"code": "UNEXPECTED_EXPANSION_SAMPLE", "session_id": session_id})
     return _write_report(output_dir, _report(aggregate.samples, errors))
@@ -95,7 +124,15 @@ def run_wizard(log_dir, aggregate_dir, output_dir, camera_index=0):
             print(f"\n[{step.index}/8] {step.session_id} juz zapisane. Pomijam.")
             continue
         session_root = os.path.join(log_dir, "live_fixtures", step.session_id)
-        _run_single_step(step, session_root, aggregate_dir, "camera_snapshot", camera_index, log_dir)
+        _run_single_step(
+            step,
+            session_root,
+            aggregate_dir,
+            "camera_snapshot",
+            camera_index,
+            log_dir,
+            total_steps=len(plan),
+        )
     report = run_expansion_preflight(aggregate_dir, output_dir)
     print("\nExpansion preflight:", report["status"])
     if report["status"] == "PASS":

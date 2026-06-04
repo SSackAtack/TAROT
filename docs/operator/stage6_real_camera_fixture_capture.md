@@ -193,11 +193,30 @@ Manual review pack nie zatwierdza runtime thresholdów ani runtime integration.
 
 ## Minimalna paczka ekspansji RWS na jasnej macie
 
-Do kolejnej walidacji offline użyj osobnego launchera:
+Do kolejnej walidacji offline użyj głównego launchera z worktree Stage 6:
 
 ```powershell
 .\stage6_capture_expansion_rws.bat
 ```
+
+lub:
+
+```powershell
+.\stage6_capture_wizard.bat
+```
+
+Główny launcher domyślnie uruchamia teraz paczkę RWS 8 próbek. Stary plan
+28 próbek Gilded jest dostępny tylko jako jawna opcja `legacy`.
+
+Ponieważ równolegle rozwijana gałąź `Komercja` może przełączać główny katalog
+repozytorium, na aktualnej maszynie przygotowano stabilny starter:
+
+```powershell
+E:\Antigravity\Projekty\START_TAROT_STAGE6_RWS_8_PROBEK.bat
+```
+
+Starter zawsze uruchamia izolowany worktree Stage 6 i zapisuje dane do
+wspólnych `logs/` głównego repo.
 
 Wizard prowadzi przez tylko 8 zdjęć RWS:
 
@@ -206,6 +225,9 @@ Wizard prowadzi przez tylko 8 zdjęć RWS:
 - jasne i ciemne grafiki,
 - upright i reversed,
 - różne pozycje na jasnej macie.
+
+Próbki mają rzeczywiste `expected_card_id` RWS oraz
+`expected_behavior: identify`. Nie są zapisywane jako wrong-deck.
 
 Podgląd listy zdjęć:
 

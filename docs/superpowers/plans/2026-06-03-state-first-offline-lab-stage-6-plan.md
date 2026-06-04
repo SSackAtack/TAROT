@@ -232,6 +232,11 @@ na jasnej macie. Paczka obejmuje jasne/ciemne grafiki, clear/glare,
 upright/reversed i różne pozycje. Używa osobnego agregatu i preflightu.
 Tooling jest gotowy, ale status pozostaje `BLOCKED_BY_OPERATOR_CAPTURE`.
 
+Aktualizacja po zgłoszeniu operatora: wspólny katalog repo został przełączony
+przez równoległy task `Komercja`, dlatego operator uruchomił stary launcher
+28 próbek. Stage 6 ma teraz osobny worktree, główny launcher domyślnie uruchamia
+RWS 8 próbek, licznik pokazuje `1/8`, a legacy wymaga jawnego wyboru.
+
 Granice:
 
 ```text

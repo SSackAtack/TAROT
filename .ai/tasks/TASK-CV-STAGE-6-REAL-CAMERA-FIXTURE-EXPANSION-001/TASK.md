@@ -16,6 +16,8 @@ WAITING_FOR_NEW_REAL_CAMERA_CAPTURE
 
 - użyć istniejącego capture wizard, preflight i generatora manual review pack,
 - dodać osobny minimalny wizard ekspansji RWS i osobny preflight paczki,
+- ustawić główny launcher Stage 6 domyślnie na nową paczkę 8 próbek,
+- zachować stary plan 28 próbek tylko jako jawną opcję `legacy`,
 - zebrać nowe fizyczne sesje przez Michała/operatora,
 - przygotować agregujący manifest i ręcznie potwierdzony ground truth,
 - uruchomić preflight,
@@ -43,7 +45,8 @@ Minimalna paczka 8 zdjęć RWS na jasnej macie:
 - zmiany `app_cv/tarotvision/*`,
 - zmiany `app_ar/*`,
 - zmiany WebSocket,
-- modyfikowanie istniejącego 28-próbkowego capture wizard i jego preflightu.
+- zmiana planu lub kontraktu istniejącego 28-próbkowego fixture,
+- uruchamianie starego planu bez jawnego wyboru operatora.
 
 ## Files Allowed to Change During Capture Phase
 
@@ -53,8 +56,10 @@ Minimalna paczka 8 zdjęć RWS na jasnej macie:
 - `.ai/TASKS_INDEX.md`,
 - `docs/superpowers/plans/2026-06-03-state-first-offline-lab-stage-6-plan.md`.
 - `tools/cv_detection_lab/stage6_real_camera_fixture_expansion_wizard.py`,
+- `tools/cv_detection_lab/stage6_real_camera_capture_wizard.py`,
 - `app_cv/tests/test_cv_detection_lab_stage6_real_camera_fixture_expansion.py`,
 - `stage6_capture_expansion_rws.bat`,
+- `stage6_capture_wizard.bat`,
 - `docs/operator/stage6_real_camera_fixture_capture.md`.
 
 ## Acceptance Criteria
@@ -68,14 +73,17 @@ Minimalna paczka 8 zdjęć RWS na jasnej macie:
 
 ## Operator Procedure
 
-Uruchomić osobny launcher:
+Na izolowanej gałęzi Stage 6 uruchomić główny launcher:
 
 ```powershell
-.\stage6_capture_expansion_rws.bat
+.\stage6_capture_wizard.bat
 ```
 
-Podgląd planu bez zdjęć:
+Domyślna opcja uruchamia paczkę RWS 8 próbek. Stary plan 28 próbek jest
+dostępny tylko po jawnym wyborze `legacy`.
+
+Na aktualnej maszynie dostępny jest też stabilny starter niezależny od gałęzi:
 
 ```powershell
-.\stage6_capture_expansion_rws.bat plan
+E:\Antigravity\Projekty\START_TAROT_STAGE6_RWS_8_PROBEK.bat
 ```

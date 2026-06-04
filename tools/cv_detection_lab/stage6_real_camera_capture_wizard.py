@@ -345,10 +345,10 @@ def run_wizard(log_dir, aggregate_dir, output_dir, capture_mode="camera_snapshot
     _run_final_validation(aggregate_dir, output_dir)
 
 
-def _run_single_step(step, session_root, aggregate_dir, capture_mode, camera_index, log_dir):
+def _run_single_step(step, session_root, aggregate_dir, capture_mode, camera_index, log_dir, total_steps=28):
     step = _prompt_manual_identity(step)
     print("\n" + "=" * 72)
-    print(f"KROK {step.index}/28: {step.category}")
+    print(f"KROK {step.index}/{total_steps}: {step.category}")
     print(f"Sesja: {step.session_id}")
     print(f"Talia: {step.deck}")
     print(f"Karta: {step.card_label}")
