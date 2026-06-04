@@ -89,3 +89,51 @@ Wynik: `quality_metric_suite_v1` jest `PROVISIONAL_RECOMMENDED`, `threshold_stat
 Weryfikacja: 11 testow Stage 5 PASS, 34 testy regresji Stage 1-4 PASS, py_compile PASS, benchmark CLI PASS, full backend suite 361 testow PASS.
 
 Kolejne kroki: Supervisor powinien recznie sprawdzic crop quality debug sheets. Nie rozpoczynac Stage 6 przed review.
+
+## Stage 5 Final Decision
+
+Decision:
+
+APPROVED_STAGE_5_METHOD: quality_metric_suite_v1
+
+Reason:
+
+Metoda poprawnie przeszła benchmark, foreground/margin fix, YELLOW/FAIL reason fix oraz manualny crop quality debug review na parach:
+
+- `empty -> empty`
+- `empty -> one_card`
+- `empty -> three_cards`
+- `one_card -> three_cards`
+- `one_card -> empty`
+- `three_cards -> empty`
+
+Scope:
+
+Stage 5 approval covers Crop Quality Validation only.
+
+Approved method:
+
+- `quality_metric_suite_v1`
+
+Approved output:
+
+- `crop_quality_status`
+- `crop_quality_score`
+- `identification_readiness_score`
+- `quality_flags`
+- `warning_reason`
+- `reject_reason`
+- `quality_metrics`
+- `crop_quality_debug_sheet`
+
+Important limitation:
+
+Stage 5 does not approve card identification, ORB / FLANN, OCR, template matching, runtime thresholds or runtime integration.
+
+Observation:
+
+All real crop samples in the current fixture are `YELLOW`, not `PASS`. Stage 6 must assume medium-quality crop input.
+
+Next stage:
+
+TASK-CV-RESEARCH-STAGE-6-CARD-IDENTIFICATION-001

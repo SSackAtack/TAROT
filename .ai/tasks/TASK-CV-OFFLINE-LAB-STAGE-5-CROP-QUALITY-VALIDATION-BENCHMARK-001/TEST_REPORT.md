@@ -218,6 +218,39 @@ OK
 
 ---
 
+## TASK-CV-OFFLINE-LAB-STAGE-5-DECISION-001
+
+### Manual Review
+
+Reviewed updated crop quality debug sheets for `quality_metric_suite_v1`:
+
+- `empty_to_empty`: PASS
+- `empty_to_one_card`: PASS_FOR_STAGE_5
+- `empty_to_three_cards`: PASS_FOR_STAGE_5
+- `one_card_to_three_cards`: PASS_FOR_STAGE_5
+- `one_card_to_empty`: PASS_FOR_STAGE_5
+- `three_cards_to_empty`: PASS_FOR_STAGE_5
+
+### Decision
+
+APPROVED_STAGE_5_METHOD: quality_metric_suite_v1
+
+### Automated Tests
+
+NOT_RUN — documentation-only stage gate.
+
+### Notes
+
+Automated tests were already executed in:
+
+- `TASK-CV-OFFLINE-LAB-STAGE-5-CROP-QUALITY-VALIDATION-BENCHMARK-001`
+- `TASK-CV-OFFLINE-LAB-STAGE-5-FOREGROUND-MARGIN-FIX-001`
+- `TASK-CV-OFFLINE-LAB-STAGE-5-YELLOW-REASON-FIX-001`
+
+This task only records the Supervisor decision after manual crop quality debug review.
+
+---
+
 ## TASK-CV-OFFLINE-LAB-STAGE-5-YELLOW-REASON-FIX-001
 
 ### RED

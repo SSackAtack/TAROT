@@ -141,3 +141,49 @@ Stage 5 remains `PROVISIONAL_RECOMMENDED`.
 ### Required next action
 
 Supervisor reviews regenerated Stage 5 debug sheets before any Stage 5 approval decision.
+
+## TASK-CV-OFFLINE-LAB-STAGE-5-DECISION-001
+
+### Supervisor Manual Review
+
+Manualnie przejrzano zaktualizowane crop quality debug sheets dla metody:
+
+`quality_metric_suite_v1`
+
+Pary testowe:
+
+- `empty_to_empty`
+- `empty_to_one_card`
+- `empty_to_three_cards`
+- `one_card_to_three_cards`
+- `one_card_to_empty`
+- `three_cards_to_empty`
+
+### Decision
+
+APPROVED_STAGE_5_METHOD: quality_metric_suite_v1
+
+### Scope of Approval
+
+Zatwierdzenie dotyczy tylko Stage 5 Crop Quality Validation:
+
+- ocena jakości cropów z zatwierdzonego Stage 4,
+- statusy `PASS`, `YELLOW`, `FAIL`, `PASS_NO_CROPS`,
+- `quality_flags`,
+- `warning_reason` / `reject_reason`,
+- `crop_quality_score`,
+- `identification_readiness_score`,
+- `threshold_status=BENCHMARK_HEURISTIC_ONLY`,
+- obsługa par state-first `added`, `removed`, `no_change`.
+
+### Known Limitation
+
+Stage 5 nie zatwierdza jeszcze identyfikacji kart ani runtime thresholds.
+
+Wszystkie realne cropy w aktualnym fixture mają status `YELLOW`, więc Stage 6 musi być projektowany z założeniem, że wejściowe cropy są używalne, ale jakościowo średnie.
+
+### Required Next Action
+
+Utworzyć:
+
+TASK-CV-RESEARCH-STAGE-6-CARD-IDENTIFICATION-001

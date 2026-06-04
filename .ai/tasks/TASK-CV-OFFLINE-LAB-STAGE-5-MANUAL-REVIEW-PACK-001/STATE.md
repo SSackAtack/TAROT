@@ -55,3 +55,13 @@ APPROVED_STAGE_5_METHOD: quality_metric_suite_v1
 ## Required next action
 
 Michal reviews the 6 PNG debug sheets and decides whether `quality_metric_suite_v1` can be approved for Stage 5.
+
+## TASK-CV-OFFLINE-LAB-STAGE-5-DECISION-001
+
+Manual review completed.
+
+Decision:
+
+APPROVED_STAGE_5_METHOD: quality_metric_suite_v1
+
+Stage 5 method approved after updated debug sheets confirmed that YELLOW / FAIL outputs include diagnostic flags or warning/reject reason.

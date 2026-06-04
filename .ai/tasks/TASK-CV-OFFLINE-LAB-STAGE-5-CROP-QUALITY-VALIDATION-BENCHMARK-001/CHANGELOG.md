@@ -38,3 +38,11 @@
 - No runtime changes.
 - No card identification changes.
 - No ORB / FLANN / template matching / OCR.
+
+## TASK-CV-OFFLINE-LAB-STAGE-5-DECISION-001
+
+- Supervisor zatwierdził `quality_metric_suite_v1` jako metodę Stage 5 Crop Quality Validation.
+- Zatwierdzenie dotyczy wyłącznie walidacji jakości cropów.
+- Nie zatwierdza Card Identification, State Managera ani Runtime Integration.
+- Znane ograniczenie: realne cropy z aktualnego fixture mają status `YELLOW`, więc Stage 6 musi zakładać wejście średniej jakości.
+- Następny krok: Research Gate Stage 6 Card Identification.
