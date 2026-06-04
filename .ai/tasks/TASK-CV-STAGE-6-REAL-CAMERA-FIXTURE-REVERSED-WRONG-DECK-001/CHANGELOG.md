@@ -61,3 +61,9 @@
 - Preflight passed with `sample_count: 28`, no errors and no warnings.
 - Manual review pack was generated under `logs/offline_replay/stage6_real_camera_validation/manual_review_pack`.
 - Task status moved from `PROVISIONAL_BLOCKED` to `DONE`; runtime integration remains out of scope.
+
+## 2026-06-04 — Manual review handoff ZIP
+
+- Recorded supervisor decision `PROVISIONAL_ACCEPTED_FOR_MANUAL_REVIEW` for commit `5afe76308602ef74e8df45b9f0bb6a7777dd0811`.
+- Created ZIP handoff at `logs/offline_replay/stage6_real_camera_validation/stage6_real_camera_manual_review_pack.zip`.
+- Verified the ZIP contains required metadata files and 28 `samples/*.png` images.

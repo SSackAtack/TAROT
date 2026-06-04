@@ -6,6 +6,13 @@
 
 ## Supervisor Review
 
+`PROVISIONAL_ACCEPTED_FOR_MANUAL_REVIEW` for capture complete commit
+`5afe76308602ef74e8df45b9f0bb6a7777dd0811`.
+
+The generated review pack was zipped for handoff:
+
+`logs/offline_replay/stage6_real_camera_validation/stage6_real_camera_manual_review_pack.zip`
+
 `APPROVED_PHASE_A_BY_CHATGPT_SUPERVISOR` for commit
 `db744e74fbddbae2086f17c97acc962d379cf077`.
 
@@ -65,5 +72,9 @@ thresholds, ORB/AKAZE runtime integration or app behavior changes.
 Review the generated manual review pack:
 
 `logs/offline_replay/stage6_real_camera_validation/manual_review_pack`
+
+ZIP handoff:
+
+`logs/offline_replay/stage6_real_camera_validation/stage6_real_camera_manual_review_pack.zip`
 
 After manual review, record the supervisor decision for the real-camera data.

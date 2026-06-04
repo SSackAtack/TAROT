@@ -215,3 +215,29 @@ README_FOR_SUPERVISOR.md reports Samples: 28
 The task is no longer blocked by missing physical capture data. Remaining
 action is manual review of the generated pack; runtime threshold and runtime
 integration approval remain out of scope.
+
+## Manual Review ZIP Verification
+
+Created ZIP:
+
+```text
+logs/offline_replay/stage6_real_camera_validation/stage6_real_camera_manual_review_pack.zip
+```
+
+ZIP content check:
+
+```text
+README_FOR_SUPERVISOR.md
+manifest.json
+ground_truth.json
+preflight_report.json
+category_index.json
+similarity_groups.json
+samples/*.png = 28 files
+```
+
+SHA256:
+
+```text
+F323748FC49AB6D71BE3A8190F9E356B5A405854383F4E28BD1C5A6F24EA10E9
+```
