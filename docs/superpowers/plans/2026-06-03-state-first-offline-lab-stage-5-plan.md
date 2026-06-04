@@ -137,3 +137,11 @@ All real crop samples in the current fixture are `YELLOW`, not `PASS`. Stage 6 m
 Next stage:
 
 TASK-CV-RESEARCH-STAGE-6-CARD-IDENTIFICATION-001
+
+## Session Status (2026-06-04 Codex Stage 6 Research Gate)
+
+Stan aktualny: Stage 1 approved: `gray_absdiff_gaussian`. Stage 2 approved: `contour_external`. Stage 3 approved: `hybrid_edge_plus_contour`. Stage 4 approved: `quad_warp_perspective_fixed_aspect__resize_only_normalization`. Stage 5 approved: `quality_metric_suite_v1`. Next gate: Stage 6 Card Identification research.
+
+Co zostało zrobione: utworzono `TASK-CV-RESEARCH-STAGE-6-CARD-IDENTIFICATION-001` i zapisano shortlistę metod Card Identification do decyzji Supervisora. Nie zmieniono `tools/cv_detection_lab/`, runtime, Studio ani frontendu.
+
+Kolejne kroki: Stage 6 benchmark must not begin until Supervisor accepts TEST_NOW shortlist. Po akceptacji należy utworzyć `TASK-CV-OFFLINE-LAB-STAGE-6-CARD-IDENTIFICATION-BENCHMARK-001`.
