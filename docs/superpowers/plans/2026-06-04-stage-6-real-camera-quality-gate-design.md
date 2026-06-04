@@ -2,7 +2,16 @@
 
 ## Status ogólny
 
-Projekt offline-only. Nie zatwierdza runtime threshold ani integracji runtime.
+Projekt i benchmark zatwierdzone jako
+`APPROVED_OFFLINE_QUALITY_GATE_BENCHMARK_ONLY`.
+
+Nadal obowiązują:
+
+```text
+BENCHMARK_HEURISTIC_ONLY
+NO_RUNTIME_THRESHOLD_APPROVAL
+NO_RUNTIME_INTEGRATION
+```
 
 ## Stan aktualny
 
@@ -161,5 +170,8 @@ zmienia wyniku identyfikacji.
 Wynik: bad crop recall `1.0`, good crop false retry `0.0`, wrong-deck false
 retry `0.0`, ORB accuracy na ACCEPT subset `1.0`.
 
-Kolejne kroki: manual review masek i decyzja Supervisora. Progi pozostają
-`BENCHMARK_HEURISTIC_ONLY`; brak zgody na runtime integration.
+Decyzja Supervisora: `APPROVED_OFFLINE_QUALITY_GATE_BENCHMARK_ONLY`.
+
+Kolejne kroki: rozszerzyć real-camera fixture i kontynuować walidację offline.
+Progi pozostają `BENCHMARK_HEURISTIC_ONLY`; brak zgody na runtime threshold
+i runtime integration.

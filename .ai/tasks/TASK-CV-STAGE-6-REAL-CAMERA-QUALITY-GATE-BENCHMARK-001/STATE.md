@@ -2,7 +2,7 @@
 
 ## Status
 
-`DONE`
+`APPROVED`
 
 ## Result
 
@@ -20,8 +20,12 @@ Trzy znane błędy jakości zostały zatrzymane:
 
 ## Decision Boundary
 
-Wszystkie progi są `BENCHMARK_HEURISTIC_ONLY`. Brak zgody na runtime.
+- `APPROVED_OFFLINE_QUALITY_GATE_BENCHMARK_ONLY`
+- `BENCHMARK_HEURISTIC_ONLY`
+- `NO_RUNTIME_THRESHOLD_APPROVAL`
+- `NO_RUNTIME_INTEGRATION`
 
 ## Required Next Action
 
-Supervisor ocenia wyniki i review pack przed jakąkolwiek kolejną decyzją.
+Rozszerzyć real-camera fixture i kontynuować walidację offline przed
+jakąkolwiek decyzją o progach lub integracji runtime.

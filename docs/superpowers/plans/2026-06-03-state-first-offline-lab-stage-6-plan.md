@@ -203,8 +203,12 @@ usable detail i decyzje ACCEPT / RETRY / MANUAL_REVIEW. Wszystkie trzy znane
 błędy jakości zostały zatrzymane, bez false retry dla dobrych i wrong-deck
 próbek. ORB accuracy na ACCEPT subset wynosi `1.0`.
 
-Kolejne kroki: Supervisor ocenia review pack. Progi są benchmark-only i nie
-mogą zostać przeniesione do runtime bez osobnej decyzji.
+Decyzja Supervisora: `APPROVED_OFFLINE_QUALITY_GATE_BENCHMARK_ONLY`.
+Wynik pozostaje `BENCHMARK_HEURISTIC_ONLY`; obowiązują
+`NO_RUNTIME_THRESHOLD_APPROVAL` i `NO_RUNTIME_INTEGRATION`.
+
+Kolejne kroki: rozszerzyć real-camera fixture i kontynuować walidację offline.
+Progi nie mogą zostać przeniesione do runtime bez osobnej decyzji.
 
 ## Session Status (2026-06-04 Codex Real-Camera Fixture Phase A)
 
