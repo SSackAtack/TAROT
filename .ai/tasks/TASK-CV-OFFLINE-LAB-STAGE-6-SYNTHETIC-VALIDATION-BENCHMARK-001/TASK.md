@@ -77,6 +77,6 @@ owner approval if a verified blocking defect is found.
 
 `feat: dodaj syntetyczny benchmark walidacyjny stage6`
 
-## Plan Review Status
+## Implementation Review Status
 
 `PENDING_SUPERVISOR_REVIEW`

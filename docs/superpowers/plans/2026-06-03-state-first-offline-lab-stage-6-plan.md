@@ -70,6 +70,7 @@ Kolejne kroki: Supervisor powinien zaakceptować albo skorygować shortlistę `T
 - [x] Uruchomiono pierwszą falę benchmarku Stage 6 Card Identification.
 - [x] Przygotowano sześcioscenariuszową paczkę manual review dla `orb_bfmatcher_ratio_test`.
 - [x] Supervisor zatwierdził `orb_bfmatcher_ratio_test` dla bieżącego offline lab fixture.
+- [x] Uruchomiono deterministyczny synthetic validation benchmark na 192 próbkach.
 
 ## Taski
 
@@ -80,7 +81,7 @@ Kolejne kroki: Supervisor powinien zaakceptować albo skorygować shortlistę `T
 - [x] `TASK-CV-OFFLINE-LAB-STAGE-6-CARD-IDENTIFICATION-BENCHMARK-001`: pierwsza fala benchmarku.
 - [x] `TASK-CV-OFFLINE-LAB-STAGE-6-MANUAL-REVIEW-PACK-001`: manual review i decyzja Supervisora.
 - [x] `TASK-CV-OFFLINE-LAB-STAGE-6-METHOD-APPROVAL-001`: dokumentacyjne utrwalenie decyzji Supervisora.
-- [ ] Szerszy Stage 6 validation benchmark.
+- [x] `TASK-CV-OFFLINE-LAB-STAGE-6-SYNTHETIC-VALIDATION-BENCHMARK-001`: syntetyczny validation benchmark ORB vs AKAZE.
 
 ## Shortlista TEST_NOW
 
@@ -117,3 +118,17 @@ Aktualizacja po decyzji Supervisora:
 `APPROVED_STAGE_6_METHOD: orb_bfmatcher_ratio_test`.
 Approved for current offline lab fixture only. No runtime integration approval.
 Następny bezpieczny krok: przygotować szerszy Stage 6 validation benchmark.
+
+## Session Status (2026-06-04 Codex Synthetic Validation)
+
+Stan aktualny: `orb_bfmatcher_ratio_test` przeszedł syntetyczny validation
+benchmark offline na 168 known i 24 wrong-deck samples.
+
+Co zostało zrobione: dodano deterministyczny generator, reversed, trudne
+warianty, wrong-deck rejection, porównanie z AKAZE, runtime local proxy oraz
+raporty per method/category/orientation. ORB i AKAZE osiągnęły 100% top-1/top-3
+i 0% wrong-deck FAR; ORB był szybszy.
+
+Kolejne kroki: Supervisor review. Przed integracją runtime wymagany jest
+szerszy real-camera fixture. Offline threshold i runtime integration pozostają
+niezatwierdzone.
