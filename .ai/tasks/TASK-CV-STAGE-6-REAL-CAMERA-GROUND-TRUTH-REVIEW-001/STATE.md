@@ -20,3 +20,10 @@
 ## Required Next Action
 
 Supervisor zatwierdza ręczną korektę i nowe metryki offline-only.
+
+## Supervisor Decision
+
+`APPROVED_OFFLINE_GROUND_TRUTH_CORRECTION`.
+
+Status ORB: `ORB_REAL_CAMERA_VALIDATED_OFFLINE_ONLY_AFTER_GT_FIX`.
+Brak zgody na runtime threshold i runtime integration.

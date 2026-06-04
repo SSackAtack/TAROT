@@ -178,6 +178,21 @@ wszystkie sklasyfikowane jako `image_quality_or_crop`.
 Kolejne kroki: Supervisor zatwierdza korektę danych i nowe metryki offline-only.
 Nadal brak zgody na runtime integration.
 
+## Session Status (2026-06-04 Codex Quality Gate Design)
+
+Stan aktualny: ground truth review został zatwierdzony przez Supervisora jako
+`APPROVED_OFFLINE_GROUND_TRUTH_CORRECTION`. ORB pozostaje
+`ORB_REAL_CAMERA_VALIDATED_OFFLINE_ONLY_AFTER_GT_FIX`.
+
+Co zostało zrobione: przeanalizowano trzy pozostałe błędy jakości/cropu.
+Istniejący Stage 5 quality suite nie wykrywa ich odblasków: raportuje
+`overexposed_pixel_ratio = 0.0`, `top_reflection_score = 0.0` i wysokie
+readiness. Zaprojektowano offline-only quality gate oparty o lokalne komponenty
+specular highlight, occlusion ratio i usable detail poza odblaskiem.
+
+Kolejne kroki: Supervisor ocenia projekt quality gate. Po akceptacji można
+utworzyć mały benchmark offline-only, bez zmian runtime.
+
 ## Session Status (2026-06-04 Codex Real-Camera Fixture Phase A)
 
 Stan aktualny: offline tooling real-camera aggregate jest gotowy, ale task
