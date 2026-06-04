@@ -1,7 +1,7 @@
 # Stan Prac — TASK-CV-STAGE-6-RWS-EXPANSION-BENCHMARK-001
 
 ## 1. Status Ogólny
-* **Status:** `DONE`
+* **Status:** `APPROVED`
 * **Realizator (Owner):** Gemini
 * **Gałąź Git:** task/cv-stage-6-rws-expansion-benchmark-001
 
@@ -9,7 +9,7 @@
 
 ## 2. Wymagane Metadane Zadania
 
-* **Decision:** PENDING_SUPERVISOR_REVIEW
+* **Decision:** APPROVED_OFFLINE_RWS_EXPANSION_BENCHMARK_ONLY
 * **Fixture:** stage6_real_camera_fixture_expansion_rws_minimal
 * **Fixture status:** APPROVED_RWS_EXPANSION_FIXTURE_OFFLINE_ONLY_BY_CHATGPT_SUPERVISOR
 * **Runtime:** NOT_CHANGED
