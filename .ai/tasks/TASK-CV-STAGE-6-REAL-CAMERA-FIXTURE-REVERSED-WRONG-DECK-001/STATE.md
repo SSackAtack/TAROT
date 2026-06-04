@@ -28,6 +28,8 @@ before recording manual-confirmed ground truth.
   without changing runtime or auto-starting the backend.
 - Added guards so the wizard and preflight reject placeholder card IDs such as
   `Gilded_YELLOW_*` and `Gilded_SIM_*`.
+- Added root launcher `stage6_capture_wizard.bat` so the operator can start the
+  wizard without typing the long Python path.
 
 ## Blocking Condition
 
@@ -46,7 +48,7 @@ and manually confirmed.
 
 Operator-assisted capture with the wizard:
 
-`python tools/cv_detection_lab/stage6_real_camera_capture_wizard.py`
+`stage6_capture_wizard.bat`
 
 Detailed procedure:
 

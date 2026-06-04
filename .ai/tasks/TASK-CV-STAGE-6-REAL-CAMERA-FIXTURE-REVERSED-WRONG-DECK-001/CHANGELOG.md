@@ -29,3 +29,8 @@
 - Added manual real-card-ID resolution requiring `Gilded_<number>` before recording those categories.
 - Added preflight guard `INVALID_EXPECTED_CARD_ID_PLACEHOLDER` for blocked placeholder IDs.
 - Kept runtime untouched and task `PROVISIONAL_BLOCKED` pending physical capture.
+
+## 2026-06-04 — Root launcher
+
+- Added `stage6_capture_wizard.bat` in the repository root for simpler operator startup.
+- Launcher supports menu mode plus `plan` and `run` arguments.

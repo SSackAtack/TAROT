@@ -108,3 +108,10 @@ Stage 6 regression command was retried:
 cmd /c "cd /d E:\Antigravity\Projekty\TAROT && set PYTHONPATH=C:\tmp\tarot_pydeps_stage6;app_cv;.&& python -m unittest app_cv.tests.test_cv_detection_lab_stage6_preflight app_cv.tests.test_cv_detection_lab_stage6_identification app_cv.tests.test_cv_detection_lab_stage6_synthetic_validation -v"
 FAIL during import before tests - the local dependency target still imports `numpy` as an empty namespace, so `np.ndarray` is missing in `tools/cv_detection_lab/methods.py`.
 ```
+
+## Root Launcher Verification
+
+```text
+cmd /c "cd /d E:\Antigravity\Projekty\TAROT && stage6_capture_wizard.bat plan"
+PASS - printed 28 planned capture steps
+```
