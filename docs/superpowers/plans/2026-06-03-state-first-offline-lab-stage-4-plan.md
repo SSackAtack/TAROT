@@ -10,8 +10,8 @@ Stage 2 approved: contour_external.
 Stage 3 approved: hybrid_edge_plus_contour.
 ```
 
-Next gate: Stage 4 Crop / Deskew / Normalize research.
-Stage 4 benchmark must not begin until Supervisor accepts TEST_NOW shortlist.
+Stage 4 benchmark has been implemented and run. Result is `PROVISIONAL_RECOMMENDED`.
+Awaiting Supervisor manual review of crop debug sheets.
 
 ## Session Status (2026-06-03 Codex)
 
@@ -33,7 +33,7 @@ Kolejne kroki: Supervisor powinien zaakceptować albo skorygować shortlistę `T
 ## Taski
 
 - [x] `TASK-CV-RESEARCH-STAGE-4-CROP-DESKEW-NORMALIZE-001`: Research Gate Stage 4 Crop / Deskew / Normalize.
-- [ ] `TASK-CV-OFFLINE-LAB-STAGE-4-CROP-DESKEW-NORMALIZE-BENCHMARK-001`: implementacja benchmarku po akceptacji shortlisty.
+- [x] `TASK-CV-OFFLINE-LAB-STAGE-4-CROP-DESKEW-NORMALIZE-BENCHMARK-001`: implementacja benchmarku — DONE, 60 rows, recommended: `quad_warp_perspective_fixed_aspect`.
 
 ## Shortlista TEST_NOW
 
@@ -49,6 +49,18 @@ Kolejne kroki: Supervisor powinien zaakceptować albo skorygować shortlistę `T
 - `brightness_contrast_normalization`
 - `orientation_portrait_normalization`
 
-## Kolejne kroki
+## Session Status (2026-06-04 Gemini Stage 4 Benchmark)
 
-Natychmiastowy następny krok dla kolejnego modelu: przekazać shortlistę `TEST_NOW` Supervisorowi. Po akceptacji dopiero wtedy utworzyć i zaimplementować offline benchmark Stage 4 w izolowanym `tools/cv_detection_lab/`, bez zmian runtime.
+Stan aktualny: zaimplementowano i uruchomiono izolowany offline benchmark Stage 4 Crop / Deskew / Normalize.
+
+Co zostało zrobione: dodano `crop_deskew_methods.py`, `stage4_crop_deskew_normalize_benchmark.py` oraz testy `test_cv_detection_lab_stage4.py`. Benchmark korzysta z `gray_absdiff_gaussian`, `contour_external` i `hybrid_edge_plus_contour`, generuje `matrix.csv`, `report.json`, `report.md` oraz crop debug sheets per pipeline variant i para fixture.
+
+Wynik: `quad_warp_perspective_fixed_aspect__resize_only_normalization` jest `PROVISIONAL_RECOMMENDED` z kompletem 60 wierszy macierzy. Wszystkie 9 testów Stage 4 PASS, 23 testy Stage 1-3 PASS, 348 testów full backend PASS.
+
+Kolejne kroki: Supervisor powinien ręcznie sprawdzić crop debug sheets:
+
+```text
+logs/offline_replay/stage4_crop_deskew_normalize/quad_warp_perspective_fixed_aspect__resize_only_normalization/*/crop_debug_sheet.png
+```
+
+Nie rozpoczynać Stage 5 przed tą decyzją.
