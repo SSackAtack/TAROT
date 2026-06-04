@@ -66,6 +66,15 @@ def _synthetic_crop_with_card_margin(top=60, left=24, right=24, bottom=22, width
     return crop
 
 
+def _synthetic_yellow_crop_without_hard_flags(width=300, height=495):
+    crop = np.full((height, width, 3), 160, dtype=np.uint8)
+    cv2.rectangle(crop, (2, 2), (width - 3, height - 3), (230, 230, 230), 3)
+    cv2.rectangle(crop, (20, 20), (width - 20, height - 20), (180, 170, 150), -1)
+    cv2.line(crop, (40, 80), (width - 40, height - 75), (80, 90, 120), 3)
+    cv2.circle(crop, (width // 2, height // 2), 45, (130, 80, 160), -1)
+    return crop
+
+
 class TestStage5FixturePairs(unittest.TestCase):
     def setUp(self):
         self.tmpdir = tempfile.mkdtemp(prefix="stage5_pairs_")
@@ -170,6 +179,25 @@ class TestStage5CropQualityMetrics(unittest.TestCase):
             without_result.metrics.background_margin_score,
         )
 
+    def test_yellow_status_has_warning_reason_or_flags(self):
+        result = evaluate_crop_quality(_synthetic_yellow_crop_without_hard_flags(), crop_index=1)
+        metrics = result.metrics
+
+        self.assertEqual(metrics.crop_quality_status, "YELLOW")
+        self.assertTrue(metrics.quality_flags or metrics.warning_reason)
+
+    def test_low_readiness_sets_flag_or_warning(self):
+        result = evaluate_crop_quality(_synthetic_yellow_crop_without_hard_flags(), crop_index=1)
+        metrics = result.metrics
+
+        self.assertLess(metrics.identification_readiness_score, 0.50)
+        self.assertTrue(
+            "LOW_READINESS" in metrics.quality_flags
+            or "LOW_SHARPNESS" in metrics.quality_flags
+            or "LOW_DETAIL" in metrics.quality_flags
+            or metrics.warning_reason
+        )
+
 
 class TestStage5BenchmarkOutputs(unittest.TestCase):
     def setUp(self):
@@ -231,6 +259,27 @@ class TestStage5BenchmarkOutputs(unittest.TestCase):
         for path in paths:
             self.assertTrue(os.path.exists(path), path)
             self.assertIsNotNone(cv2.imread(path, cv2.IMREAD_COLOR), path)
+
+    def test_non_pass_results_have_reason(self):
+        run_benchmark(self.tmpdir, self.output_dir)
+
+        for pair_name, _, _, _, _ in PAIR_DEFINITIONS:
+            debug_path = os.path.join(
+                self.output_dir,
+                "quality_metric_suite_v1",
+                pair_name,
+                "quality_debug.json",
+            )
+            with open(debug_path, "r", encoding="utf-8") as handle:
+                payload = json.load(handle)
+
+            for result in payload["results"]:
+                if result["crop_quality_status"] == "PASS":
+                    continue
+                self.assertTrue(
+                    result["quality_flags"] or result["warning_reason"] or result["reject_reason"],
+                    f"{pair_name} crop_{result['crop_index']:02d} lacks non-PASS reason",
+                )
 
 
 if __name__ == "__main__":

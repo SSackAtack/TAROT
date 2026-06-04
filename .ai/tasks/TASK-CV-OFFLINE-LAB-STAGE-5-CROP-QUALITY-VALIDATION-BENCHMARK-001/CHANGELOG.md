@@ -28,3 +28,13 @@
 - No runtime changes.
 - No benchmark logic changes.
 - No method approval recorded.
+
+## TASK-CV-OFFLINE-LAB-STAGE-5-YELLOW-REASON-FIX-001
+
+- Added diagnostic quality flags for non-PASS Stage 5 crop results.
+- Ensured YELLOW / FAIL outputs include `quality_flags` or warning/reject reason.
+- Added regression tests for non-PASS reason reporting.
+- Regenerated Stage 5 benchmark output and local manual review pack.
+- No runtime changes.
+- No card identification changes.
+- No ORB / FLANN / template matching / OCR.

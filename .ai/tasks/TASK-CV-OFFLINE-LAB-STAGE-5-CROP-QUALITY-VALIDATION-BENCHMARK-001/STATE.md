@@ -115,3 +115,29 @@ Michal reviews all 6 debug sheets and decides whether to record:
 ```text
 APPROVED_STAGE_5_METHOD: quality_metric_suite_v1
 ```
+
+## TASK-CV-OFFLINE-LAB-STAGE-5-YELLOW-REASON-FIX-001
+
+### Summary
+
+Improved Stage 5 diagnostics so YELLOW / FAIL crop quality results include an explicit reason.
+
+### Problem
+
+Manual review showed real crop quality debug sheets with `status=YELLOW` and `flags=none`, which made Stage 5 diagnostically weak.
+
+### Fix
+
+Stage 5 now adds benchmark-only diagnostic flags for low score/readiness/sharpness/contrast/detail conditions.
+
+### Verification
+
+Stage 5 tests, Stage 1-4 regressions, py_compile, Stage 5 benchmark CLI and full backend suite passed. Regenerated real benchmark JSON output no longer has non-PASS crop results without `quality_flags`, `warning_reason` or `reject_reason`.
+
+### Decision
+
+Stage 5 remains `PROVISIONAL_RECOMMENDED`.
+
+### Required next action
+
+Supervisor reviews regenerated Stage 5 debug sheets before any Stage 5 approval decision.

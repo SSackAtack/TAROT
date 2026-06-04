@@ -218,6 +218,133 @@ OK
 
 ---
 
+## TASK-CV-OFFLINE-LAB-STAGE-5-YELLOW-REASON-FIX-001
+
+### RED
+
+```powershell
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv;.'; python -m unittest app_cv.tests.test_cv_detection_lab_stage5 -v
+```
+
+Wynik oczekiwany:
+
+```text
+FAILED (failures=2, errors=1)
+```
+
+Failujace regresje:
+
+```text
+test_yellow_status_has_warning_reason_or_flags
+test_low_readiness_sets_flag_or_warning
+```
+
+Blad w nowym tescie benchmark output zostal poprawiony przed implementacja fixu:
+
+```text
+test_non_pass_results_have_reason
+```
+
+### Stage 5 testy
+
+```powershell
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv;.'; python -m unittest app_cv.tests.test_cv_detection_lab_stage5 -v
+```
+
+Wynik:
+
+```text
+Ran 17 tests in 2.370s
+OK
+```
+
+Nowe regresje:
+
+1. `test_yellow_status_has_warning_reason_or_flags` — PASS
+2. `test_low_readiness_sets_flag_or_warning` — PASS
+3. `test_non_pass_results_have_reason` — PASS
+
+### Stage 1/2/3/4 regresja
+
+```powershell
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv;.'; python -m unittest app_cv.tests.test_cv_detection_lab_stage1 app_cv.tests.test_cv_detection_lab_stage2 app_cv.tests.test_cv_detection_lab_stage3 app_cv.tests.test_cv_detection_lab_stage4 -v
+```
+
+Wynik:
+
+```text
+Ran 34 tests in 2.146s
+OK
+```
+
+### Py compile
+
+```powershell
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv;.'; python -B -m py_compile tools\cv_detection_lab\crop_quality_methods.py tools\cv_detection_lab\stage5_crop_quality_validation_benchmark.py app_cv\tests\test_cv_detection_lab_stage5.py
+```
+
+Wynik: PASS
+
+### Benchmark CLI
+
+```powershell
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv;.'; python tools\cv_detection_lab\stage5_crop_quality_validation_benchmark.py --fixture logs\live_fixtures\event_first_current_debug_verified --output logs\offline_replay\stage5_crop_quality_validation
+```
+
+Wynik:
+
+```json
+{
+  "recommended_method": "quality_metric_suite_v1",
+  "recommendation_status": "PROVISIONAL_RECOMMENDED",
+  "threshold_status": "BENCHMARK_HEURISTIC_ONLY",
+  "rows": 6
+}
+```
+
+### Real output reason check
+
+Wynik:
+
+```text
+MISSING []
+```
+
+Kazdy realny crop ze statusem `YELLOW` ma teraz `quality_flags` i `warning_reason`.
+
+### Manual review pack
+
+Odświezono lokalna paczke:
+
+```text
+logs/offline_replay/stage5_crop_quality_validation/manual_review_pack_quality_metric_suite_v1/
+```
+
+Wynik:
+
+```text
+6 PNG files present
+```
+
+### Full backend suite
+
+```powershell
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv;.'; python -m unittest discover -s app_cv\tests -v
+```
+
+Wynik:
+
+```text
+Ran 367 tests in 8.753s
+OK
+```
+
+### Frontend
+
+`NOT_RUN` — task nie zmienia `app_ar/`.
+
+---
+
 ## TASK-CV-OFFLINE-LAB-STAGE-5-MANUAL-REVIEW-PACK-001
 
 ### Artefact check

@@ -207,6 +207,28 @@ def evaluate_crop_quality(crop, crop_index=1):
         (internal_detail, 0.10),
     ])
 
+    # Stage 5 is diagnostic: benchmark-only YELLOW/FAIL scores must explain
+    # which quality dimension lowered the result, even when no hard reject flag
+    # was triggered.
+    def add_flag(flag):
+        if flag not in flags:
+            flags.append(flag)
+
+    if crop_quality_score < 0.68:
+        add_flag("LOW_QUALITY_SCORE")
+    if readiness_score < 0.50:
+        add_flag("LOW_READINESS")
+    if blur_score < 0.18 or tenengrad_score < 0.18:
+        add_flag("LOW_SHARPNESS")
+    if contrast_stddev_score < 0.35:
+        add_flag("LOW_CONTRAST")
+    if texture_density < 0.12 or internal_detail < 0.12:
+        add_flag("LOW_DETAIL")
+    if brightness_score < 0.50:
+        add_flag("LOW_BRIGHTNESS_SCORE")
+    if histogram_spread_score < 0.35:
+        add_flag("LOW_HISTOGRAM_SPREAD")
+
     hard_fail_flags = {"EDGE_CUT_RISK", "BAD_ASPECT", "UNEXPECTED_SIZE"}
     if any(flag in hard_fail_flags for flag in flags) and crop_quality_score < 0.35:
         status = "FAIL"
@@ -216,6 +238,9 @@ def evaluate_crop_quality(crop, crop_index=1):
         status = "YELLOW"
     else:
         status = "PASS"
+
+    if status != "PASS" and not flags:
+        add_flag("LOW_READINESS" if readiness_score < 0.50 else "LOW_QUALITY_SCORE")
 
     reject_reason = flags[0] if status == "FAIL" and flags else None
     warning_reason = flags[0] if status == "YELLOW" and flags else None
