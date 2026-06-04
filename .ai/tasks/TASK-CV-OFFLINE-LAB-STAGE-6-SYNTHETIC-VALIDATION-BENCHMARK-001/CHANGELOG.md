@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 2026-06-04 — Supervisor approval
+
+- Recorded `APPROVED_BY_CHATGPT_SUPERVISOR`.
+- Preserved `VALIDATION_PASS_OFFLINE_ONLY` and the runtime integration block.
+- Set the broader real-camera fixture as the required next task.
+
 ## 2026-06-04 — Synthetic validation benchmark
 
 - Added deterministic synthetic sample generation with stable sample IDs.

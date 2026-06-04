@@ -129,6 +129,9 @@ warianty, wrong-deck rejection, porównanie z AKAZE, runtime local proxy oraz
 raporty per method/category/orientation. ORB i AKAZE osiągnęły 100% top-1/top-3
 i 0% wrong-deck FAR; ORB był szybszy.
 
-Kolejne kroki: Supervisor review. Przed integracją runtime wymagany jest
-szerszy real-camera fixture. Offline threshold i runtime integration pozostają
-niezatwierdzone.
+Kolejne kroki: `TASK-CV-STAGE-6-REAL-CAMERA-FIXTURE-REVERSED-WRONG-DECK-001`.
+Przed integracją runtime wymagany jest szerszy real-camera fixture. Offline
+threshold i runtime integration pozostają niezatwierdzone.
+
+Decyzja Supervisora: `APPROVED_BY_CHATGPT_SUPERVISOR`.
+Status metody pozostaje `VALIDATION_PASS_OFFLINE_ONLY`.

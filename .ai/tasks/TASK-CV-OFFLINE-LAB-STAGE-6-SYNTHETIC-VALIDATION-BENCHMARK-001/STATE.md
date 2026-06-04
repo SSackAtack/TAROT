@@ -31,6 +31,8 @@ confidence gap.
 
 The approved Stage 6 method remains the preferred offline candidate.
 
+`APPROVED_BY_CHATGPT_SUPERVISOR`
+
 ## Limitations
 
 - The dataset is synthetic and derived from reference images.
@@ -41,6 +43,10 @@ The approved Stage 6 method remains the preferred offline candidate.
 
 ## Required Next Action
 
-Supervisor review of the synthetic validation result. Before runtime
-integration, collect and validate a broader real-camera fixture including
-reversed and wrong-deck cases.
+Prepare:
+
+`TASK-CV-STAGE-6-REAL-CAMERA-FIXTURE-REVERSED-WRONG-DECK-001`
+
+Before runtime integration, collect and validate a broader real-camera fixture
+including upright, reversed, wrong-deck, difficult YELLOW crops and visually
+similar cards. Include `ground_truth.json`, preflight and manual review pack.
