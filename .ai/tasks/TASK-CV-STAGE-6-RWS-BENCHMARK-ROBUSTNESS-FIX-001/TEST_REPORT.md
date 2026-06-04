@@ -50,3 +50,9 @@ OK
 ## 3. Walidacja Stylu (git diff --check)
 * **Status:** `PASS`
 * **Komenda uruchomienia:** `git diff --check`
+
+---
+
+## 4. Decyzja Zatwierdzająca
+* **Supervisor decision:** APPROVED_OFFLINE_RWS_BENCHMARK_ROBUSTNESS_FIX_ONLY
+* **Code tests:** NOT_RERUN — approval doc only

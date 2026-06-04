@@ -1,7 +1,7 @@
 # Stan Prac — TASK-CV-STAGE-6-RWS-BENCHMARK-ROBUSTNESS-FIX-001
 
 ## 1. Status Ogólny
-* **Status:** `DONE`
+* **Status:** `APPROVED`
 * **Realizator (Owner):** Gemini
 * **Gałąź Git:** task/cv-stage-6-rws-expansion-benchmark-001
 
@@ -9,7 +9,8 @@
 
 ## 2. Metadane Zadania
 
-* **Decision:** PENDING_SUPERVISOR_REVIEW
+* **Decision:** APPROVED_OFFLINE_RWS_BENCHMARK_ROBUSTNESS_FIX_ONLY
+* **Supervisor status:** RWS_BENCHMARK_ROBUSTNESS_FIX_APPROVED_OFFLINE_ONLY
 * **Runtime:** NOT_CHANGED
 * **Benchmark:** OFFLINE_ONLY
 * **Fixture:** stage6_real_camera_fixture_expansion_rws_minimal

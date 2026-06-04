@@ -15,3 +15,9 @@
 ### `app_cv/tests/test_cv_detection_lab_stage6_rws_expansion_benchmark.py`
 * Dodano test jednostkowy `test_build_benchmark_summary_aggregates_extraction_failures` sprawdzający poprawne zachowanie agregacji przy sztucznych próbkach zawierających błędy ekstrakcji oraz prawidłowe filtrowanie metryk extracted-only i accept_subset.
 * Dodano test `test_build_benchmark_summary_handles_empty_runtimes` weryfikujący stabilność działania helpera przy braku zmierzonych czasów wykonania (runtimes).
+
+---
+
+## 3. Decyzje i Zatwierdzenia
+* Zatwierdzono przez ChatGPT Supervisora jako `APPROVED_OFFLINE_RWS_BENCHMARK_ROBUSTNESS_FIX_ONLY`.
+* Utrzymano brak zgody na runtime integration i runtime threshold.
