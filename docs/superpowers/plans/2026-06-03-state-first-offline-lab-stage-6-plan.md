@@ -14,6 +14,14 @@ Stage 5 approved: quality_metric_suite_v1.
 
 Stage 6 Card Identification research has been prepared. Benchmark Stage 6 must not begin until Supervisor accepts the `TEST_NOW` shortlist.
 
+## Session Status (2026-06-04 Codex Stage 6 Card Identification Benchmark)
+
+Stan aktualny: zaimplementowano i uruchomiono pierwszą falę offline benchmarku Stage 6 Card Identification.
+
+Co zostało zrobione: porównano `orb_bfmatcher_ratio_test`, `akaze_bfmatcher`, `histogram_similarity_hsv`, `ssim_like_luma` i `hybrid_orb_plus_histogram`. ORB, AKAZE i hybryda osiągnęły 100% top1/top3 na 10 ręcznie potwierdzonych etykietach. Histogram i SSIM-like osiągnęły 0%.
+
+Kolejne kroki: przygotować manual review Stage 6 i decyzję Supervisora. `orb_bfmatcher_ratio_test` jest `PROVISIONAL_RECOMMENDED`, ale nie wolno jeszcze integrować go z runtime.
+
 ## Session Status (2026-06-04 Codex Stage 6 Reference/Ground Truth Preflight)
 
 Stan aktualny: zaimplementowano izolowany preflight Stage 6 dla `reference_deck_dir`, `deck_profile.json` i `ground_truth.json`.
@@ -59,6 +67,7 @@ Kolejne kroki: Supervisor powinien zaakceptować albo skorygować shortlistę `T
 - [x] Dodano preflight wymaganych wejść Stage 6: reference deck, `deck_profile.json`, `ground_truth.json`.
 - [x] Dodano `deck_profile.json` i strukturalny `ground_truth.json` dla Gilded.
 - [x] Ręcznie potwierdzono etykiety Stage 6 i usunięto `UNKNOWN_DECK` z ground truth.
+- [x] Uruchomiono pierwszą falę benchmarku Stage 6 Card Identification.
 
 ## Taski
 
@@ -66,7 +75,8 @@ Kolejne kroki: Supervisor powinien zaakceptować albo skorygować shortlistę `T
 - [x] `TASK-CV-OFFLINE-LAB-STAGE-6-REFERENCE-GROUNDTRUTH-PREFLIGHT-001`: izolowany preflight wejść Stage 6.
 - [x] `TASK-CV-OFFLINE-LAB-STAGE-6-DECK-PROFILE-GROUNDTRUTH-001`: uzupełnienie `deck_profile.json` i strukturalnego `ground_truth.json` dla fixture Stage 6.
 - [x] `TASK-CV-OFFLINE-LAB-STAGE-6-MANUAL-LABEL-CONFIRMATION-001`: ręczne uzupełnienie realnych `expected_card_id`.
-- [ ] `TASK-CV-OFFLINE-LAB-STAGE-6-CARD-IDENTIFICATION-BENCHMARK-001`: benchmark po akceptacji shortlisty.
+- [x] `TASK-CV-OFFLINE-LAB-STAGE-6-CARD-IDENTIFICATION-BENCHMARK-001`: pierwsza fala benchmarku.
+- [ ] `TASK-CV-OFFLINE-LAB-STAGE-6-MANUAL-REVIEW-PACK-001`: manual review i decyzja Supervisora.
 
 ## Shortlista TEST_NOW
 
@@ -93,4 +103,4 @@ ground_truth.json
 
 Natychmiastowy następny krok dla kolejnego modelu: przekazać shortlistę `TEST_NOW` Supervisorowi. Po akceptacji dopiero wtedy utworzyć i zaimplementować offline benchmark Stage 6 w izolowanym `tools/cv_detection_lab/`, bez zmian runtime.
 
-Aktualizacja po manual label confirmation: `ground_truth.json` ma status `manual_confirmed`, więc następny bezpieczny krok to benchmark Stage 6 Card Identification.
+Aktualizacja po benchmarku: `orb_bfmatcher_ratio_test` jest `PROVISIONAL_RECOMMENDED`; następny bezpieczny krok to manual review Stage 6, bez integracji runtime.
