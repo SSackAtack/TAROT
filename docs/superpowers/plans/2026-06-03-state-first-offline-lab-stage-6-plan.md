@@ -69,6 +69,7 @@ Kolejne kroki: Supervisor powinien zaakceptować albo skorygować shortlistę `T
 - [x] Ręcznie potwierdzono etykiety Stage 6 i usunięto `UNKNOWN_DECK` z ground truth.
 - [x] Uruchomiono pierwszą falę benchmarku Stage 6 Card Identification.
 - [x] Przygotowano sześcioscenariuszową paczkę manual review dla `orb_bfmatcher_ratio_test`.
+- [x] Supervisor zatwierdził `orb_bfmatcher_ratio_test` dla bieżącego offline lab fixture.
 
 ## Taski
 
@@ -77,7 +78,9 @@ Kolejne kroki: Supervisor powinien zaakceptować albo skorygować shortlistę `T
 - [x] `TASK-CV-OFFLINE-LAB-STAGE-6-DECK-PROFILE-GROUNDTRUTH-001`: uzupełnienie `deck_profile.json` i strukturalnego `ground_truth.json` dla fixture Stage 6.
 - [x] `TASK-CV-OFFLINE-LAB-STAGE-6-MANUAL-LABEL-CONFIRMATION-001`: ręczne uzupełnienie realnych `expected_card_id`.
 - [x] `TASK-CV-OFFLINE-LAB-STAGE-6-CARD-IDENTIFICATION-BENCHMARK-001`: pierwsza fala benchmarku.
-- [ ] `TASK-CV-OFFLINE-LAB-STAGE-6-MANUAL-REVIEW-PACK-001`: manual review i decyzja Supervisora.
+- [x] `TASK-CV-OFFLINE-LAB-STAGE-6-MANUAL-REVIEW-PACK-001`: manual review i decyzja Supervisora.
+- [x] `TASK-CV-OFFLINE-LAB-STAGE-6-METHOD-APPROVAL-001`: dokumentacyjne utrwalenie decyzji Supervisora.
+- [ ] Szerszy Stage 6 validation benchmark.
 
 ## Shortlista TEST_NOW
 
@@ -109,3 +112,8 @@ Aktualizacja po benchmarku: `orb_bfmatcher_ratio_test` jest `PROVISIONAL_RECOMME
 Aktualizacja po przygotowaniu paczki: artefakt
 `logs/offline_replay/stage6_manual_review_pack_orb_bfmatcher_ratio_test.zip`
 jest gotowy do decyzji Supervisora.
+
+Aktualizacja po decyzji Supervisora:
+`APPROVED_STAGE_6_METHOD: orb_bfmatcher_ratio_test`.
+Approved for current offline lab fixture only. No runtime integration approval.
+Następny bezpieczny krok: przygotować szerszy Stage 6 validation benchmark.

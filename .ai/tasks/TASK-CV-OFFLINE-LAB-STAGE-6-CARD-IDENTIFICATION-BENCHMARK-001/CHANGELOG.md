@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## 2026-06-04 — Method approval
+
+- Recorded Supervisor decision: `APPROVED_STAGE_6_METHOD: orb_bfmatcher_ratio_test`.
+- Limited approval to the current offline lab fixture.
+- Explicitly recorded that runtime integration is not approved.
+- Set broader Stage 6 validation benchmark as the next action.
+
 ## 2026-06-04 — Manual review pack
 
 - Prepared a six-scenario Supervisor review pack for `orb_bfmatcher_ratio_test`.
