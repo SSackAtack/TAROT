@@ -48,3 +48,33 @@ ChatGPT Supervisor approved Phase A for commit
 The review accepted focused tests, Stage 6 regression tests, py_compile and full
 backend discovery with `PYTHONPATH=app_cv`. Frontend build remains `NOT_RUN`
 because there were no `app_ar` changes.
+
+## Capture Wizard Verification
+
+```text
+Initial RED:
+ModuleNotFoundError: tools.cv_detection_lab.stage6_real_camera_capture_wizard
+
+cmd /c "cd /d E:\Antigravity\Projekty\TAROT && set PYTHONPATH=C:\tmp\tarot_pydeps_stage6;app_cv;.&& python -m unittest app_cv.tests.test_cv_detection_lab_stage6_real_camera_fixture -v"
+PASS - 13 tests
+
+cmd /c "cd /d E:\Antigravity\Projekty\TAROT && set PYTHONPATH=C:\tmp\tarot_pydeps_stage6;app_cv;.&& python -B -m py_compile tools\cv_detection_lab\stage6_real_camera_fixture.py tools\cv_detection_lab\stage6_real_camera_preflight.py tools\cv_detection_lab\stage6_real_camera_manual_review_pack.py tools\cv_detection_lab\stage6_real_camera_capture_wizard.py app_cv\tests\test_cv_detection_lab_stage6_real_camera_fixture.py"
+PASS
+
+cmd /c "cd /d E:\Antigravity\Projekty\TAROT && set PYTHONPATH=C:\tmp\tarot_pydeps_stage6;app_cv;.&& python tools\cv_detection_lab\stage6_real_camera_capture_wizard.py --print-plan"
+PASS - printed 28 planned capture steps
+```
+
+During verification, the existing `C:\tmp\tarot_pydeps` cache exposed empty
+namespace imports for `numpy`/`cv2`. A fresh `C:\tmp\tarot_pydeps_stage6`
+dependency target was installed for test execution, and manual review pack
+generation now has a fallback when OpenCV is unavailable.
+
+Stage 6 regression command:
+
+```text
+cmd /c "cd /d E:\Antigravity\Projekty\TAROT && set PYTHONPATH=C:\tmp\tarot_pydeps_stage6;app_cv;.&& python -m unittest app_cv.tests.test_cv_detection_lab_stage6_preflight app_cv.tests.test_cv_detection_lab_stage6_identification app_cv.tests.test_cv_detection_lab_stage6_synthetic_validation -v"
+FAIL during import before tests - local dependency target imports `numpy` as an empty namespace, so `np.ndarray` is missing in `tools/cv_detection_lab/methods.py`.
+```
+
+This is an environment/dependency-target issue, not a wizard behavior failure.

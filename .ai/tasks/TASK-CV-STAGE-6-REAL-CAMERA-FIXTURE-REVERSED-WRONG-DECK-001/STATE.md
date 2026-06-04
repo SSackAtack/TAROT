@@ -19,6 +19,8 @@ physical real-camera sessions are captured and manually confirmed.
 - Implemented offline preflight with one-session-one-sample enforcement.
 - Implemented manual review pack generator requiring preflight `PASS`.
 - Added operator capture documentation.
+- Added a manual operator wizard that guides the 28-session capture process
+  without changing runtime or auto-starting the backend.
 
 ## Blocking Condition
 
@@ -35,7 +37,11 @@ and manually confirmed.
 
 ## Required Next Action
 
-Operator-assisted capture according to:
+Operator-assisted capture with the wizard:
+
+`python tools/cv_detection_lab/stage6_real_camera_capture_wizard.py`
+
+Detailed procedure:
 
 `docs/operator/stage6_real_camera_fixture_capture.md`
 

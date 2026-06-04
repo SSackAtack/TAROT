@@ -45,7 +45,14 @@ def build_manual_review_pack(manifest_path, ground_truth_path, preflight_path, o
 def _write_debug_sheet(sample, label, path):
     scenario_dir = os.path.join(sample.resolved_session_path, sample.scenario)
     analysis_name = next(name for name in scenario_required_files(sample.scenario) if name.startswith("analysis_frame_"))
-    image = cv2.imread(os.path.join(scenario_dir, analysis_name), cv2.IMREAD_COLOR)
+    analysis_path = os.path.join(scenario_dir, analysis_name)
+    if not hasattr(cv2, "imread") or not hasattr(np, "zeros"):
+        shutil.copy2(analysis_path, path)
+        metadata_dir = os.path.join(os.path.dirname(os.path.dirname(path)), "sample_metadata")
+        os.makedirs(metadata_dir, exist_ok=True)
+        _write_text_sheet(sample, label, os.path.join(metadata_dir, f"{sample.sample_id}.txt"))
+        return
+    image = cv2.imread(analysis_path, cv2.IMREAD_COLOR)
     if image is None:
         raise ValueError(f"Cannot read analysis frame for {sample.sample_id}")
     resized = cv2.resize(image, (480, 320), interpolation=cv2.INTER_AREA)
@@ -64,6 +71,21 @@ def _write_debug_sheet(sample, label, path):
     for index, line in enumerate(lines):
         cv2.putText(panel, line, (500, 45 + index * 50), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (225, 225, 225), 1, cv2.LINE_AA)
     cv2.imwrite(path, panel)
+
+
+def _write_text_sheet(sample, label, path):
+    lines = [
+        f"sample_id: {sample.sample_id}",
+        f"session: {sample.session_id}",
+        f"category: {sample.category}",
+        f"expected: {label.get('expected_deck')} / {label.get('expected_card_id')}",
+        f"orientation: {label.get('expected_orientation')}",
+        f"behavior: {label.get('expected_behavior')}",
+        f"quality: {sample.quality_expectation}",
+        f"similarity_group: {sample.similarity_group}",
+    ]
+    with open(path, "w", encoding="utf-8") as handle:
+        handle.write("\n".join(lines) + "\n")
 
 
 def _write_readme(output_dir, count):

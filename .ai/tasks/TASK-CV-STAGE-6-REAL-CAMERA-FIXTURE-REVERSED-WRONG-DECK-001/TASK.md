@@ -43,6 +43,7 @@ single offline aggregate validation manifest
 - `tools/cv_detection_lab/stage6_real_camera_fixture.py`
 - `tools/cv_detection_lab/stage6_real_camera_preflight.py`
 - `tools/cv_detection_lab/stage6_real_camera_manual_review_pack.py`
+- `tools/cv_detection_lab/stage6_real_camera_capture_wizard.py`
 - `app_cv/tests/test_cv_detection_lab_stage6_real_camera_fixture.py`
 - `docs/operator/stage6_real_camera_fixture_capture.md`
 - `docs/superpowers/plans/2026-06-04-stage-6-real-camera-fixture-implementation-plan.md`
@@ -71,7 +72,7 @@ single offline aggregate validation manifest
 
 - `python -m unittest app_cv.tests.test_cv_detection_lab_stage6_real_camera_fixture -v`
 - `python -m unittest app_cv.tests.test_cv_detection_lab_stage6_preflight app_cv.tests.test_cv_detection_lab_stage6_identification app_cv.tests.test_cv_detection_lab_stage6_synthetic_validation -v`
-- `python -B -m py_compile tools/cv_detection_lab/stage6_real_camera_fixture.py tools/cv_detection_lab/stage6_real_camera_preflight.py tools/cv_detection_lab/stage6_real_camera_manual_review_pack.py app_cv/tests/test_cv_detection_lab_stage6_real_camera_fixture.py`
+- `python -B -m py_compile tools/cv_detection_lab/stage6_real_camera_fixture.py tools/cv_detection_lab/stage6_real_camera_preflight.py tools/cv_detection_lab/stage6_real_camera_manual_review_pack.py tools/cv_detection_lab/stage6_real_camera_capture_wizard.py app_cv/tests/test_cv_detection_lab_stage6_real_camera_fixture.py`
 - `python -m unittest discover -s app_cv/tests -v`
 
 ## Reports Required

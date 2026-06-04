@@ -5,9 +5,6 @@ import shutil
 import tempfile
 import unittest
 
-import cv2
-import numpy as np
-
 from tools.cv_detection_lab.stage6_real_camera_fixture import (
     load_aggregate,
     session_fingerprint,
@@ -15,6 +12,11 @@ from tools.cv_detection_lab.stage6_real_camera_fixture import (
 )
 from tools.cv_detection_lab.stage6_real_camera_manual_review_pack import build_manual_review_pack
 from tools.cv_detection_lab.stage6_real_camera_preflight import run_preflight
+from tools.cv_detection_lab.stage6_real_camera_capture_wizard import (
+    append_confirmed_sample,
+    build_capture_plan,
+    expected_env_commands,
+)
 
 
 class TestStage6RealCameraFixture(unittest.TestCase):
@@ -139,6 +141,94 @@ class TestStage6RealCameraFixture(unittest.TestCase):
         self.assertTrue(os.path.isfile(os.path.join(pack_dir, "similarity_groups.json")))
         self.assertEqual(len(os.listdir(os.path.join(pack_dir, "samples"))), 28)
 
+    def test_capture_wizard_plan_contains_required_28_operator_steps(self):
+        plan = build_capture_plan()
+
+        self.assertEqual(len(plan), 28)
+        self.assertEqual(sum(1 for step in plan if step.category == "gilded_upright"), 6)
+        self.assertEqual(sum(1 for step in plan if step.category == "gilded_reversed"), 6)
+        self.assertEqual(sum(1 for step in plan if step.category == "wrong_deck_magic"), 4)
+        self.assertEqual(sum(1 for step in plan if step.category == "wrong_deck_marchetti"), 4)
+        self.assertEqual(sum(1 for step in plan if step.category == "gilded_yellow"), 4)
+        self.assertEqual(sum(1 for step in plan if step.category == "gilded_visually_similar"), 4)
+        self.assertEqual(
+            [step.expected_card_id for step in plan if step.category == "gilded_upright"],
+            [step.expected_card_id for step in plan if step.category == "gilded_reversed"],
+        )
+
+    def test_capture_wizard_prints_existing_live_capture_env_commands(self):
+        step = build_capture_plan()[0]
+
+        commands = expected_env_commands(step)
+
+        self.assertIn('$env:TAROTVISION_CAPTURE_LIVE_FIXTURES = "1"', commands)
+        self.assertIn(f'$env:TAROTVISION_LIVE_FIXTURE_NAME = "{step.session_id}"', commands)
+        self.assertIn('$env:TAROTVISION_LIVE_FIXTURE_SCENARIO = "one_card"', commands)
+
+    def test_capture_wizard_appends_confirmed_session_to_aggregate(self):
+        aggregate_dir = os.path.join(self.tmpdir, "wizard_aggregate")
+        session_id = "stage6_real_gilded_01_upright"
+        self._write_session(session_id, 91)
+        step = build_capture_plan()[0]
+        step = step.__class__(
+            index=step.index,
+            session_id=session_id,
+            category=step.category,
+            deck=step.deck,
+            card_label=step.card_label,
+            expected_card_id=step.expected_card_id,
+            expected_orientation=step.expected_orientation,
+            expected_behavior=step.expected_behavior,
+            quality_expectation=step.quality_expectation,
+            similarity_group=step.similarity_group,
+            operator_instruction=step.operator_instruction,
+        )
+
+        result = append_confirmed_sample(
+            step,
+            session_root=os.path.join(self.sessions_dir, session_id),
+            aggregate_dir=aggregate_dir,
+        )
+
+        self.assertEqual(result["status"], "RECORDED")
+        manifest = self._load(os.path.join(aggregate_dir, "manifest.json"))
+        ground_truth = self._load(os.path.join(aggregate_dir, "ground_truth.json"))
+        self.assertEqual(len(manifest["samples"]), 1)
+        sample = manifest["samples"][0]
+        self.assertEqual(sample["sample_id"], stable_sample_id(session_id, "one_card", step.category))
+        self.assertEqual(sample["session_id"], session_id)
+        self.assertEqual(sample["expected_card_id"], step.expected_card_id)
+        self.assertEqual(ground_truth["labels"][sample["sample_id"]]["label_status"], "manual_confirmed")
+
+    def test_capture_wizard_refuses_to_record_incomplete_session(self):
+        aggregate_dir = os.path.join(self.tmpdir, "wizard_aggregate")
+        session_id = "stage6_real_incomplete"
+        scenario_dir = os.path.join(self.sessions_dir, session_id, "one_card")
+        os.makedirs(scenario_dir)
+        step = build_capture_plan()[0]
+        step = step.__class__(
+            index=step.index,
+            session_id=session_id,
+            category=step.category,
+            deck=step.deck,
+            card_label=step.card_label,
+            expected_card_id=step.expected_card_id,
+            expected_orientation=step.expected_orientation,
+            expected_behavior=step.expected_behavior,
+            quality_expectation=step.quality_expectation,
+            similarity_group=step.similarity_group,
+            operator_instruction=step.operator_instruction,
+        )
+
+        with self.assertRaisesRegex(ValueError, "missing required capture files"):
+            append_confirmed_sample(
+                step,
+                session_root=os.path.join(self.sessions_dir, session_id),
+                aggregate_dir=aggregate_dir,
+            )
+
+        self.assertFalse(os.path.exists(os.path.join(aggregate_dir, "manifest.json")))
+
     def _build_minimum_sessions(self):
         specifications = []
         for index in range(6):
@@ -181,10 +271,14 @@ class TestStage6RealCameraFixture(unittest.TestCase):
         session_dir = os.path.join(self.sessions_dir, session_id)
         scenario_dir = os.path.join(session_dir, "one_card")
         os.makedirs(scenario_dir)
-        image = np.full((120, 180, 3), (30 + index, 50, 40), dtype=np.uint8)
-        cv2.putText(image, str(index), (50, 70), cv2.FONT_HERSHEY_SIMPLEX, 1.2, (240, 240, 240), 2)
-        cv2.imwrite(os.path.join(scenario_dir, "analysis_frame_1.png"), image)
-        cv2.imwrite(os.path.join(scenario_dir, "raw_frame_1.png"), image)
+        png_bytes = (
+            b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01"
+            b"\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde"
+            b"\x00\x00\x00\x0cIDATx\x9cc```\x00\x00\x00\x04"
+            b"\x00\x01\xf6\x178U\x00\x00\x00\x00IEND\xaeB`\x82"
+        )
+        self._write_bytes(os.path.join(scenario_dir, "analysis_frame_1.png"), png_bytes)
+        self._write_bytes(os.path.join(scenario_dir, "raw_frame_1.png"), png_bytes)
         self._dump(os.path.join(scenario_dir, "payload.json"), {"cards": []})
         self._dump(os.path.join(scenario_dir, "metrics.json"), {"crop_quality_status": "YELLOW"})
         self._dump(os.path.join(scenario_dir, "roi_diagnostics.json"), [])
@@ -225,6 +319,11 @@ class TestStage6RealCameraFixture(unittest.TestCase):
     def _dump(path, payload):
         with open(path, "w", encoding="utf-8") as handle:
             json.dump(payload, handle, indent=2)
+
+    @staticmethod
+    def _write_bytes(path, payload):
+        with open(path, "wb") as handle:
+            handle.write(payload)
 
 
 if __name__ == "__main__":

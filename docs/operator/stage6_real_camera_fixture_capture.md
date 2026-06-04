@@ -14,6 +14,43 @@ jedna niezmienna sesja capture = jedna próbka agregatu
 Po dodaniu sesji do agregującego manifestu nie edytuj jej plików. Błędną sesję
 zastąp nową sesją o nowym `session_id`, a następnie zaktualizuj manifest.
 
+## Zalecany tryb: wizard operatorski
+
+Najbezpieczniejsza ścieżka to uruchomienie wizarda:
+
+```powershell
+python tools/cv_detection_lab/stage6_real_camera_capture_wizard.py
+```
+
+Wizard:
+
+- prowadzi przez 28 kroków capture,
+- pokazuje, którą talię, kartę i orientację przygotować,
+- drukuje właściwe zmienne środowiskowe dla istniejącego live capture,
+- czeka na ręczne potwierdzenie operatora,
+- sprawdza, czy sesja ma wymagane pliki,
+- dopisuje potwierdzoną próbkę do `manifest.json` i `ground_truth.json`,
+- po zebraniu kompletu uruchamia preflight,
+- po `PASS` generuje manual review pack.
+
+Wizard nie uruchamia backendu automatycznie i nie zmienia runtime. Jest tylko
+warstwą prowadzącą operatora po istniejącym mechanizmie live fixture capture.
+
+Podgląd planu bez rozpoczęcia capture:
+
+```powershell
+python tools/cv_detection_lab/stage6_real_camera_capture_wizard.py --print-plan
+```
+
+Jeżeli używasz niestandardowych katalogów:
+
+```powershell
+python tools/cv_detection_lab/stage6_real_camera_capture_wizard.py `
+  --log-dir logs `
+  --aggregate-dir logs/live_fixtures/stage6_real_camera_validation `
+  --output-dir logs/offline_replay/stage6_real_camera_validation
+```
+
 ## Uruchomienie istniejącego capture
 
 Przed uruchomieniem backendu ustaw:
@@ -47,6 +84,8 @@ stage6_real_gilded_similar_group_01_card_01
 Łączne minimum: 28 sesji.
 
 ## Procedura pojedynczej sesji
+
+W trybie wizarda poniższe kroki wykonujesz wtedy, kiedy wizard o to poprosi.
 
 1. Przygotuj wyłącznie jedną kartę i wymaganą orientację.
 2. Ustaw nowy unikalny `TAROTVISION_LIVE_FIXTURE_NAME`.

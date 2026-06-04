@@ -15,3 +15,10 @@
 - Recorded `APPROVED_PHASE_A_BY_CHATGPT_SUPERVISOR` for commit `db744e74fbddbae2086f17c97acc962d379cf077`.
 - Confirmed the whole task remains `PROVISIONAL_BLOCKED` until operator-assisted capture produces the required 28 physical sessions.
 - Confirmed next action is operator capture, then preflight and manual review pack generation.
+
+## 2026-06-04 — Manual capture wizard
+
+- Added `tools/cv_detection_lab/stage6_real_camera_capture_wizard.py`.
+- Wizard prints existing live capture env vars, guides the operator through the 28 required samples and records only complete, manually confirmed sessions.
+- Added OpenCV-unavailable fallback for manual review pack generation in constrained test environments.
+- Kept task `PROVISIONAL_BLOCKED` because physical sessions still have not been captured.

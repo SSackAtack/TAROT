@@ -15,6 +15,7 @@
 - Create `tools/cv_detection_lab/stage6_real_camera_fixture.py`: kontrakt manifestu/ground truth, stable sample ID, loadery i fingerprint sesji.
 - Create `tools/cv_detection_lab/stage6_real_camera_preflight.py`: offline walidacja agregatu.
 - Create `tools/cv_detection_lab/stage6_real_camera_manual_review_pack.py`: generowanie paczki review.
+- Create `tools/cv_detection_lab/stage6_real_camera_capture_wizard.py`: manualny wizard operatora prowadzący po 28 sesjach bez automatycznego startu backendu.
 - Create `app_cv/tests/test_cv_detection_lab_stage6_real_camera_fixture.py`: TDD dla kontraktu, preflightu i packa.
 - Create `docs/operator/stage6_real_camera_fixture_capture.md`: instrukcja operatorska.
 - Create task reports after implementation and capture.
@@ -194,9 +195,18 @@ brakujących sesji/próbek. To jest poprawny wynik etapu tooling.
 ## Task 5: Operator-assisted capture and manual confirmation
 
 **Files:**
+- Create: `tools/cv_detection_lab/stage6_real_camera_capture_wizard.py`
+- Modify: `app_cv/tests/test_cv_detection_lab_stage6_real_camera_fixture.py`
+- Modify: `docs/operator/stage6_real_camera_fixture_capture.md`
 - Local ignored data under: `logs/live_fixtures/stage6_real_*`
 - Modify local aggregate: `logs/live_fixtures/stage6_real_camera_validation/manifest.json`
 - Modify local aggregate: `logs/live_fixtures/stage6_real_camera_validation/ground_truth.json`
+
+- [x] **Step 0: Add manual operator wizard**
+
+Dodano `stage6_real_camera_capture_wizard.py`, który prowadzi operatora po
+całej macierzy 28 próbek, drukuje env vars istniejącego live capture, weryfikuje
+wymagane pliki sesji i dopisuje ręcznie potwierdzone próbki do agregatu.
 
 - [ ] **Step 1: Capture 6 Gilded upright sessions**
 
@@ -291,3 +301,11 @@ fizycznych sesji real-camera i ręcznie potwierdzonego ground truth.
 Kolejny bezpieczny krok: Michał/operator wykonuje capture zgodnie z
 `docs/operator/stage6_real_camera_fixture_capture.md`, po czym agent uruchamia
 preflight i generuje manual review pack.
+
+## Session Status (2026-06-04 Capture Wizard)
+
+Dodano manualny wizard operatorski jako bezpieczną warstwę nad istniejącym live
+fixture capture. Wizard nie uruchamia backendu, nie zmienia runtime i nie
+integruje ORB/AKAZE; tylko prowadzi operatora, sprawdza komplet plików sesji i
+dopisuje ręcznie potwierdzony manifest/ground truth. Status taska pozostaje
+`PROVISIONAL_BLOCKED` do czasu realnego zebrania 28 fizycznych sesji.
