@@ -136,6 +136,20 @@ threshold i runtime integration pozostają niezatwierdzone.
 Decyzja Supervisora: `APPROVED_BY_CHATGPT_SUPERVISOR`.
 Status metody pozostaje `VALIDATION_PASS_OFFLINE_ONLY`.
 
+## Session Status (2026-06-04 Codex Real-Camera Identification Benchmark)
+
+Stan aktualny: zatwierdzony real-camera fixture został przetworzony przez
+offline benchmark ORB vs AKAZE.
+
+Co zostało zrobione: dodano deterministyczną ekstrakcję pojedynczej karty z
+real-camera analysis frame, metryki per category i similarity group,
+wrong-deck FAR oraz local runtime proxy. ORB osiągnął Top-1 `0.80`, Top-3
+`0.85`, wrong-deck FAR `0.00`; AKAZE osiągnął Top-1/Top-3 `0.70` i FAR `0.75`.
+
+Kolejne kroki: Supervisor ocenia wynik. Benchmark nie zatwierdza progu ani
+integracji runtime; trudne próbki YELLOW pozostają głównym ograniczeniem
+(ORB Top-1 `0.50`).
+
 ## Session Status (2026-06-04 Codex Real-Camera Fixture Phase A)
 
 Stan aktualny: offline tooling real-camera aggregate jest gotowy, ale task

@@ -6,6 +6,8 @@
 
 ## Supervisor Review
 
+`APPROVED_REAL_CAMERA_FIXTURE_OFFLINE_ONLY_BY_CHATGPT_SUPERVISOR`.
+
 `PROVISIONAL_ACCEPTED_FOR_MANUAL_REVIEW` for capture complete commit
 `5afe76308602ef74e8df45b9f0bb6a7777dd0811`.
 
@@ -55,9 +57,9 @@ before recording manual-confirmed ground truth.
 
 ## Review Condition
 
-Manual review of the generated pack is still required before any downstream
-Stage 6 method or runtime decision. This task does not approve runtime
-thresholds, ORB/AKAZE runtime integration or app behavior changes.
+Manual review of the generated pack is complete. Fixture is approved for
+offline Stage 6 validation only. This task does not approve runtime thresholds,
+ORB/AKAZE runtime integration or app behavior changes.
 
 ## Runtime Safety
 
@@ -69,12 +71,4 @@ thresholds, ORB/AKAZE runtime integration or app behavior changes.
 
 ## Required Next Action
 
-Review the generated manual review pack:
-
-`logs/offline_replay/stage6_real_camera_validation/manual_review_pack`
-
-ZIP handoff:
-
-`logs/offline_replay/stage6_real_camera_validation/stage6_real_camera_manual_review_pack.zip`
-
-After manual review, record the supervisor decision for the real-camera data.
+Run `TASK-CV-STAGE-6-REAL-CAMERA-IDENTIFICATION-BENCHMARK-001` offline-only.
