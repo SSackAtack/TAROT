@@ -68,6 +68,7 @@ Kolejne kroki: Supervisor powinien zaakceptować albo skorygować shortlistę `T
 - [x] Dodano `deck_profile.json` i strukturalny `ground_truth.json` dla Gilded.
 - [x] Ręcznie potwierdzono etykiety Stage 6 i usunięto `UNKNOWN_DECK` z ground truth.
 - [x] Uruchomiono pierwszą falę benchmarku Stage 6 Card Identification.
+- [x] Przygotowano sześcioscenariuszową paczkę manual review dla `orb_bfmatcher_ratio_test`.
 
 ## Taski
 
@@ -104,3 +105,7 @@ ground_truth.json
 Natychmiastowy następny krok dla kolejnego modelu: przekazać shortlistę `TEST_NOW` Supervisorowi. Po akceptacji dopiero wtedy utworzyć i zaimplementować offline benchmark Stage 6 w izolowanym `tools/cv_detection_lab/`, bez zmian runtime.
 
 Aktualizacja po benchmarku: `orb_bfmatcher_ratio_test` jest `PROVISIONAL_RECOMMENDED`; następny bezpieczny krok to manual review Stage 6, bez integracji runtime.
+
+Aktualizacja po przygotowaniu paczki: artefakt
+`logs/offline_replay/stage6_manual_review_pack_orb_bfmatcher_ratio_test.zip`
+jest gotowy do decyzji Supervisora.

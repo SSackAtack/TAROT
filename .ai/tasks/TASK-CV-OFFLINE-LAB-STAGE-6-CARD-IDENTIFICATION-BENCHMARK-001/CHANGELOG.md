@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 2026-06-04 — Manual review pack
+
+- Prepared a six-scenario Supervisor review pack for `orb_bfmatcher_ratio_test`.
+- Added an explicit zero-crop PASS sheet for `empty_to_empty`.
+- Added benchmark reports, matrix and Supervisor instructions.
+
 ## TASK-CV-OFFLINE-LAB-STAGE-6-CARD-IDENTIFICATION-BENCHMARK-001
 
 - Added isolated Stage 6 card identification methods.

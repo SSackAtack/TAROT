@@ -43,6 +43,8 @@ AKAZE remains a strong fallback candidate because it produced a larger confidenc
 
 ## Required Next Action
 
-Prepare Stage 6 manual review pack and Supervisor decision.
+Perform Supervisor review of:
+
+`logs/offline_replay/stage6_manual_review_pack_orb_bfmatcher_ratio_test.zip`
 
 Do not integrate the method into runtime yet.

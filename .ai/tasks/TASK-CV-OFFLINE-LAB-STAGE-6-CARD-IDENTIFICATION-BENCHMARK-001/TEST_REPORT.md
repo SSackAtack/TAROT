@@ -47,3 +47,9 @@ Recommended method: `orb_bfmatcher_ratio_test`
 - No runtime files changed.
 - No Studio / WebSocket files changed.
 - No new dependencies added.
+
+## Manual Review Pack Verification
+
+- Six numbered scenario sheets: `PASS`.
+- Benchmark `report.md`, `report.json` and `matrix.csv`: `PASS`.
+- ZIP archive created: `PASS`.
