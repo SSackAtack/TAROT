@@ -30,6 +30,14 @@ Co zostało zrobione: utworzono `biblioteka_talii/gilded/deck_profile.json` na p
 
 Kolejne kroki: preflight może przejść do `PASS`, ale benchmark Stage 6 będzie mierzył tylko unknown/reject behavior, dopóki Michał nie uzupełni ręcznych `expected_card_id`.
 
+## Session Status (2026-06-04 Codex Stage 6 Manual Label Confirmation)
+
+Stan aktualny: Stage 6 ground truth został ręcznie potwierdzony na podstawie debug sheetów Stage 5 i referencji Gilded.
+
+Co zostało zrobione: zastąpiono `UNKNOWN_DECK` etykietami `Gilded_34`, `Gilded_54`, `Gilded_72` i `Gilded_73` dla 10 cropów. `ground_truth.json` ma teraz `label_status: manual_confirmed`.
+
+Kolejne kroki: można utworzyć `TASK-CV-OFFLINE-LAB-STAGE-6-CARD-IDENTIFICATION-BENCHMARK-001`, ponieważ preflight i ręczne etykiety są gotowe do pomiaru top1/top3 accuracy.
+
 ## Session Status (2026-06-04 Codex Stage 6 Research Gate)
 
 Stan aktualny: przygotowano research summary dla Stage 6 Card Identification.
@@ -50,13 +58,14 @@ Kolejne kroki: Supervisor powinien zaakceptować albo skorygować shortlistę `T
 - [x] Wskazano shortlistę `TEST_NOW`.
 - [x] Dodano preflight wymaganych wejść Stage 6: reference deck, `deck_profile.json`, `ground_truth.json`.
 - [x] Dodano `deck_profile.json` i strukturalny `ground_truth.json` dla Gilded.
+- [x] Ręcznie potwierdzono etykiety Stage 6 i usunięto `UNKNOWN_DECK` z ground truth.
 
 ## Taski
 
 - [x] `TASK-CV-RESEARCH-STAGE-6-CARD-IDENTIFICATION-001`: Research Gate Stage 6 Card Identification.
 - [x] `TASK-CV-OFFLINE-LAB-STAGE-6-REFERENCE-GROUNDTRUTH-PREFLIGHT-001`: izolowany preflight wejść Stage 6.
 - [x] `TASK-CV-OFFLINE-LAB-STAGE-6-DECK-PROFILE-GROUNDTRUTH-001`: uzupełnienie `deck_profile.json` i strukturalnego `ground_truth.json` dla fixture Stage 6.
-- [ ] `TASK-CV-OFFLINE-LAB-STAGE-6-MANUAL-LABEL-CONFIRMATION-001`: opcjonalne ręczne uzupełnienie realnych `expected_card_id`.
+- [x] `TASK-CV-OFFLINE-LAB-STAGE-6-MANUAL-LABEL-CONFIRMATION-001`: ręczne uzupełnienie realnych `expected_card_id`.
 - [ ] `TASK-CV-OFFLINE-LAB-STAGE-6-CARD-IDENTIFICATION-BENCHMARK-001`: benchmark po akceptacji shortlisty.
 
 ## Shortlista TEST_NOW
@@ -84,4 +93,4 @@ ground_truth.json
 
 Natychmiastowy następny krok dla kolejnego modelu: przekazać shortlistę `TEST_NOW` Supervisorowi. Po akceptacji dopiero wtedy utworzyć i zaimplementować offline benchmark Stage 6 w izolowanym `tools/cv_detection_lab/`, bez zmian runtime.
 
-Aktualizacja po danych wejściowych: strukturalny preflight może przejść na `PASS`, ale accuracy top1/top3 wymaga ręcznego potwierdzenia etykiet zamiast `UNKNOWN_DECK`.
+Aktualizacja po manual label confirmation: `ground_truth.json` ma status `manual_confirmed`, więc następny bezpieczny krok to benchmark Stage 6 Card Identification.
