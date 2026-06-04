@@ -147,3 +147,19 @@ quality_gate_review_pack/
 Po akceptacji Supervisora utworzyć mały offline benchmark implementujący
 `local_specular_component_ratio`, `highlight_occlusion_ratio` i
 `usable_detail_ratio`. Nie zmieniać runtime.
+
+## Session Status (2026-06-04 Codex Quality Gate Benchmark)
+
+Stan aktualny: projekt został zatwierdzony przez Supervisora i zaimplementowany
+jako benchmark offline-only.
+
+Co zostało zrobione: gate generuje adaptacyjną maskę lokalnych neutralnych
+highlightów, mierzy największy komponent, centralne zasłonięcie i usable detail.
+Opcjonalny niski sygnał ORB może eskalować ACCEPT do MANUAL_REVIEW, ale nie
+zmienia wyniku identyfikacji.
+
+Wynik: bad crop recall `1.0`, good crop false retry `0.0`, wrong-deck false
+retry `0.0`, ORB accuracy na ACCEPT subset `1.0`.
+
+Kolejne kroki: manual review masek i decyzja Supervisora. Progi pozostają
+`BENCHMARK_HEURISTIC_ONLY`; brak zgody na runtime integration.

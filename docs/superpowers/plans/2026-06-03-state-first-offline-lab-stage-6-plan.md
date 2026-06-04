@@ -193,6 +193,19 @@ specular highlight, occlusion ratio i usable detail poza odblaskiem.
 Kolejne kroki: Supervisor ocenia projekt quality gate. Po akceptacji można
 utworzyć mały benchmark offline-only, bez zmian runtime.
 
+## Session Status (2026-06-04 Codex Quality Gate Benchmark)
+
+Stan aktualny: offline quality gate benchmark został wykonany na 28 real-camera
+crops.
+
+Co zostało zrobione: zaimplementowano lokalne maski highlightu, occlusion ratio,
+usable detail i decyzje ACCEPT / RETRY / MANUAL_REVIEW. Wszystkie trzy znane
+błędy jakości zostały zatrzymane, bez false retry dla dobrych i wrong-deck
+próbek. ORB accuracy na ACCEPT subset wynosi `1.0`.
+
+Kolejne kroki: Supervisor ocenia review pack. Progi są benchmark-only i nie
+mogą zostać przeniesione do runtime bez osobnej decyzji.
+
 ## Session Status (2026-06-04 Codex Real-Camera Fixture Phase A)
 
 Stan aktualny: offline tooling real-camera aggregate jest gotowy, ale task
