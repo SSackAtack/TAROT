@@ -1,0 +1,89 @@
+{
+  "deck_profile_id": "gilded_scans",
+  "deck_profile_version": 1,
+  "fixture_id": "event_first_current_debug_verified",
+  "label_status": "manual_confirmed",
+  "pairs": {
+    "empty_to_empty": [],
+    "empty_to_one_card": [
+      {
+        "crop_index": 1,
+        "expected_card_id": "Gilded_34",
+        "expected_card_name": "Gilded_34",
+        "orientation": "upright",
+        "notes": "Manually confirmed from Stage 5 debug sheet and Gilded reference contact sheet."
+      }
+    ],
+    "empty_to_three_cards": [
+      {
+        "crop_index": 1,
+        "expected_card_id": "Gilded_54",
+        "expected_card_name": "Gilded_54",
+        "orientation": "upright",
+        "notes": "Manually confirmed from Stage 5 debug sheet and Gilded reference contact sheet."
+      },
+      {
+        "crop_index": 2,
+        "expected_card_id": "Gilded_34",
+        "expected_card_name": "Gilded_34",
+        "orientation": "upright",
+        "notes": "Manually confirmed from Stage 5 debug sheet and Gilded reference contact sheet."
+      },
+      {
+        "crop_index": 3,
+        "expected_card_id": "Gilded_73",
+        "expected_card_name": "Gilded_73",
+        "orientation": "upright",
+        "notes": "Manually confirmed from Stage 5 debug sheet and Gilded reference contact sheet."
+      }
+    ],
+    "one_card_to_three_cards": [
+      {
+        "crop_index": 1,
+        "expected_card_id": "Gilded_54",
+        "expected_card_name": "Gilded_54",
+        "orientation": "upright",
+        "notes": "Manually confirmed from Stage 5 debug sheet and Gilded reference contact sheet. This crop represents a newly added card only."
+      },
+      {
+        "crop_index": 2,
+        "expected_card_id": "Gilded_73",
+        "expected_card_name": "Gilded_73",
+        "orientation": "upright",
+        "notes": "Manually confirmed from Stage 5 debug sheet and Gilded reference contact sheet. This crop represents a newly added card only."
+      }
+    ],
+    "one_card_to_empty": [
+      {
+        "crop_index": 1,
+        "expected_card_id": "Gilded_34",
+        "expected_card_name": "Gilded_34",
+        "orientation": "upright",
+        "notes": "Manually confirmed from Stage 5 debug sheet and Gilded reference contact sheet. Removed card crop comes from previous snapshot."
+      }
+    ],
+    "three_cards_to_empty": [
+      {
+        "crop_index": 1,
+        "expected_card_id": "Gilded_54",
+        "expected_card_name": "Gilded_54",
+        "orientation": "upright",
+        "notes": "Manually confirmed from Stage 5 debug sheet and Gilded reference contact sheet. Removed card crop comes from previous snapshot."
+      },
+      {
+        "crop_index": 2,
+        "expected_card_id": "Gilded_34",
+        "expected_card_name": "Gilded_34",
+        "orientation": "upright",
+        "notes": "Manually confirmed from Stage 5 debug sheet and Gilded reference contact sheet. Removed card crop comes from previous snapshot."
+      },
+      {
+        "crop_index": 3,
+        "expected_card_id": "Gilded_73",
+        "expected_card_name": "Gilded_73",
+        "orientation": "upright",
+        "notes": "Manually confirmed from Stage 5 debug sheet and Gilded reference contact sheet. Removed card crop comes from previous snapshot."
+      }
+    ]
+  }
+}

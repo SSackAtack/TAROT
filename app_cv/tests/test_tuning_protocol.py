@@ -252,6 +252,41 @@ class TuningProtocolTest(unittest.TestCase):
         with self.assertRaises(ControlMessageError):
             parse_control_message('{"type": "studio_set_active_decks", "active_decks": ["rider-waite-smith", 123]}')
 
+    def test_parses_autotune_start(self):
+        message = parse_control_message('{"type": "autotune_start", "scenario": "three_cards"}')
+
+        self.assertEqual(message.type, "autotune_start")
+        self.assertEqual(message.scenario, "three_cards")
+
+    def test_parses_autotune_apply(self):
+        message = parse_control_message('{"type": "autotune_apply"}')
+
+        self.assertEqual(message.type, "autotune_apply")
+
+    def test_parses_autotune_calibrate(self):
+        message = parse_control_message('{"type": "autotune_calibrate"}')
+
+        self.assertEqual(message.type, "autotune_calibrate")
+
+    def test_parses_autotune_cancel(self):
+        message = parse_control_message('{"type": "autotune_cancel"}')
+
+        self.assertEqual(message.type, "autotune_cancel")
+
+    def test_parses_autotune_save(self):
+        message = parse_control_message('{"type": "autotune_save", "name": "studio_live"}')
+
+        self.assertEqual(message.type, "autotune_save")
+        self.assertEqual(message.name, "studio_live")
+
+    def test_rejects_invalid_autotune_scenario(self):
+        with self.assertRaises(ControlMessageError):
+            parse_control_message('{"type": "autotune_start", "scenario": "twenty_cards"}')
+
+    def test_rejects_autotune_save_without_name(self):
+        with self.assertRaises(ControlMessageError):
+            parse_control_message('{"type": "autotune_save"}')
+
 
 if __name__ == "__main__":
     unittest.main()

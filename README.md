@@ -93,7 +93,7 @@ Najwazniejsze pliki diagnostyczne:
 
 Przy starcie przez launcher `cv_metrics.jsonl`, `cv_runtime.log` i `ar_vite.log` opisuja biezacy przebieg testowy, zeby nowe pomiary nie mieszaly sie ze starymi.
 W `runtime` widac profil pracy, indeks kamery, rozdzielczosc przechwytywania oraz status blokady focus/exposure.
-W metrykach snapshot-first CV dochodza `motion_changed_ratio`, `stable_for_ms`, `snapshot_quality_score`, `snapshot_analysis_ms`, `snapshot_rejected_count`, `layout_publish_count` oraz `time_from_motion_to_publish_ms`.
+W metrykach snapshot-first CV dochodza `motion_changed_ratio`, `stable_for_ms`, `snapshot_quality_score`, `snapshot_analysis_ms`, `snapshot_rejected_count`, `layout_publish_count`, `recognition_score`, `snapshot_candidate_validation_rejections` oraz `time_from_motion_to_publish_ms`.
 
 ### Tryb snapshot-first CV
 
@@ -101,7 +101,7 @@ Tryb snapshot-first jest jedyna produkcyjna sciezka CV. Uruchamia lekki watcher 
 
 Startowe parametry sa konserwatywne: okolo 3 sekund stabilnosci, 3 snapshoty kontrolne i publikacja tylko zatwierdzonego ukladu. Overlay w przegladarce trzyma ostatni dobry wynik podczas ruchu lub odrzucenia snapshotu.
 
-Metryki tego trybu obejmuja m.in. `stable_for_ms`, `snapshot_quality_score`, `snapshot_analysis_ms`, `snapshot_rejected_count`, `layout_publish_count` oraz `time_from_motion_to_publish_ms`.
+Metryki tego trybu obejmuja m.in. `stable_for_ms`, `snapshot_quality_score`, `snapshot_analysis_ms`, `snapshot_rejected_count`, `layout_publish_count`, `recognition_score`, `snapshot_candidate_validation_rejections` oraz `time_from_motion_to_publish_ms`.
 
 ### Benchmark snapshot recognition
 
@@ -133,6 +133,34 @@ Profile strojenia zapisywane sa lokalnie w:
 
 ```text
 logs/calibration_profiles/
+```
+
+### Live Auto Tune
+
+Live Auto Tune jest narzedziem operatorskim w Studio, nie automatycznym trybem produkcyjnym. Operator uruchamia kalibracje dla pustej maty, jednej karty albo trzech kart. Backend zbiera stabilne snapshoty, zapisuje realne probki `candidate_count`, `accepted_count`, `recognition_score`, `candidate_validation_rejections` i czas analizy, ocenia kandydackie profile i pokazuje rekomendacje. Profil jest stosowany dopiero po kliknieciu Apply, a zapis do `logs/calibration_profiles/` wymaga komendy Save Profile.
+
+Bezpieczna sekwencja pracy:
+
+1. Uruchom Studio i upewnij sie, ze `CV Explain` pokazuje aktywna talie oraz skalibrowany stol ArUco.
+2. W panelu `Auto Tune` wybierz scenariusz: `Pusta mata`, `1 karta` albo `3 karty`.
+3. Poczekaj, az status autotuningu pokaze rekomendacje z `score`, `confidence` i parametrami profilu.
+4. Kliknij `Apply` tylko wtedy, gdy rekomendacja jest zgodna z realnym obrazem kamery.
+5. Zapisz profil dopiero po potwierdzeniu poprawy rozpoznawania w `CV Explain`.
+
+Profil autotuningu zapisany przez backend ma format z metadanymi:
+
+```json
+{
+  "name": "studio-live-20260602",
+  "parameters": {
+    "CARD_DETECT_MIN_AREA_RATIO": 0.001,
+    "CARD_DETECT_MAX_CANDIDATES": 10.0,
+    "WORKSPACE_INFLATE_PERCENT": 6.0
+  },
+  "source": "autotune",
+  "score": 1.25,
+  "confidence": "HIGH"
+}
 ```
 
 Probe parametrów kamery (`CAP_PROP_*`) jest teraz bezpiecznym odczytem-only: pokazuje wartosc odczytana, ale nie ustawia focusem, ekspozycja ani kontrastem. Dlaczego: samo wywolanie `cap.set()` dla focus/exposure potrafi przelaczyc niektóre kamery w tryb manualny i rozjechac ostrosc.

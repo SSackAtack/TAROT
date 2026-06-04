@@ -59,6 +59,12 @@ class SnapshotGate:
         self.quiet_started_ms = None
         self.stable_for_ms = 0
 
+    def request_sample(self, now_ms):
+        self.state = "settling"
+        self.motion_started_ms = None
+        self.quiet_started_ms = now_ms
+        self.stable_for_ms = 0
+
     def mark_rejected(self):
         self.state = "holding_last_good"
         self.motion_started_ms = None

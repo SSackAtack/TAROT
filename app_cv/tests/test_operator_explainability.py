@@ -43,6 +43,29 @@ class OperatorExplainabilityTest(unittest.TestCase):
         self.assertEqual(result["severity"], "warn")
         self.assertEqual(result["next_action"], "Zostaw mate nieruchomo przez kilka sekund.")
 
+    def test_rejected_snapshot_reports_quality_reason(self):
+        result = build_cv_explainability(
+            cards=[],
+            metrics={
+                "snapshot_quality_brightness": 0.0,
+                "snapshot_quality_contrast": 0.0,
+            },
+            runtime={"aruco_calibrated": True, "aruco_markers": 4},
+            layout={
+                "state": "holding_last_good",
+                "snapshot_reject_reason": "all_samples_rejected",
+                "snapshot_quality_reject_reason": "too_dark",
+            },
+            operator={"active_decks": ["gilded"]},
+            warnings=[],
+        )
+
+        snapshot_step = next(step for step in result["steps"] if step["id"] == "snapshot")
+        self.assertEqual(snapshot_step["state"], "warn")
+        self.assertEqual(snapshot_step["value"], "too_dark")
+        self.assertIn("odrzucony", snapshot_step["message"].lower())
+        self.assertIn("too_dark", result["next_action"])
+
     def test_detected_cards_are_ok(self):
         result = build_cv_explainability(
             cards=[{"id": "card-1"}],
@@ -55,6 +78,134 @@ class OperatorExplainabilityTest(unittest.TestCase):
 
         self.assertEqual(result["severity"], "ok")
         self.assertEqual(result["next_action"], "Mozna prowadzic sesje.")
+
+    def test_candidate_gap_explains_rejected_cards(self):
+        result = build_cv_explainability(
+            cards=[{"id": "gilded_01"}, {"id": "gilded_02"}],
+            metrics={"snapshot_quads_found": 3},
+            runtime={"aruco_calibrated": True, "aruco_markers": 4, "candidate_count": 3},
+            layout={"state": "holding_last_good"},
+            operator={"active_decks": ["gilded"]},
+            warnings=[],
+        )
+
+        recognition_step = next(step for step in result["steps"] if step["id"] == "recognition")
+        self.assertEqual(recognition_step["state"], "warn")
+        self.assertIn("2/3", recognition_step["value"])
+        self.assertIn("1", recognition_step["message"])
+        self.assertEqual(result["severity"], "warn")
+        self.assertIn("jedna karta", result["next_action"].lower())
+
+    def test_candidate_gap_mentions_shape_validation_rejection(self):
+        result = build_cv_explainability(
+            cards=[{"id": "gilded_01"}],
+            metrics={
+                "snapshot_quads_found": 2,
+                "snapshot_candidate_validation_rejections": 1,
+            },
+            runtime={"aruco_calibrated": True, "aruco_markers": 4},
+            layout={"state": "holding_last_good"},
+            operator={"active_decks": ["gilded"]},
+            warnings=[],
+        )
+
+        recognition_step = next(step for step in result["steps"] if step["id"] == "recognition")
+        self.assertEqual(recognition_step["state"], "warn")
+        self.assertIn("bez cech karty", recognition_step["message"])
+        self.assertIn("odblask", result["next_action"].lower())
+
+    def test_aruco_step_counts_marker_ids_from_table_status(self):
+        result = build_cv_explainability(
+            cards=[{"id": "gilded_01"}],
+            metrics={},
+            runtime={"table": {"calibrated": True, "marker_ids": [10, 11, 12, 13]}},
+            layout={"state": "holding_last_good"},
+            operator={"active_decks": ["gilded"]},
+            warnings=[],
+        )
+
+        aruco_step = next(step for step in result["steps"] if step["id"] == "aruco")
+        self.assertEqual(aruco_step["state"], "ok")
+        self.assertEqual(aruco_step["value"], "4/4")
+        self.assertEqual(aruco_step["message"], "Stol skalibrowany")
+
+    def test_aruco_step_warns_when_using_cached_calibration_without_visible_markers(self):
+        result = build_cv_explainability(
+            cards=[{"id": "gilded_01"}],
+            metrics={},
+            runtime={"table": {"calibrated": True, "marker_ids": []}},
+            layout={"state": "holding_last_good"},
+            operator={"active_decks": ["gilded"]},
+            warnings=[],
+        )
+
+        aruco_step = next(step for step in result["steps"] if step["id"] == "aruco")
+        self.assertEqual(aruco_step["state"], "warn")
+        self.assertEqual(aruco_step["value"], "0/4")
+        self.assertIn("ostatniej kalibracji", aruco_step["message"])
+        self.assertEqual(result["severity"], "warn")
+        self.assertEqual(result["next_action"], "Pokaz wszystkie markery ArUco w kadrze.")
+
+    def test_change_detector_explains_missing_change_regions(self):
+        result = build_cv_explainability(
+            cards=[],
+            metrics={
+                "change_region_count": 0,
+                "change_mask_ratio": 0.0,
+                "snapshot_quads_found": 2,
+            },
+            runtime={"table": {"calibrated": True, "marker_ids": [10, 11, 12, 13]}},
+            layout={"state": "holding_last_good", "card_count": 0},
+            operator={"active_decks": ["gilded"]},
+            warnings=[],
+        )
+
+        change_step = next(step for step in result["steps"] if step["id"] == "change_detection")
+        self.assertEqual(change_step["state"], "warn")
+        self.assertIn("brak regionow zmian", change_step["message"].lower())
+
+    def test_change_detector_explains_global_shift(self):
+        result = build_cv_explainability(
+            cards=[],
+            metrics={
+                "change_region_count": 0,
+                "change_mask_ratio": 0.70,
+                "change_global_shift": 1,
+            },
+            runtime={"table": {"calibrated": True, "marker_ids": [10, 11, 12, 13]}},
+            layout={"state": "holding_last_good", "card_count": 0},
+            operator={"active_decks": ["gilded"]},
+            warnings=[],
+        )
+
+        change_step = next(step for step in result["steps"] if step["id"] == "change_detection")
+        self.assertEqual(change_step["state"], "warn")
+        self.assertIn("globalna zmiane obrazu", change_step["message"])
+
+    def test_empty_reference_step_reports_capture_progress_and_validation_warning(self):
+        result = build_cv_explainability(
+            cards=[],
+            metrics={
+                "background_reference_validation_ratio": 0.025,
+                "background_reference_validation_warning": 1,
+            },
+            runtime={
+                "aruco_calibrated": True,
+                "aruco_markers": 4,
+                "background_reference_active": False,
+                "empty_reference_capture_active": True,
+                "empty_reference_frame_count": 2,
+            },
+            layout={"state": "sampling_snapshots"},
+            operator={"active_decks": ["gilded"]},
+            warnings=[],
+        )
+
+        reference_step = next(step for step in result["steps"] if step["id"] == "empty_reference")
+        self.assertEqual(reference_step["state"], "warn")
+        self.assertEqual(reference_step["value"], "2/3")
+        self.assertIn("zbieram", reference_step["message"].lower())
+        self.assertIn("0.025", reference_step["message"])
 
 
 if __name__ == "__main__":

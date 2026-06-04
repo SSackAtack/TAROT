@@ -1,0 +1,405 @@
+{
+  "deck_id": "gilded_scans",
+  "deck_profile_version": 1,
+  "display_name": "Gilded",
+  "scope": "full_deck_78",
+  "language": "pl",
+  "source": "Fizyczne skany uzytkownika z urzadzenia WIA",
+  "copyright": "private",
+  "card_count": 78,
+  "orientation_policy": "upright_or_reversed",
+  "has_back": false,
+  "reference_deck_dir": "produkcja/wzorce_cv",
+  "cards": [
+    {
+      "card_id": "Gilded_00",
+      "card_name": "Gilded_00",
+      "reference_image": "Gilded_00.jpg"
+    },
+    {
+      "card_id": "Gilded_01",
+      "card_name": "Gilded_01",
+      "reference_image": "Gilded_01.jpg"
+    },
+    {
+      "card_id": "Gilded_02",
+      "card_name": "Gilded_02",
+      "reference_image": "Gilded_02.jpg"
+    },
+    {
+      "card_id": "Gilded_03",
+      "card_name": "Gilded_03",
+      "reference_image": "Gilded_03.jpg"
+    },
+    {
+      "card_id": "Gilded_04",
+      "card_name": "Gilded_04",
+      "reference_image": "Gilded_04.jpg"
+    },
+    {
+      "card_id": "Gilded_05",
+      "card_name": "Gilded_05",
+      "reference_image": "Gilded_05.jpg"
+    },
+    {
+      "card_id": "Gilded_06",
+      "card_name": "Gilded_06",
+      "reference_image": "Gilded_06.jpg"
+    },
+    {
+      "card_id": "Gilded_07",
+      "card_name": "Gilded_07",
+      "reference_image": "Gilded_07.jpg"
+    },
+    {
+      "card_id": "Gilded_08",
+      "card_name": "Gilded_08",
+      "reference_image": "Gilded_08.jpg"
+    },
+    {
+      "card_id": "Gilded_09",
+      "card_name": "Gilded_09",
+      "reference_image": "Gilded_09.jpg"
+    },
+    {
+      "card_id": "Gilded_10",
+      "card_name": "Gilded_10",
+      "reference_image": "Gilded_10.jpg"
+    },
+    {
+      "card_id": "Gilded_11",
+      "card_name": "Gilded_11",
+      "reference_image": "Gilded_11.jpg"
+    },
+    {
+      "card_id": "Gilded_12",
+      "card_name": "Gilded_12",
+      "reference_image": "Gilded_12.jpg"
+    },
+    {
+      "card_id": "Gilded_13",
+      "card_name": "Gilded_13",
+      "reference_image": "Gilded_13.jpg"
+    },
+    {
+      "card_id": "Gilded_14",
+      "card_name": "Gilded_14",
+      "reference_image": "Gilded_14.jpg"
+    },
+    {
+      "card_id": "Gilded_15",
+      "card_name": "Gilded_15",
+      "reference_image": "Gilded_15.jpg"
+    },
+    {
+      "card_id": "Gilded_16",
+      "card_name": "Gilded_16",
+      "reference_image": "Gilded_16.jpg"
+    },
+    {
+      "card_id": "Gilded_17",
+      "card_name": "Gilded_17",
+      "reference_image": "Gilded_17.jpg"
+    },
+    {
+      "card_id": "Gilded_18",
+      "card_name": "Gilded_18",
+      "reference_image": "Gilded_18.jpg"
+    },
+    {
+      "card_id": "Gilded_19",
+      "card_name": "Gilded_19",
+      "reference_image": "Gilded_19.jpg"
+    },
+    {
+      "card_id": "Gilded_20",
+      "card_name": "Gilded_20",
+      "reference_image": "Gilded_20.jpg"
+    },
+    {
+      "card_id": "Gilded_21",
+      "card_name": "Gilded_21",
+      "reference_image": "Gilded_21.jpg"
+    },
+    {
+      "card_id": "Gilded_22",
+      "card_name": "Gilded_22",
+      "reference_image": "Gilded_22.jpg"
+    },
+    {
+      "card_id": "Gilded_23",
+      "card_name": "Gilded_23",
+      "reference_image": "Gilded_23.jpg"
+    },
+    {
+      "card_id": "Gilded_24",
+      "card_name": "Gilded_24",
+      "reference_image": "Gilded_24.jpg"
+    },
+    {
+      "card_id": "Gilded_25",
+      "card_name": "Gilded_25",
+      "reference_image": "Gilded_25.jpg"
+    },
+    {
+      "card_id": "Gilded_26",
+      "card_name": "Gilded_26",
+      "reference_image": "Gilded_26.jpg"
+    },
+    {
+      "card_id": "Gilded_27",
+      "card_name": "Gilded_27",
+      "reference_image": "Gilded_27.jpg"
+    },
+    {
+      "card_id": "Gilded_28",
+      "card_name": "Gilded_28",
+      "reference_image": "Gilded_28.jpg"
+    },
+    {
+      "card_id": "Gilded_29",
+      "card_name": "Gilded_29",
+      "reference_image": "Gilded_29.jpg"
+    },
+    {
+      "card_id": "Gilded_30",
+      "card_name": "Gilded_30",
+      "reference_image": "Gilded_30.jpg"
+    },
+    {
+      "card_id": "Gilded_31",
+      "card_name": "Gilded_31",
+      "reference_image": "Gilded_31.jpg"
+    },
+    {
+      "card_id": "Gilded_32",
+      "card_name": "Gilded_32",
+      "reference_image": "Gilded_32.jpg"
+    },
+    {
+      "card_id": "Gilded_33",
+      "card_name": "Gilded_33",
+      "reference_image": "Gilded_33.jpg"
+    },
+    {
+      "card_id": "Gilded_34",
+      "card_name": "Gilded_34",
+      "reference_image": "Gilded_34.jpg"
+    },
+    {
+      "card_id": "Gilded_35",
+      "card_name": "Gilded_35",
+      "reference_image": "Gilded_35.jpg"
+    },
+    {
+      "card_id": "Gilded_36",
+      "card_name": "Gilded_36",
+      "reference_image": "Gilded_36.jpg"
+    },
+    {
+      "card_id": "Gilded_37",
+      "card_name": "Gilded_37",
+      "reference_image": "Gilded_37.jpg"
+    },
+    {
+      "card_id": "Gilded_38",
+      "card_name": "Gilded_38",
+      "reference_image": "Gilded_38.jpg"
+    },
+    {
+      "card_id": "Gilded_39",
+      "card_name": "Gilded_39",
+      "reference_image": "Gilded_39.jpg"
+    },
+    {
+      "card_id": "Gilded_40",
+      "card_name": "Gilded_40",
+      "reference_image": "Gilded_40.jpg"
+    },
+    {
+      "card_id": "Gilded_41",
+      "card_name": "Gilded_41",
+      "reference_image": "Gilded_41.jpg"
+    },
+    {
+      "card_id": "Gilded_42",
+      "card_name": "Gilded_42",
+      "reference_image": "Gilded_42.jpg"
+    },
+    {
+      "card_id": "Gilded_43",
+      "card_name": "Gilded_43",
+      "reference_image": "Gilded_43.jpg"
+    },
+    {
+      "card_id": "Gilded_44",
+      "card_name": "Gilded_44",
+      "reference_image": "Gilded_44.jpg"
+    },
+    {
+      "card_id": "Gilded_45",
+      "card_name": "Gilded_45",
+      "reference_image": "Gilded_45.jpg"
+    },
+    {
+      "card_id": "Gilded_46",
+      "card_name": "Gilded_46",
+      "reference_image": "Gilded_46.jpg"
+    },
+    {
+      "card_id": "Gilded_47",
+      "card_name": "Gilded_47",
+      "reference_image": "Gilded_47.jpg"
+    },
+    {
+      "card_id": "Gilded_48",
+      "card_name": "Gilded_48",
+      "reference_image": "Gilded_48.jpg"
+    },
+    {
+      "card_id": "Gilded_49",
+      "card_name": "Gilded_49",
+      "reference_image": "Gilded_49.jpg"
+    },
+    {
+      "card_id": "Gilded_50",
+      "card_name": "Gilded_50",
+      "reference_image": "Gilded_50.jpg"
+    },
+    {
+      "card_id": "Gilded_51",
+      "card_name": "Gilded_51",
+      "reference_image": "Gilded_51.jpg"
+    },
+    {
+      "card_id": "Gilded_52",
+      "card_name": "Gilded_52",
+      "reference_image": "Gilded_52.jpg"
+    },
+    {
+      "card_id": "Gilded_53",
+      "card_name": "Gilded_53",
+      "reference_image": "Gilded_53.jpg"
+    },
+    {
+      "card_id": "Gilded_54",
+      "card_name": "Gilded_54",
+      "reference_image": "Gilded_54.jpg"
+    },
+    {
+      "card_id": "Gilded_55",
+      "card_name": "Gilded_55",
+      "reference_image": "Gilded_55.jpg"
+    },
+    {
+      "card_id": "Gilded_56",
+      "card_name": "Gilded_56",
+      "reference_image": "Gilded_56.jpg"
+    },
+    {
+      "card_id": "Gilded_57",
+      "card_name": "Gilded_57",
+      "reference_image": "Gilded_57.jpg"
+    },
+    {
+      "card_id": "Gilded_58",
+      "card_name": "Gilded_58",
+      "reference_image": "Gilded_58.jpg"
+    },
+    {
+      "card_id": "Gilded_59",
+      "card_name": "Gilded_59",
+      "reference_image": "Gilded_59.jpg"
+    },
+    {
+      "card_id": "Gilded_60",
+      "card_name": "Gilded_60",
+      "reference_image": "Gilded_60.jpg"
+    },
+    {
+      "card_id": "Gilded_61",
+      "card_name": "Gilded_61",
+      "reference_image": "Gilded_61.jpg"
+    },
+    {
+      "card_id": "Gilded_62",
+      "card_name": "Gilded_62",
+      "reference_image": "Gilded_62.jpg"
+    },
+    {
+      "card_id": "Gilded_63",
+      "card_name": "Gilded_63",
+      "reference_image": "Gilded_63.jpg"
+    },
+    {
+      "card_id": "Gilded_64",
+      "card_name": "Gilded_64",
+      "reference_image": "Gilded_64.jpg"
+    },
+    {
+      "card_id": "Gilded_65",
+      "card_name": "Gilded_65",
+      "reference_image": "Gilded_65.jpg"
+    },
+    {
+      "card_id": "Gilded_66",
+      "card_name": "Gilded_66",
+      "reference_image": "Gilded_66.jpg"
+    },
+    {
+      "card_id": "Gilded_67",
+      "card_name": "Gilded_67",
+      "reference_image": "Gilded_67.jpg"
+    },
+    {
+      "card_id": "Gilded_68",
+      "card_name": "Gilded_68",
+      "reference_image": "Gilded_68.jpg"
+    },
+    {
+      "card_id": "Gilded_69",
+      "card_name": "Gilded_69",
+      "reference_image": "Gilded_69.jpg"
+    },
+    {
+      "card_id": "Gilded_70",
+      "card_name": "Gilded_70",
+      "reference_image": "Gilded_70.jpg"
+    },
+    {
+      "card_id": "Gilded_71",
+      "card_name": "Gilded_71",
+      "reference_image": "Gilded_71.jpg"
+    },
+    {
+      "card_id": "Gilded_72",
+      "card_name": "Gilded_72",
+      "reference_image": "Gilded_72.jpg"
+    },
+    {
+      "card_id": "Gilded_73",
+      "card_name": "Gilded_73",
+      "reference_image": "Gilded_73.jpg"
+    },
+    {
+      "card_id": "Gilded_74",
+      "card_name": "Gilded_74",
+      "reference_image": "Gilded_74.jpg"
+    },
+    {
+      "card_id": "Gilded_75",
+      "card_name": "Gilded_75",
+      "reference_image": "Gilded_75.jpg"
+    },
+    {
+      "card_id": "Gilded_76",
+      "card_name": "Gilded_76",
+      "reference_image": "Gilded_76.jpg"
+    },
+    {
+      "card_id": "Gilded_77",
+      "card_name": "Gilded_77",
+      "reference_image": "Gilded_77.jpg"
+    }
+  ]
+}

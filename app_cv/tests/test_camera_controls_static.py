@@ -54,6 +54,59 @@ class CameraControlsStaticTest(unittest.TestCase):
         self.assertIn('id="studio-cv-explain-next"', source)
         self.assertIn("studio-cv-explain-step--", source)
 
+    def test_studio_autotune_panel_sends_operator_commands(self):
+        source = self._read_frontend_file(
+            os.path.join("app_ar", "src", "studio", "studioConsole.js")
+        )
+
+        self.assertIn("studio-autotune-panel", source)
+        self.assertIn("renderStudioAutotune", source)
+        self.assertIn("operator?.calibration?.autotune", source)
+        self.assertIn("autotune_start", source)
+        self.assertIn("autotune_calibrate", source)
+        self.assertIn("autotune_apply", source)
+        self.assertIn("autotune_save", source)
+        self.assertIn("autotune_cancel", source)
+
+    def test_studio_sidebar_uses_collapsible_separate_sections(self):
+        source = self._read_frontend_file(
+            os.path.join("app_ar", "src", "studio", "studioConsole.js")
+        )
+
+        self.assertIn('data-studio-section="decks"', source)
+        self.assertIn('data-studio-section="autotune"', source)
+        self.assertIn('data-studio-section="cv-diagnostics"', source)
+        self.assertIn("initializeStudioSidebarAccordions", source)
+        self.assertIn("studio:sidebarCollapsedSections", source)
+        self.assertIn("data-studio-accordion-toggle", source)
+
+    def test_studio_preview_modes_support_table_camera_and_pip(self):
+        source = self._read_frontend_file(
+            os.path.join("app_ar", "src", "studio", "studioConsole.js")
+        )
+
+        self.assertIn("setStudioPreviewMode", source)
+        self.assertIn('data-preview-mode="table"', source)
+        self.assertIn('data-preview-mode="camera"', source)
+        self.assertIn('data-preview-mode="pip"', source)
+        self.assertIn("'preview'", source)
+        self.assertIn("Wirtualny stół", source)
+        self.assertIn("studio-preview-mode-btn--active", source)
+        self.assertIn("setStudioPipSize", source)
+        self.assertIn('id="studio-pip-size-slider"', source)
+        self.assertIn("--studio-pip-width", source)
+        self.assertIn("studio:pipSize", source)
+
+    def test_studio_pip_slider_is_not_capped_before_maximum_value(self):
+        source = self._read_frontend_file(os.path.join("app_ar", "studio.css"))
+
+        self.assertIn("--studio-pip-width", source)
+        self.assertIn("calc(100% - 56px)", source)
+        self.assertNotIn(
+            "width: min(var(--studio-pip-width, 30%), 560px)",
+            source,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

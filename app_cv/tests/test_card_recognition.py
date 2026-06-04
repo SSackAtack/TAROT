@@ -10,9 +10,11 @@ from tarotvision.card_recognition import (
     NORMALIZED_CARD_HEIGHT,
     deskew_card_crop,
     recognize_card_crop,
+    recognize_card_crop_with_debug,
     load_reference_cards,
     resolve_orientation_with_margin,
 )
+from tarotvision.recognition_debug import top_match_summary
 
 
 class VariantNamesTest(unittest.TestCase):
@@ -118,6 +120,66 @@ class RecognizeCardCropTest(unittest.TestCase):
         result = recognize_card_crop(gray_crop, {}, orb, matcher)
 
         self.assertIsNone(result)
+
+    @patch("cv2.findHomography")
+    def test_debug_reports_top_match_ranking(self, mock_find_homography):
+        try:
+            import cv2
+        except ImportError:
+            self.skipTest("cv2 not available")
+
+        def homography_with_full_inliers(src_pts, dst_pts, method, threshold):
+            return np.eye(3, dtype=np.float32), np.ones(len(src_pts), dtype=np.uint8)
+
+        mock_find_homography.side_effect = homography_with_full_inliers
+
+        ref_cards = {
+            "Gilded_10": {
+                "keypoints": [cv2.KeyPoint(0, 0, 1)] * 20,
+                "descriptors": np.zeros((20, 32), dtype=np.uint8),
+                "reversed_keypoints": [],
+                "reversed_descriptors": None,
+            },
+            "Gilded_09": {
+                "keypoints": [cv2.KeyPoint(0, 0, 1)] * 15,
+                "descriptors": np.zeros((15, 32), dtype=np.uint8),
+                "reversed_keypoints": [],
+                "reversed_descriptors": None,
+            },
+        }
+
+        mock_orb = MagicMock()
+        mock_orb.detectAndCompute.return_value = (
+            [cv2.KeyPoint(0, 0, 1)] * 20,
+            np.zeros((20, 32), dtype=np.uint8),
+        )
+
+        mock_matcher = MagicMock()
+
+        def knn_match(des_ref, des_crop, k=2):
+            return [
+                [cv2.DMatch(i, i, 1.0), cv2.DMatch(i, i, 10.0)]
+                for i in range(len(des_ref))
+            ]
+
+        mock_matcher.knnMatch.side_effect = knn_match
+
+        crop = np.zeros((516, 300), dtype=np.uint8)
+        result, debug = recognize_card_crop_with_debug(
+            crop,
+            ref_cards,
+            mock_orb,
+            mock_matcher,
+            min_good_matches=12,
+        )
+
+        self.assertIsNotNone(result)
+        self.assertEqual(result["name"], "Gilded_10")
+        self.assertIsNone(debug.reject_reason)
+        summary = top_match_summary(debug, limit=2)
+        self.assertEqual([item["name"] for item in summary], ["Gilded_10", "Gilded_09"])
+        self.assertEqual(summary[0]["match_count"], 20)
+        self.assertEqual(summary[1]["match_count"], 15)
 
 
 class LoadReferenceCardsTest(unittest.TestCase):

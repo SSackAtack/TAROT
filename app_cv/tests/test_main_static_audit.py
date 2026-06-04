@@ -43,6 +43,11 @@ class TestMainStaticAudit(unittest.TestCase):
     def setUp(self):
         self.main_py_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "main.py"))
 
+    def _read_main_source(self):
+        self.assertTrue(os.path.exists(self.main_py_path), f"Plik {self.main_py_path} nie istnieje")
+        with open(self.main_py_path, "r", encoding="utf-8") as f:
+            return f.read()
+
     def test_no_dead_references_in_main(self):
         """Weryfikuje, że w main.py nie ma zakazanych, surowych odwołań do camera_index lub cap."""
         self.assertTrue(os.path.exists(self.main_py_path), f"Plik {self.main_py_path} nie istnieje")
@@ -102,13 +107,98 @@ class TestMainStaticAudit(unittest.TestCase):
 
     def test_main_publishes_operator_explainability(self):
         """Payload operatora powinien zawierać uporządkowaną diagnostykę CV Explain."""
-        self.assertTrue(os.path.exists(self.main_py_path), f"Plik {self.main_py_path} nie istnieje")
-
-        with open(self.main_py_path, "r", encoding="utf-8") as f:
-            source = f.read()
+        source = self._read_main_source()
 
         self.assertIn("from tarotvision.operator_explainability import build_cv_explainability", source)
         self.assertIn('"explainability": build_cv_explainability(', source)
+
+    def test_main_handles_autotune_without_auto_apply(self):
+        """Autotuning ma publikować rekomendację, ale nie stosować jej bez komendy operatora."""
+        source = self._read_main_source()
+
+        self.assertIn("from tarotvision.autotune_session import AutotuneSession", source)
+        self.assertIn("from tarotvision.autotune_profiles import generate_candidate_profiles", source)
+        self.assertIn("from tarotvision.autotune_scoring import choose_best_profile_result", source)
+        self.assertIn('message.type == "autotune_start"', source)
+        self.assertIn('message.type == "autotune_apply"', source)
+        self.assertIn("set_recommendation", source)
+        self.assertNotIn("auto_apply_recommendation", source)
+
+    def test_main_saves_autotune_recommendation_with_metadata(self):
+        """autotune_save powinien zapisywać rekomendację z metadanymi, nie surową mapę parametrów."""
+        source = self._read_main_source()
+
+        self.assertIn('message.type == "autotune_save"', source)
+        self.assertIn("save_autotune_recommendation", source)
+        self.assertIn("load_parameters", source)
+        self.assertNotIn('profile_store.save(message.name, autotune_session.recommendation["profile"])', source)
+
+    def test_main_wires_live_autotune_samples_from_snapshot_pipeline(self):
+        """SnapshotFirstPipeline powinien zapisywać realne próbki do aktywnej sesji autotuningu."""
+        source = self._read_main_source()
+
+        self.assertIn("def record_autotune_sample_from_snapshot", source)
+        self.assertIn("autotune_session.add_sample", source)
+        self.assertIn("update_autotune_recommendation_from_samples", source)
+        self.assertIn("autotune_sample_recorder=record_autotune_sample_from_snapshot", source)
+
+    def test_autotune_start_forces_snapshot_sampling_request(self):
+        """Klikniecie etapu Auto Tune nie moze czekac na naturalny ruch w snapshot gate."""
+        source = self._read_main_source()
+
+        autotune_start_index = source.index('if message.type == "autotune_start"')
+        autotune_start_block = source[
+            autotune_start_index:source.index('if message.type == "autotune_calibrate"')
+        ]
+
+        self.assertIn("snapshot_gate.request_sample", autotune_start_block)
+        self.assertIn('write_autotune_log("stage_started")', autotune_start_block)
+
+    def test_autotune_sample_recorder_requests_next_sample_until_stage_complete(self):
+        """Auto Tune ma sam dociagac probki do 3/3 po pierwszym wymuszonym snapshocie."""
+        source = self._read_main_source()
+
+        recorder_index = source.index("def record_autotune_sample_from_snapshot")
+        recorder_block = source[recorder_index:source.index("def handle_control_message")]
+
+        self.assertIn('"request_next_sample"', recorder_block)
+        self.assertIn("autotune_session.ready_to_score()", recorder_block)
+
+    def test_main_logs_autotune_wizard_events_and_calibrate_command(self):
+        """Wizard Auto Tune powinien zapisywać zdarzenia i generować rekomendację dopiero po jawnej komendzie."""
+        source = self._read_main_source()
+
+        self.assertIn("from tarotvision.autotune_session_log import AutotuneSessionLog", source)
+        self.assertIn("autotune_session_log = AutotuneSessionLog", source)
+        self.assertIn("def write_autotune_log", source)
+        self.assertIn('message.type == "autotune_calibrate"', source)
+        self.assertIn('write_autotune_log("stage_completed")', source)
+        self.assertIn('write_autotune_log(', source)
+        self.assertIn('"saved"', source)
+
+    def test_main_wires_change_detector_into_snapshot_pipeline(self):
+        source = self._read_main_source()
+
+        self.assertIn("from tarotvision.change_detection import ChangeDetector", source)
+        self.assertIn("change_detector = ChangeDetector", source)
+        self.assertIn("change_detector=change_detector", source)
+        self.assertIn("background_model=background_model", source)
+
+    def test_autotune_empty_stage_bootstraps_reference_before_validation(self):
+        """Etap pustej maty ma najpierw zbierac referencje, a dopiero potem ja walidowac."""
+        source = self._read_main_source()
+        autotune_start_index = source.index('if message.type == "autotune_start"')
+        autotune_start_block = source[
+            autotune_start_index:source.index('if message.type == "autotune_calibrate"')
+        ]
+
+        self.assertIn('message.scenario == "empty"', autotune_start_block)
+        self.assertIn("background_model.clear()", autotune_start_block)
+        self.assertIn("snapshot_pipeline.empty_reference_frames.clear()", autotune_start_block)
+        self.assertIn("snapshot_pipeline.empty_reference_capture_active = True", autotune_start_block)
+        self.assertIn("snapshot_pipeline.last_snapshot_cards = []", autotune_start_block)
+        self.assertIn("collect_empty_reference_frame", source)
+        self.assertIn("finalize_empty_reference", source)
 
 if __name__ == '__main__':
     unittest.main()

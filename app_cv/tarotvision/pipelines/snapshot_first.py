@@ -6,7 +6,34 @@ import time
 import numpy as np
 from tarotvision.pipelines.base import VisionPipeline
 from tarotvision.detection_diagnostics import summarize_detection_diagnostics
-from tarotvision.snapshot_quality import choose_best_snapshot
+from tarotvision.snapshot_quality import choose_best_snapshot, score_snapshot
+
+SNAPSHOT_QUALITY_REJECT_CODES = {
+    "too_dark": 1,
+    "too_bright": 2,
+    "low_contrast": 3,
+    "blurry": 4,
+}
+
+
+ROI_DIAGNOSTIC_FIELDS = (
+    "roi_count",
+    "roi_diagnostics",
+    "crop_diagnostics",
+    "roi_with_quads_count",
+    "roi_with_accepted_card_count",
+    "accepted_cards_before_dedup",
+    "accepted_cards_after_dedup",
+)
+
+
+def _extract_roi_diagnostics(diagnostics):
+    return {
+        field: diagnostics[field]
+        for field in ROI_DIAGNOSTIC_FIELDS
+        if field in diagnostics
+    }
+
 
 class SnapshotFirstPipeline(VisionPipeline):
     def __init__(
@@ -23,7 +50,11 @@ class SnapshotFirstPipeline(VisionPipeline):
         build_operator_snapshot_fn,
         operator_warnings,
         log_dir,
-        runtime_profile="default"
+        runtime_profile="default",
+        autotune_sample_recorder=None,
+        change_detector=None,
+        background_model=None,
+        live_fixture_capture=None,
     ):
         self.camera_session = camera_session
         self.opencv_preview = opencv_preview
@@ -38,9 +69,17 @@ class SnapshotFirstPipeline(VisionPipeline):
         self.operator_warnings = operator_warnings
         self.log_dir = log_dir
         self.runtime_profile = runtime_profile
+        self.autotune_sample_recorder = autotune_sample_recorder
+        self.change_detector = change_detector
+        self.background_model = background_model
+        self.live_fixture_capture = live_fixture_capture
+        self.empty_reference_frames = []
+        self.empty_reference_capture_active = False
+        self.last_roi_diagnostics = {}
 
         # Zmienne stanu rurociągu
         self.last_snapshot_cards = []
+        self.previous_stable_snapshot = None
         self.snapshot_layout_id = 0
         self.last_motion_started_ms = None
         self.last_diagnostics_time = 0.0
@@ -93,6 +132,8 @@ class SnapshotFirstPipeline(VisionPipeline):
         self.runtime_metrics.add("fps", fps)
 
         # Pobieranie próbek (sampling)
+        selected_raw_frame = None
+        selected_analysis_frame = None
         if gate_decision.should_sample:
             samples = [frame.copy()]
             key_action = None
@@ -126,11 +167,24 @@ class SnapshotFirstPipeline(VisionPipeline):
             self.runtime_metrics.add("snapshot_samples_taken", len(samples))
             selected = choose_best_snapshot(samples)
             if selected is None:
+                quality = score_snapshot(samples[-1])
                 self.snapshot_gate.mark_rejected()
                 layout_snapshot["state"] = self.snapshot_gate.state
                 layout_snapshot["snapshot_reject_reason"] = "all_samples_rejected"
+                layout_snapshot["snapshot_quality_reject_reason"] = quality.reject_reason
+                layout_snapshot["snapshot_quality_blur_score"] = quality.blur_score
+                layout_snapshot["snapshot_quality_brightness"] = quality.brightness
+                layout_snapshot["snapshot_quality_contrast"] = quality.contrast
                 self.runtime_metrics.add("snapshot_rejected_count", 1)
+                self.runtime_metrics.add(
+                    "snapshot_quality_reject_code",
+                    SNAPSHOT_QUALITY_REJECT_CODES.get(quality.reject_reason, 99),
+                )
+                self.runtime_metrics.add("snapshot_quality_blur_score", quality.blur_score)
+                self.runtime_metrics.add("snapshot_quality_brightness", quality.brightness)
+                self.runtime_metrics.add("snapshot_quality_contrast", quality.contrast)
             else:
+                selected_raw_frame = selected.frame.copy()
                 self.snapshot_gate.mark_analyzing()
                 
                 # Szybki podgląd stanu analizy
@@ -149,24 +203,91 @@ class SnapshotFirstPipeline(VisionPipeline):
                         self.runtime_metrics.add("snapshot_analysis_warped", 0)
                 else:
                     self.runtime_metrics.add("snapshot_analysis_warped", 0)
+                selected_analysis_frame = analysis_frame.copy()
 
-                analysis_start = time.perf_counter()
-                result = self.snapshot_analyzer.analyze(analysis_frame)
-                diagnostics = result.diagnostics if isinstance(result.diagnostics, dict) else {}
-                self.runtime_metrics.add("snapshot_quads_found", diagnostics.get("quads_found", 0))
-                self.runtime_metrics.add("snapshot_recognition_attempts", diagnostics.get("recognition_attempts", 0))
-                self.runtime_metrics.add("snapshot_recognition_rejections", diagnostics.get("recognition_rejections", 0))
-                for metric_name, metric_value in summarize_detection_diagnostics(
-                        diagnostics.get("detection")).items():
-                    self.runtime_metrics.add(metric_name, metric_value)
-                analysis_ms = (time.perf_counter() - analysis_start) * 1000.0
-                self.runtime_metrics.add("snapshot_analysis_ms", analysis_ms)
+                roi_hints = None
+                hold_previous_state = False
+                hold_reason = None
+                update_previous_stable_snapshot = False
+                if self.change_detector is not None and self.previous_stable_snapshot is not None:
+                    change_result = self.change_detector.detect(
+                        self.previous_stable_snapshot,
+                        analysis_frame,
+                        empty_reference=self.background_model,
+                    )
+                    added_regions = [
+                        region for region in change_result.regions
+                        if region.kind == "added_or_moved"
+                    ]
+                    removed_regions = [
+                        region for region in change_result.regions
+                        if region.kind == "removed"
+                    ]
+                    self.runtime_metrics.add("change_region_count", len(change_result.regions))
+                    self.runtime_metrics.add("change_mask_ratio", change_result.mask_nonzero_ratio)
+                    self.runtime_metrics.add("change_global_shift", 1 if change_result.global_shift else 0)
+                    self.runtime_metrics.add("change_ignored_small_count", change_result.ignored_small_count)
+                    self.runtime_metrics.add("change_ignored_large_count", change_result.ignored_large_count)
+                    self.runtime_metrics.add("change_added_count", len(added_regions))
+                    self.runtime_metrics.add("change_removed_count", len(removed_regions))
+                    if change_result.global_shift:
+                        hold_previous_state = True
+                        hold_reason = "global_shift_detected"
+                    elif not added_regions and not removed_regions:
+                        hold_previous_state = True
+                        hold_reason = "no_change_hold_previous"
+                        update_previous_stable_snapshot = True
+                    else:
+                        roi_hints = [region.bbox for region in added_regions]
+
+                analysis_ms = 0.0
+                diagnostics = {}
+                result = None
+                if hold_previous_state:
+                    self.empty_snapshot_streak = 0
+                    self.snapshot_gate.mark_rejected()
+                    layout_snapshot["snapshot_reject_reason"] = hold_reason
+                    self.runtime_metrics.add("snapshot_rejected_count", 1)
+                    self.runtime_metrics.add("snapshot_analysis_ms", analysis_ms)
+                else:
+                    analysis_start = time.perf_counter()
+                    result = self.snapshot_analyzer.analyze(analysis_frame, roi_hints=roi_hints)
+                    diagnostics = result.diagnostics if isinstance(result.diagnostics, dict) else {}
+                    self.last_roi_diagnostics = _extract_roi_diagnostics(diagnostics)
+                    self.runtime_metrics.add("snapshot_quads_found", diagnostics.get("quads_found", 0))
+                    self.runtime_metrics.add("snapshot_recognition_attempts", diagnostics.get("recognition_attempts", 0))
+                    self.runtime_metrics.add("snapshot_recognition_rejections", diagnostics.get("recognition_rejections", 0))
+                    self.runtime_metrics.add("snapshot_candidate_validation_rejections", diagnostics.get("candidate_validation_rejections", 0))
+                    self.runtime_metrics.add("recognition_score", diagnostics.get("recognition_score", 0.0))
+                    self.runtime_metrics.add("snapshot_recognition_score", diagnostics.get("recognition_score", 0.0))
+                    for metric_name, metric_value in summarize_detection_diagnostics(
+                            diagnostics.get("detection")).items():
+                        self.runtime_metrics.add(metric_name, metric_value)
+                    analysis_ms = (time.perf_counter() - analysis_start) * 1000.0
+                    self.runtime_metrics.add("snapshot_analysis_ms", analysis_ms)
                 self.runtime_metrics.add("snapshot_quality_score", selected.quality.quality_score)
+                autotune_recorder_result = None
+                if not hold_previous_state or self.empty_reference_capture_active:
+                    accepted_count = 0 if result is None else result.card_count
+                    autotune_recorder_result = self._record_autotune_sample(
+                        diagnostics=diagnostics,
+                        accepted_count=accepted_count,
+                        analysis_ms=analysis_ms,
+                        quality_score=selected.quality.quality_score,
+                    )
 
-                if result.card_count > 0:
+                if hold_previous_state:
+                    pass
+                elif result.card_count > 0 and self.empty_reference_capture_active:
+                    self.empty_snapshot_streak = 0
+                    self.snapshot_gate.mark_rejected()
+                    layout_snapshot["snapshot_reject_reason"] = "empty_reference_capture_hold"
+                    self.runtime_metrics.add("empty_reference_false_positive_hold", 1)
+                elif result.card_count > 0:
                     self.empty_snapshot_streak = 0
                     self.snapshot_layout_id += 1
                     self.last_snapshot_cards = result.cards
+                    update_previous_stable_snapshot = True
                     self.snapshot_gate.mark_published(
                         layout_id=self.snapshot_layout_id,
                         now_ms=int(time.time() * 1000),
@@ -191,6 +312,39 @@ class SnapshotFirstPipeline(VisionPipeline):
                         layout_snapshot["snapshot_reject_reason"] = "cards_removed_confirmed"
                         self.runtime_metrics.add("cards_removed_count", 1)
                         self.runtime_metrics.add("layout_changed", 1)
+                        update_previous_stable_snapshot = True
+
+                if (
+                        isinstance(autotune_recorder_result, dict)
+                        and autotune_recorder_result.get("request_next_sample")):
+                    self.snapshot_gate.request_sample(now_ms=int(time.time() * 1000))
+
+                if (
+                        isinstance(autotune_recorder_result, dict)
+                        and autotune_recorder_result.get("collect_empty_reference_frame")):
+                    self.empty_reference_frames.append(analysis_frame.copy())
+
+                if (
+                        isinstance(autotune_recorder_result, dict)
+                        and autotune_recorder_result.get("finalize_empty_reference")
+                        and self.background_model is not None):
+                    self.background_model.capture_many(self.empty_reference_frames)
+                    self.runtime_metrics.add("background_reference_captured", 1)
+                    validation_ratio = self.background_model.changed_ratio(
+                        analysis_frame,
+                        threshold=20,
+                    )
+                    self.runtime_metrics.add(
+                        "background_reference_validation_ratio",
+                        validation_ratio,
+                    )
+                    self.runtime_metrics.add(
+                        "background_reference_validation_warning",
+                        1 if validation_ratio > 0.01 else 0,
+                    )
+                    self.empty_reference_frames = []
+                    self.empty_reference_capture_active = False
+                    update_previous_stable_snapshot = True
 
                 layout_snapshot.update({
                     "layout_id": self.snapshot_layout_id,
@@ -199,8 +353,11 @@ class SnapshotFirstPipeline(VisionPipeline):
                     "quality_score": selected.quality.quality_score,
                     "card_count": len(self.last_snapshot_cards),
                 })
+                if update_previous_stable_snapshot:
+                    self.previous_stable_snapshot = analysis_frame.copy()
 
         metrics_snapshot = self.runtime_metrics.snapshot()
+        metrics_snapshot.update(self.last_roi_diagnostics)
         runtime_snapshot = {
             "profile": self.runtime_profile,
             "camera_index": self.camera_session.camera_index,
@@ -210,24 +367,36 @@ class SnapshotFirstPipeline(VisionPipeline):
             "camera_exposure_locked": self.runtime_config.values.get("CAMERA_EXPOSURE_LOCKED", False),
             "schedule_mode": "snapshot_first",
             "table": self.table_calibration.status(),
+            "background_reference_active": bool(getattr(self.background_model, "active", False)),
+            "empty_reference_capture_active": self.empty_reference_capture_active,
+            "empty_reference_frame_count": len(self.empty_reference_frames),
         }
         
         status_update_start = time.perf_counter()
+        operator_snapshot = self.build_operator_snapshot_fn(
+            cards=self.last_snapshot_cards,
+            metrics=metrics_snapshot,
+            runtime=runtime_snapshot,
+            layout=layout_snapshot,
+            warnings=list(self.operator_warnings[-8:]),
+        )
         self.status_store.update_cv_state(
             cards=self.last_snapshot_cards,
             metrics=metrics_snapshot,
             runtime=runtime_snapshot,
-            operator=self.build_operator_snapshot_fn(
-                cards=self.last_snapshot_cards,
-                metrics=metrics_snapshot,
-                runtime=runtime_snapshot,
-                layout=layout_snapshot,
-                warnings=list(self.operator_warnings[-8:]),
-            ),
+            operator=operator_snapshot,
             layout=layout_snapshot,
             warnings=list(self.operator_warnings[-8:])
         )
         self.runtime_metrics.add("status_update_ms", (time.perf_counter() - status_update_start) * 1000.0)
+        self._capture_live_fixture(
+            raw_frame=selected_raw_frame,
+            analysis_frame=selected_analysis_frame,
+            metrics=metrics_snapshot,
+            runtime=runtime_snapshot,
+            operator=operator_snapshot,
+            layout=layout_snapshot,
+        )
 
         diagnostics_time = time.time()
         if diagnostics_time - self.last_diagnostics_time >= 1.0:
@@ -248,3 +417,65 @@ class SnapshotFirstPipeline(VisionPipeline):
             "frame_width": self.camera_session.frame_width,
             "frame_height": self.camera_session.frame_height
         }
+
+    def _record_autotune_sample(self, diagnostics, accepted_count, analysis_ms, quality_score):
+        if self.autotune_sample_recorder is None:
+            return None
+        sample = {
+            "candidate_count": int(diagnostics.get("quads_found", 0)),
+            "accepted_count": int(accepted_count),
+            "geometry_score": float(quality_score),
+            "recognition_score": float(diagnostics.get("recognition_score", 0.0)),
+            "false_positive_count": 0,
+            "matching_ms": float(analysis_ms),
+            "recognition_rejections": int(diagnostics.get("recognition_rejections", 0)),
+            "candidate_validation_rejections": int(diagnostics.get("candidate_validation_rejections", 0)),
+        }
+        return self.autotune_sample_recorder(sample)
+
+    def _capture_live_fixture(self, raw_frame, analysis_frame, metrics, runtime, operator, layout):
+        if self.live_fixture_capture is None or raw_frame is None or analysis_frame is None:
+            return None
+        scenario = _fixture_scenario(operator)
+        payload = {
+            "detected": bool(self.last_snapshot_cards),
+            "cards": self.last_snapshot_cards,
+            "metrics": metrics,
+            "runtime": runtime,
+            "operator": operator,
+            "layout": layout,
+        }
+        return self.live_fixture_capture.save_snapshot(
+            scenario=scenario,
+            raw_frame=raw_frame,
+            analysis_frame=analysis_frame,
+            empty_reference=_background_reference_image(self.background_model),
+            metrics=metrics,
+            payload=payload,
+            expected_cards_count=_expected_cards_count(scenario),
+        )
+
+
+def _fixture_scenario(operator):
+    calibration = operator.get("calibration") if isinstance(operator, dict) else {}
+    autotune = calibration.get("autotune") if isinstance(calibration, dict) else {}
+    scenario = autotune.get("scenario") if isinstance(autotune, dict) else None
+    if scenario:
+        return scenario
+    import os
+    return os.environ.get("TAROTVISION_LIVE_FIXTURE_SCENARIO", "unknown")
+
+
+def _expected_cards_count(scenario):
+    return {
+        "empty": 0,
+        "one_card": 1,
+        "three_cards": 3,
+    }.get(scenario)
+
+
+def _background_reference_image(background_model):
+    image = getattr(background_model, "_gray_background", None)
+    if image is None:
+        return None
+    return image.copy()

@@ -17,8 +17,9 @@ from tarotvision.profile_store import ProfileStore
 from tarotvision.camera_controls import read_camera_control
 from tarotvision.calibration_session import choose_best_candidate
 from tarotvision.table_calibration import TableCalibration
-from tarotvision.card_recognition import recognize_card_crop
+from tarotvision.card_recognition import recognize_card_crop, recognize_card_crop_with_debug
 from tarotvision.background_model import BackgroundModel
+from tarotvision.change_detection import ChangeDetector
 from tarotvision.reference_loader import load_active_reference_cards
 from tarotvision.card_detection_profiles import find_card_quads_multi_profile
 from tarotvision.snapshot_gate import SnapshotGate, SnapshotGateConfig
@@ -28,6 +29,11 @@ from tarotvision.preview import OpenCvPreview
 from tarotvision.pipelines import SnapshotFirstPipeline
 from tarotvision.frame_stream import LatestFrameStore, start_preview_server
 from tarotvision.operator_explainability import build_cv_explainability
+from tarotvision.autotune_session import AutotuneSession
+from tarotvision.autotune_session_log import AutotuneSessionLog
+from tarotvision.autotune_profiles import generate_candidate_profiles
+from tarotvision.autotune_scoring import choose_best_profile_result
+from tarotvision.live_fixture_capture import LiveFixtureCapture
 
 # Konfiguracja
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -60,9 +66,14 @@ runtime_config = config_session.config
 operator_warnings = []
 calibration_state = {"state": "idle", "last_score": None}
 profile_store = ProfileStore(os.path.join(LOG_DIR, "calibration_profiles"))
+autotune_session_log = AutotuneSessionLog(os.path.join(LOG_DIR, "autotune_sessions"))
 active_tuning_profile = "default"
 background_model = BackgroundModel()
+change_detector = ChangeDetector()
+live_fixture_capture = LiveFixtureCapture.from_env(LOG_DIR, deck=DECK_NAME)
 pending_background_capture = False
+autotune_session = None
+autotune_candidate_profiles = []
 
 # Inicjalizacja DiagnosticsWriter, CameraSession i OpenCvPreview
 reset_logs = os.environ.get("TAROTVISION_RESET_LOGS") == "1"
@@ -110,10 +121,102 @@ def add_operator_warning(message):
     log_event(f"[OPERATOR] {message}")
 
 
+def current_active_decks():
+    return status_store.get_status().get("operator", {}).get("active_decks", [])
+
+
+def write_autotune_log(event, recommendation=None, profile_name=None):
+    if autotune_session is None:
+        return None
+    try:
+        return autotune_session_log.write_event(
+            event=event,
+            session=autotune_session,
+            active_decks=current_active_decks(),
+            runtime_parameters=runtime_config.values,
+            recommendation=recommendation,
+            profile_name=profile_name,
+        )
+    except OSError as exc:
+        add_operator_warning(f"Nie zapisano logu autotuningu: {exc}")
+        return None
+
+
+def update_autotune_recommendation_from_samples():
+    global calibration_state
+    if autotune_session is None or not autotune_session.ready_to_score():
+        return None
+
+    samples = autotune_session.all_samples()
+    profile_results = [
+        {"profile": profile, "samples": samples}
+        for profile in autotune_candidate_profiles
+    ]
+    best = choose_best_profile_result(profile_results)
+    if best is None:
+        return None
+
+    autotune_session.set_recommendation(best)
+    calibration_state = {
+        "state": "recommendation_ready",
+        "last_score": best["score"],
+        "autotune": autotune_session.status(),
+    }
+    return best
+
+
+def record_autotune_sample_from_snapshot(sample):
+    global calibration_state
+    if autotune_session is None or autotune_session.recommendation is not None:
+        return None
+
+    scenario = autotune_session.required_scenarios[0]
+    sample_payload = dict(sample)
+    if scenario == "empty":
+        sample_payload["false_positive_count"] = max(
+            int(sample_payload.get("candidate_count", 0)),
+            int(sample_payload.get("accepted_count", 0)),
+        )
+
+    autotune_session.add_sample(scenario, sample_payload)
+    calibration_state = {
+        "state": autotune_session.state,
+        "last_score": None,
+        "autotune": autotune_session.status(),
+    }
+    write_autotune_log("sample_collected")
+    if autotune_session.ready_to_score():
+        result = autotune_session.stage_result()
+        write_autotune_log("stage_completed")
+        add_operator_warning(
+            f"Autotuning {scenario}: {result['state']} - {result['message']}"
+        )
+        diagnostics = autotune_session.diagnostics()
+        if scenario == "empty" and diagnostics.get("legacy_detector_false_positive"):
+            add_operator_warning(
+                "Pusta mata: referencja OK; stary detektor widzi false positives "
+                f"({diagnostics.get('false_positive_count', 0)}) jako diagnostyke."
+            )
+        if scenario == "empty":
+            return {
+                "collect_empty_reference_frame": True,
+                "finalize_empty_reference": True,
+            }
+        return None
+    if scenario == "empty":
+        return {
+            "collect_empty_reference_frame": True,
+            "request_next_sample": True,
+        }
+    return {"request_next_sample": True}
+
+
 def handle_control_message(message, camera_session):
     global calibration_state
     global active_tuning_profile
     global pending_background_capture
+    global autotune_session
+    global autotune_candidate_profiles
 
     if message.type == "tuning_update":
         try:
@@ -140,7 +243,7 @@ def handle_control_message(message, camera_session):
         return
 
     if message.type == "profile_apply":
-        values = profile_store.load(message.name)
+        values = profile_store.load_parameters(message.name)
         for param_name, value in values.items():
             runtime_config.update(param_name, value)
         config_session.commit_stable()
@@ -179,6 +282,80 @@ def handle_control_message(message, camera_session):
     if message.type == "calibration_cancel":
         calibration_state = {"state": "idle", "last_score": None}
         add_operator_warning("Anulowano kalibracje")
+        return
+
+    if message.type == "autotune_start":
+        autotune_session = AutotuneSession(
+            required_scenarios=(message.scenario,),
+            samples_per_scenario=3,
+        )
+        if message.scenario == "empty":
+            background_model.clear()
+            if "snapshot_pipeline" in globals():
+                snapshot_pipeline.empty_reference_frames.clear()
+                snapshot_pipeline.last_snapshot_cards = []
+                snapshot_pipeline.empty_snapshot_streak = 0
+                snapshot_pipeline.empty_reference_capture_active = True
+        snapshot_gate.request_sample(now_ms=int(time.time() * 1000))
+        autotune_candidate_profiles = generate_candidate_profiles()
+        calibration_state = {
+            "state": "collecting",
+            "last_score": None,
+            "autotune": autotune_session.status(),
+        }
+        write_autotune_log("stage_started")
+        add_operator_warning(f"Autotuning: zbieram probki scenariusza {message.scenario}")
+        return
+
+    if message.type == "autotune_calibrate":
+        if autotune_session is None or not autotune_session.ready_to_score():
+            add_operator_warning("Brak kompletnych probek autotuningu do kalibracji")
+            return
+        recommendation = update_autotune_recommendation_from_samples()
+        write_autotune_log("recommendation_ready", recommendation=recommendation)
+        if recommendation is not None:
+            add_operator_warning(
+                f"Autotuning: rekomendacja gotowa "
+                f"(score={recommendation['score']:.3f}, confidence={recommendation['confidence']})"
+            )
+        return
+
+    if message.type == "autotune_cancel":
+        write_autotune_log("cancelled")
+        autotune_session = None
+        autotune_candidate_profiles = []
+        calibration_state = {"state": "idle", "last_score": None}
+        add_operator_warning("Anulowano autotuning")
+        return
+
+    if message.type == "autotune_apply":
+        if autotune_session is None or not autotune_session.recommendation:
+            add_operator_warning("Brak rekomendacji autotuningu do zastosowania")
+            return
+        for param_name, value in autotune_session.recommendation["profile"].items():
+            config_session.update(param_name, value)
+        config_session.commit_stable()
+        calibration_state = {
+            "state": "applied",
+            "last_score": autotune_session.recommendation["score"],
+            "autotune": autotune_session.status(),
+        }
+        write_autotune_log("applied", recommendation=autotune_session.recommendation)
+        add_operator_warning("Zastosowano rekomendacje autotuningu")
+        return
+
+    if message.type == "autotune_save":
+        if autotune_session is None or not autotune_session.recommendation:
+            add_operator_warning("Brak rekomendacji autotuningu do zapisania")
+            return
+        profile_store.save_autotune_recommendation(message.name, autotune_session.recommendation)
+        active_tuning_profile = message.name
+        write_autotune_log(
+            "saved",
+            recommendation=autotune_session.recommendation,
+            profile_name=message.name,
+        )
+        add_operator_warning(f"Zapisano rekomendacje autotuningu jako profil {message.name}")
         return
 
     if message.type == "background_capture":
@@ -453,19 +630,16 @@ table_calibration = TableCalibration(table_width=CAMERA_WIDTH, table_height=CAME
 log_event("[ARUCO] Modul kalibracji stolu zainicjalizowany (markery ID 10-13, DICT_4X4_50)")
 
 
-def recognize_snapshot_crop(gray_crop):
-    crop_for_matching = clahe.apply(gray_crop)
+def _recognition_thresholds():
     config_values = runtime_config.values
-    min_match_count = int(config_values.get("MIN_MATCH_COUNT", 12.0))
-    ratio_thresh = config_values.get("RATIO_THRESH", 0.79)
-    min_inlier_ratio = config_values.get("MIN_INLIER_RATIO", 0.25)
-
-    result = recognize_card_crop(
-        crop_for_matching, reference_cards, orb, flann,
-        min_good_matches=min_match_count,
-        lowe_ratio=ratio_thresh,
-        min_inlier_ratio=min_inlier_ratio
+    return (
+        int(config_values.get("MIN_MATCH_COUNT", 12.0)),
+        config_values.get("RATIO_THRESH", 0.79),
+        config_values.get("MIN_INLIER_RATIO", 0.25),
     )
+
+
+def _public_recognition_result(result):
     if result is None:
         return None
 
@@ -482,11 +656,40 @@ def recognize_snapshot_crop(gray_crop):
         "confidence": result.get("confidence", 0.0),
         "orientation": result.get("orientation", "unknown"),
         "homography_angle_deg": angle_deg,
+        "match_count": result.get("match_count", 0),
+        "inlier_ratio": result.get("inlier_ratio", 0.0),
     }
+
+
+def recognize_snapshot_crop(gray_crop):
+    crop_for_matching = clahe.apply(gray_crop)
+    min_match_count, ratio_thresh, min_inlier_ratio = _recognition_thresholds()
+
+    result = recognize_card_crop(
+        crop_for_matching, reference_cards, orb, flann,
+        min_good_matches=min_match_count,
+        lowe_ratio=ratio_thresh,
+        min_inlier_ratio=min_inlier_ratio
+    )
+    return _public_recognition_result(result)
+
+
+def recognize_snapshot_crop_with_debug(gray_crop):
+    crop_for_matching = clahe.apply(gray_crop)
+    min_match_count, ratio_thresh, min_inlier_ratio = _recognition_thresholds()
+
+    result, debug = recognize_card_crop_with_debug(
+        crop_for_matching, reference_cards, orb, flann,
+        min_good_matches=min_match_count,
+        lowe_ratio=ratio_thresh,
+        min_inlier_ratio=min_inlier_ratio,
+    )
+    return _public_recognition_result(result), debug
 
 
 snapshot_analyzer = SnapshotAnalyzer(
     recognize_crop=recognize_snapshot_crop,
+    recognize_crop_with_debug=recognize_snapshot_crop_with_debug,
     background_model=background_model,
     find_quads_with_debug=lambda frame: find_card_quads_multi_profile(
         frame,
@@ -514,7 +717,11 @@ snapshot_pipeline = SnapshotFirstPipeline(
     build_operator_snapshot_fn=build_operator_snapshot,
     operator_warnings=operator_warnings,
     log_dir=LOG_DIR,
-    runtime_profile=RUNTIME_PROFILE
+    runtime_profile=RUNTIME_PROFILE,
+    autotune_sample_recorder=record_autotune_sample_from_snapshot,
+    change_detector=change_detector,
+    background_model=background_model,
+    live_fixture_capture=live_fixture_capture,
 )
 snapshot_pipeline.snapshot_sample_count = SNAPSHOT_SAMPLE_COUNT
 snapshot_pipeline.snapshot_sample_interval_ms = SNAPSHOT_SAMPLE_INTERVAL_MS

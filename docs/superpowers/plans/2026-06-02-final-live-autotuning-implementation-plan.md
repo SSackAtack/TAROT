@@ -29,6 +29,33 @@ Projekt ma juz fundament pod autotuning:
 - `TASK-STUDIO-CV-EXPLAIN-001`: panel `CV Explain` zatwierdzony i scalony do `master`.
 - `TASK-STUDIO-CV-EXPLAIN-002`: follow-up zaplanowany po live smoke, aby wyjasnic roznice miedzy kandydatami a zaakceptowanymi kartami.
 
+## Session Status (2026-06-02 Codex Post-Task 10)
+
+Po ponownym przeglądzie logiki rozpoznawania kart wykryto i domknięto dwie luki, które ograniczały sensowność live autotuningu:
+
+- `AutotuneSession.add_sample()` był przygotowany, ale nie był podłączony do produkcyjnej ścieżki snapshot-first.
+- `SnapshotAnalyzer` liczył odrzucone rozpoznania, ale nie publikował per-candidate przyczyn odrzucenia, rankingu top-matchy ani agregowanego `recognition_score`.
+
+W tej sesji Codex dodał callback próbek autotuningu w `SnapshotFirstPipeline`, podłączył go w `main.py`, rozszerzył `recognize_card_crop_with_debug()` o ranking top-matchy i uzupełnił diagnostykę kandydatów w `SnapshotAnalyzer`. Manualny live smoke z fizyczną kamerą nadal pozostaje wymaganym krokiem przed oznaczeniem taska jako `DONE`.
+
+## Session Status (2026-06-02 Codex glare false-positive hardening)
+
+Po obserwacji live z jedną kartą i odblaskiem na macie wykryto trzecią lukę: detektor geometrii mógł zgłosić jasną plamę jako kandydat, a rozpoznawanie ORB nie miało wcześniejszej bramki „none-of-the-above”. Codex dodał `card_candidate_validation.py`, który przed rozpoznawaniem odrzuca cropy bez tekstury, krawędzi i śladów granicy karty. `SnapshotAnalyzer` publikuje `candidate_validation_rejections`, pipeline zapisuje tę metrykę do próbek autotuningu, a `CV Explain` wskazuje operatorowi odblask/tło zamiast sugerować problem z właściwą kartą.
+
+Weryfikacja automatyczna: 267 testów backend PASS oraz `npm --prefix app_ar run build` PASS. Manualny live smoke z fizyczną kamerą nadal pozostaje wymagany przed zamknięciem taska.
+
+## Session Status (2026-06-02 Codex Studio sidebar accordion)
+
+Po uwadze operatorskiej o pomieszaniu aktywnych talii z diagnostyką Codex uporządkował prawy panel Studio. `Auto Tune` jest teraz osobną rozwijaną sekcją, `Aktywne Talie` zawiera tylko wybór talii, a pozostałe grupy bocznego panelu działają jako akordeony z lokalnym zapamiętywaniem zwinięcia. Weryfikacja: 268 testów backend PASS, `npm --prefix app_ar run build` PASS oraz Browser QA lokalnego Studio PASS bez błędów konsoli. Manualny live smoke z fizyczną kamerą nadal pozostaje wymagany przed oznaczeniem taska jako `DONE`.
+
+## Session Status (2026-06-02 Codex Auto Tune wizard MVP)
+
+Codex wdrożył minimalny workflow operatorski Auto Tune zgodny z intencją Michała: scenariusze `Pusta mata`, `1 karta` i `3 karty` zwracają jawny wynik etapu `COLLECTING`/`PASS`/`FAIL`, a `Skalibruj` jest osobną komendą uruchamiającą rekomendację po komplecie próbek. Dodano trwały logger sesji do `logs/autotune_sessions/autotune_*.json`, przyciski `Skalibruj` i `Save Profile` w Studio oraz automatyczną nazwę zapisywanego profilu `studio_live_YYYYMMDD_HHMMSS`. Weryfikacja automatyczna: 275 testów backend PASS, frontend build PASS, Browser QA PASS. Manualny live smoke z fizyczną kamerą nadal pozostaje wymagany przed oznaczeniem taska jako `DONE`.
+
+## Session Status (2026-06-02 Codex preview controls visibility)
+
+Po uwadze Michała o niewidocznych ustawieniach obrazu Codex otworzył domyślnie sekcję `Widok podglądu`, ignoruje wcześniejszy zapis localStorage zwijający tę sekcję i zmienił etykietę trybu `table` na `Wirtualny stół`. Weryfikacja: statyczne testy UI PASS, frontend build PASS, Browser QA PASS bez błędów konsoli.
+
 ## Decyzja strategiczna
 
 Po nowych funkcjach rozpoznawania nie wolno implementowac autotuningu jako "znajdz najlepsze Canny/min_area". To byloby lokalne minimum: system moglby idealnie wykrywac prostokaty, ale nadal odrzucac karty przez ORB, homografie, threshold lub konflikt aktywnych talii.
@@ -1105,6 +1132,22 @@ Wdrozenie jest gotowe do review dopiero gdy:
 3. Nie zmieniaj progow ORB w pierwszej iteracji. MVP ma stroic tylko bezpieczne parametry detekcji i workspace.
 4. Kazdy task commituj osobno.
 5. Po kazdym tasku aktualizuj `STATE.md`, `CHANGELOG.md` i `TEST_REPORT.md` dla `TASK-CV-AUTOTUNE-LIVE-001`.
+
+## Session Status (2026-06-02 Codex PiP slider cap fix)
+
+Stan aktualny: Studio mialo martwa strefe suwaka PiP od okolo 38% do 45%, bo CSS ograniczal okno PiP do stalego `560px`.
+
+Co zostalo zrobione: twardy limit zastapiono limitem wzgledem szerokosci overlayu (`calc(100% - 56px)`) i dodano test statyczny pilnujacy, zeby zakres 38-45% nie byl ponownie ucinany.
+
+Kolejne kroki: manualny live smoke z kamera nadal pozostaje wymagany dla calego taska Auto Tune; sama poprawka PiP zostala zweryfikowana testem, buildem i pomiarem w przegladarce.
+
+## Session Status (2026-06-02 Codex Auto Tune forced sampling fix)
+
+Stan aktualny: live klik `Pusta mata` zapisywal `stage_started`, ale nie zbieral probek, jezeli zwykla bramka snapshot-first nie widziala naturalnego ruchu. W logach `cv_metrics.jsonl` kamera i ArUco dzialaly, natomiast `stable_for_ms` pozostawal `0.0`.
+
+Co zostalo zrobione: dodano manualne `SnapshotGate.request_sample()` dla Auto Tune, wywolanie przy `autotune_start` oraz automatyczne dociaganie kolejnych snapshotow do kompletu `3/3`.
+
+Kolejne kroki: detekcja pustej maty nadal wymaga strojenia, bo live smoke po poprawce zakonczyl etap `empty` jako `FAIL` z false positives (`candidate_count` 1-2, `accepted_count` 1). Logi sa juz kompletne i mozna ich uzyc do doboru parametrow.
 
 ## Plan integracji
 

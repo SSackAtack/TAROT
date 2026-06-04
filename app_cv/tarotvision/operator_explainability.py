@@ -8,6 +8,127 @@ def _step(step_id, label, state, value, message):
     }
 
 
+def _current_aruco_marker_count(runtime, table_status):
+    if "aruco_markers" in runtime:
+        return int(runtime.get("aruco_markers") or 0)
+    marker_ids = table_status.get("marker_ids")
+    if isinstance(marker_ids, list):
+        return len(marker_ids)
+    return int(table_status.get("markers_detected", 0) or 0)
+
+
+def _metric_int(metrics, key, fallback=0):
+    try:
+        return int(round(float(metrics.get(key, fallback) or 0)))
+    except (TypeError, ValueError):
+        return int(fallback)
+
+
+def _metric_float(metrics, key, fallback=0.0):
+    try:
+        return float(metrics.get(key, fallback) or 0.0)
+    except (TypeError, ValueError):
+        return float(fallback)
+
+
+def _empty_reference_step(metrics, runtime):
+    capture_active = bool(runtime.get("empty_reference_capture_active", False))
+    frame_count = _metric_int(runtime, "empty_reference_frame_count")
+    reference_active = bool(runtime.get("background_reference_active", False))
+    validation_ratio = _metric_float(metrics, "background_reference_validation_ratio")
+    validation_warning = bool(metrics.get("background_reference_validation_warning", 0) or 0)
+
+    if capture_active:
+        message = f"Zbieram pusta referencje ({frame_count}/3)"
+        if validation_ratio:
+            message += f"; ostatnia walidacja={validation_ratio:.3f}"
+        return _step("empty_reference", "Pusta mata", "warn", f"{frame_count}/3", message)
+    if validation_warning:
+        return _step(
+            "empty_reference",
+            "Pusta mata",
+            "warn",
+            f"{validation_ratio:.3f}",
+            f"Referencja pustej maty wymaga uwagi: validation ratio={validation_ratio:.3f}.",
+        )
+    if reference_active:
+        message = "Referencja pustej maty aktywna"
+        if validation_ratio:
+            message += f"; validation ratio={validation_ratio:.3f}"
+        return _step("empty_reference", "Pusta mata", "ok", "active", message)
+    return _step(
+        "empty_reference",
+        "Pusta mata",
+        "warn",
+        "inactive",
+        "Brak aktywnej referencji pustej maty; system pracuje w trybie fallback.",
+    )
+
+
+def _change_detection_step(metrics):
+    if "change_region_count" not in metrics and "change_global_shift" not in metrics:
+        return _step(
+            "change_detection",
+            "Zmiana",
+            "wait",
+            "n/a",
+            "Brak danych change detection dla ostatniego snapshotu.",
+        )
+
+    region_count = _metric_int(metrics, "change_region_count")
+    added_count = _metric_int(metrics, "change_added_count")
+    removed_count = _metric_int(metrics, "change_removed_count")
+    mask_ratio = _metric_float(metrics, "change_mask_ratio")
+    global_shift = bool(metrics.get("change_global_shift", 0) or 0)
+    if global_shift:
+        return _step(
+            "change_detection",
+            "Zmiana",
+            "warn",
+            "global",
+            "Wykryto globalna zmiane obrazu: sprawdz swiatlo, ekspozycje albo stabilnosc kamery.",
+        )
+    if region_count == 0:
+        return _step(
+            "change_detection",
+            "Zmiana",
+            "warn",
+            "0 ROI",
+            "Brak regionow zmian; false positives z detektora kart powinny zostac odrzucone lub wymagaja kalibracji pustej maty.",
+        )
+    return _step(
+        "change_detection",
+        "Zmiana",
+        "ok",
+        str(region_count),
+        f"Regiony zmian: added={added_count}, removed={removed_count}, mask ratio={mask_ratio:.3f}.",
+    )
+
+
+def _snapshot_step(layout):
+    layout_state = layout.get("state") or "unknown"
+    reject_reason = layout.get("snapshot_reject_reason")
+    quality_reject_reason = layout.get("snapshot_quality_reject_reason")
+    if reject_reason == "all_samples_rejected":
+        value = quality_reject_reason or reject_reason
+        return _step(
+            "snapshot",
+            "Snapshot",
+            "warn",
+            value,
+            f"Snapshot odrzucony przez bramke jakosci: {value}.",
+        )
+    if layout_state in {"settling", "sampling_snapshots", "analyzing_snapshot"}:
+        return _step(
+            "snapshot",
+            "Snapshot",
+            "wait",
+            layout_state,
+            "Czeka na stabilny snapshot",
+        )
+    return _step("snapshot", "Snapshot", "ok", layout_state, "Snapshot gotowy")
+
+
 def build_cv_explainability(cards, metrics, runtime, layout, operator, warnings):
     cards = cards or []
     metrics = metrics or {}
@@ -19,11 +140,35 @@ def build_cv_explainability(cards, metrics, runtime, layout, operator, warnings)
     active_decks = operator.get("active_decks") or []
     layout_state = layout.get("state") or "unknown"
     table_status = runtime.get("table") if isinstance(runtime.get("table"), dict) else {}
-    aruco_markers = runtime.get("aruco_markers", table_status.get("markers_detected", 0)) or 0
+    aruco_markers = _current_aruco_marker_count(runtime, table_status)
     aruco_calibrated = bool(runtime.get("aruco_calibrated", table_status.get("calibrated", False)))
+    aruco_fully_visible = aruco_markers >= 4
+    aruco_step_state = "ok" if aruco_calibrated and aruco_fully_visible else "warn"
+    if aruco_calibrated and aruco_fully_visible:
+        aruco_message = "Stol skalibrowany"
+    elif aruco_calibrated:
+        aruco_message = "Uzywam ostatniej kalibracji; pokaz markery ArUco"
+    else:
+        aruco_message = "Pokaz markery ArUco w kadrze"
     candidate_count = runtime.get("candidate_count", metrics.get("snapshot_quads_found"))
     if candidate_count is None:
         candidate_count = len(cards)
+    candidate_count = int(candidate_count)
+    accepted_count = len(cards)
+    rejected_count = max(0, candidate_count - accepted_count)
+    has_candidate_gap = candidate_count > accepted_count and accepted_count > 0
+    validation_rejections = _metric_int(metrics, "snapshot_candidate_validation_rejections")
+    if has_candidate_gap and validation_rejections > 0:
+        recognition_message = (
+            f"Zaakceptowano {accepted_count}, odrzucono {rejected_count}; "
+            f"{validation_rejections} bez cech karty"
+        )
+    elif has_candidate_gap:
+        recognition_message = f"Zaakceptowano {accepted_count}, odrzucono {rejected_count}"
+    elif cards:
+        recognition_message = "Karty zaakceptowane"
+    else:
+        recognition_message = "Czeka na rozpoznanie"
 
     steps = [
         _step(
@@ -36,19 +181,13 @@ def build_cv_explainability(cards, metrics, runtime, layout, operator, warnings)
         _step(
             "aruco",
             "ArUco",
-            "ok" if aruco_calibrated else "warn",
+            aruco_step_state,
             f"{aruco_markers}/4",
-            "Stol skalibrowany" if aruco_calibrated else "Pokaz markery ArUco w kadrze",
+            aruco_message,
         ),
-        _step(
-            "snapshot",
-            "Snapshot",
-            "wait" if layout_state in {"settling", "sampling_snapshots", "analyzing_snapshot"} else "ok",
-            layout_state,
-            "Czeka na stabilny snapshot"
-            if layout_state in {"settling", "sampling_snapshots", "analyzing_snapshot"}
-            else "Snapshot gotowy",
-        ),
+        _snapshot_step(layout),
+        _empty_reference_step(metrics, runtime),
+        _change_detection_step(metrics),
         _step(
             "candidates",
             "Kandydaci kart",
@@ -59,9 +198,9 @@ def build_cv_explainability(cards, metrics, runtime, layout, operator, warnings)
         _step(
             "recognition",
             "Rozpoznanie",
-            "ok" if cards else "wait",
-            str(len(cards)),
-            "Karty zaakceptowane" if cards else "Czeka na rozpoznanie",
+            "warn" if has_candidate_gap else ("ok" if cards else "wait"),
+            f"{accepted_count}/{candidate_count}" if candidate_count else str(accepted_count),
+            recognition_message,
         ),
     ]
 
@@ -71,15 +210,25 @@ def build_cv_explainability(cards, metrics, runtime, layout, operator, warnings)
     elif layout_state == "no_camera":
         severity = "error"
         next_action = "Sprawdz kamere i launcher CV."
-    elif not aruco_calibrated:
+    elif not aruco_calibrated or not aruco_fully_visible:
         severity = "warn"
         next_action = "Pokaz wszystkie markery ArUco w kadrze."
     elif layout_state in {"settling", "sampling_snapshots", "analyzing_snapshot"}:
         severity = "warn"
         next_action = "Zostaw mate nieruchomo przez kilka sekund."
+    elif layout.get("snapshot_reject_reason") == "all_samples_rejected":
+        severity = "warn"
+        quality_reject_reason = layout.get("snapshot_quality_reject_reason") or "unknown"
+        next_action = f"Snapshot odrzucony ({quality_reject_reason}); popraw swiatlo, ostrosc albo kontrast maty."
     elif candidate_count < 1 and not cards:
         severity = "warn"
         next_action = "Popraw swiatlo, kontrast albo polozenie kart."
+    elif has_candidate_gap:
+        severity = "warn"
+        if validation_rejections > 0:
+            next_action = "Odrzucony kandydat wyglada jak odblask albo tlo: zmniejsz refleks i sprawdz separacje karty."
+        else:
+            next_action = "Jedna karta wymaga poprawy rozpoznania: popraw swiatlo, kontrast albo odsun karte od innych."
     elif cards:
         severity = "ok"
         next_action = "Mozna prowadzic sesje."

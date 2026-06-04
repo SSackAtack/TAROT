@@ -6,7 +6,9 @@ import cv2
 import numpy as np
 
 from tarotvision.card_detection_profiles import find_card_quads_multi_profile
+from tarotvision.card_candidate_validation import validate_card_candidate_crop
 from tarotvision.card_recognition import deskew_card_crop
+from tarotvision.recognition_debug import top_match_summary
 
 
 @dataclass(frozen=True)
@@ -19,11 +21,14 @@ class SnapshotAnalysisResult:
 class SnapshotAnalyzer:
     def __init__(self, find_quads=None, crop_card=None, recognize_crop=None,
                  scene_width=26.0, scene_height=15.6, background_model=None,
-                 find_quads_with_debug=None):
+                 find_quads_with_debug=None, recognize_crop_with_debug=None,
+                 validate_candidate_crop=validate_card_candidate_crop):
         self.find_quads = find_quads or self._find_quads_default
         self.find_quads_with_debug = find_quads_with_debug
         self.crop_card = crop_card or deskew_card_crop
         self.recognize_crop = recognize_crop
+        self.recognize_crop_with_debug = recognize_crop_with_debug
+        self.validate_candidate_crop = validate_candidate_crop
         self.scene_width = scene_width
         self.scene_height = scene_height
         self.background_model = background_model
@@ -31,16 +36,55 @@ class SnapshotAnalyzer:
     def _find_quads_default(self, frame):
         return find_card_quads_multi_profile(frame, background_model=self.background_model).quads
 
-    def analyze(self, frame):
+    def analyze(self, frame, roi_hints=None):
         cards = []
         diagnostics = {
             "quads_found": 0,
             "recognition_attempts": 0,
             "recognition_rejections": 0,
+            "candidate_validation_rejections": 0,
+            "recognition_candidates": [],
+            "crop_diagnostics": [],
+            "recognition_score": 0.0,
+            "roi_limited": roi_hints is not None,
+            "roi_count": len(roi_hints or []),
+            "roi_diagnostics": [],
+            "roi_with_quads_count": 0,
+            "roi_with_accepted_card_count": 0,
+            "accepted_cards_before_dedup": 0,
+            "accepted_cards_after_dedup": 0,
         }
         frame_height, frame_width = frame.shape[:2]
+        recognition_score_total = 0.0
+        quad_roi_indices = []
 
-        if self.find_quads_with_debug is not None:
+        if roi_hints is not None:
+            quads = []
+            detection_debug = {"roi_hints": []}
+            for roi_index, bbox in enumerate(roi_hints):
+                x, y, w, h = _clamp_bbox(bbox, frame_width, frame_height)
+                if w <= 0 or h <= 0:
+                    continue
+                crop_frame = frame[y:y + h, x:x + w]
+                crop_quads = self.find_quads(crop_frame)
+                for crop_quad in crop_quads:
+                    points = _quad_points(crop_quad).copy()
+                    points[:, 0] += x
+                    points[:, 1] += y
+                    quads.append(points)
+                    quad_roi_indices.append(len(diagnostics["roi_diagnostics"]))
+                roi_payload = _empty_roi_diagnostics(
+                    roi_index=roi_index,
+                    bbox=[x, y, w, h],
+                    quad_count=len(crop_quads),
+                )
+                diagnostics["roi_diagnostics"].append(roi_payload)
+                detection_debug["roi_hints"].append({
+                    "bbox": [x, y, w, h],
+                    "quads": len(crop_quads),
+                })
+            diagnostics["detection"] = detection_debug
+        elif self.find_quads_with_debug is not None:
             detection_result = self.find_quads_with_debug(frame)
             quads = detection_result.quads
             diagnostics["detection"] = detection_result.debug
@@ -48,15 +92,55 @@ class SnapshotAnalyzer:
             quads = self.find_quads(frame)
 
         diagnostics["quads_found"] = len(quads)
-        for quad in quads:
+        for quad_index, quad in enumerate(quads):
             crop = self.crop_card(frame, quad)
+            candidate_index = len(diagnostics["recognition_candidates"]) + 1
+            roi_payload = _roi_payload_for_quad(diagnostics, quad_roi_indices, quad_index)
+            candidate_validation = self._validate_candidate_crop(crop)
+            if candidate_validation is not None and not candidate_validation.accepted:
+                diagnostics["candidate_validation_rejections"] += 1
+                _record_roi_validation_rejection(roi_payload, candidate_validation.reject_reason)
+                candidate_debug = _candidate_diagnostics(
+                    candidate_index,
+                    None,
+                    None,
+                    candidate_validation,
+                    crop=crop,
+                    roi_payload=roi_payload,
+                    recognition_attempt_result="skipped_candidate_validation",
+                )
+                diagnostics["recognition_candidates"].append(candidate_debug)
+                _record_crop_diagnostics(diagnostics, roi_payload, candidate_debug)
+                continue
+
+            _record_roi_candidate_after_validation(roi_payload)
             diagnostics["recognition_attempts"] += 1
             _write_debug_crop(crop, diagnostics["recognition_attempts"])
 
-            recognition = self.recognize_crop(crop) if self.recognize_crop else None
+            recognition, recognition_debug = self._recognize_with_optional_debug(crop)
+            candidate_debug = _candidate_diagnostics(
+                candidate_index,
+                recognition,
+                recognition_debug,
+                candidate_validation,
+                crop=crop,
+                roi_payload=roi_payload,
+                recognition_attempt_result=(
+                    "accepted" if recognition is not None else "rejected"
+                ),
+            )
+            diagnostics["recognition_candidates"].append(candidate_debug)
+            _record_crop_diagnostics(diagnostics, roi_payload, candidate_debug)
             if not recognition:
                 diagnostics["recognition_rejections"] += 1
+                _record_roi_recognition_rejection(roi_payload, candidate_debug.get("reject_reason"))
                 continue
+            candidate_score = _candidate_recognition_score(
+                recognition,
+                recognition_debug,
+            )
+            candidate_debug["recognition_score"] = candidate_score
+            recognition_score_total += candidate_score
             center_x, center_y = _quad_center(quad)
             scene_x, scene_y = _frame_to_scene(
                 center_x,
@@ -78,15 +162,121 @@ class SnapshotAnalyzer:
                 "orientation": recognition.get("orientation", "unknown"),
                 "homography_angle_deg": recognition.get("homography_angle_deg", 0.0),
             })
+            _record_roi_accepted_card(roi_payload)
+            candidate_debug["name"] = recognition["name"]
+        _finalize_roi_diagnostics(diagnostics, cards)
+        if diagnostics["quads_found"] > 0:
+            diagnostics["recognition_score"] = round(
+                recognition_score_total / diagnostics["quads_found"],
+                3,
+            )
         return SnapshotAnalysisResult(
             cards=cards,
             card_count=len(cards),
             diagnostics=diagnostics,
         )
 
+    def _recognize_with_optional_debug(self, crop):
+        if self.recognize_crop_with_debug is not None:
+            return self.recognize_crop_with_debug(crop)
+        recognition = self.recognize_crop(crop) if self.recognize_crop else None
+        return recognition, None
+
+    def _validate_candidate_crop(self, crop):
+        if self.validate_candidate_crop is None:
+            return None
+        if crop is None or not hasattr(crop, "shape"):
+            return None
+        return self.validate_candidate_crop(crop)
+
 
 def _quad_points(quad):
     return np.asarray(quad, dtype=np.float32).reshape(4, 2)
+
+
+def _clamp_bbox(bbox, frame_width, frame_height):
+    x, y, w, h = [int(v) for v in bbox]
+    x1 = max(0, x)
+    y1 = max(0, y)
+    x2 = min(frame_width, x + max(0, w))
+    y2 = min(frame_height, y + max(0, h))
+    return x1, y1, max(0, x2 - x1), max(0, y2 - y1)
+
+
+def _empty_roi_diagnostics(roi_index, bbox, quad_count):
+    return {
+        "roi_index": int(roi_index),
+        "roi_bbox": list(bbox),
+        "roi_area": int(bbox[2] * bbox[3]),
+        "roi_quads_found": int(quad_count),
+        "roi_candidates_after_validation": 0,
+        "roi_validation_rejections": 0,
+        "roi_recognition_attempts": 0,
+        "roi_recognition_rejections": 0,
+        "roi_accepted_cards": 0,
+        "roi_reject_reasons": {},
+        "roi_candidate_diagnostics": [],
+    }
+
+
+def _roi_payload_for_quad(diagnostics, quad_roi_indices, quad_index):
+    if quad_index >= len(quad_roi_indices):
+        return None
+    roi_index = quad_roi_indices[quad_index]
+    roi_diagnostics = diagnostics.get("roi_diagnostics") or []
+    if roi_index < 0 or roi_index >= len(roi_diagnostics):
+        return None
+    return roi_diagnostics[roi_index]
+
+
+def _record_roi_validation_rejection(roi_payload, reject_reason):
+    if roi_payload is None:
+        return
+    roi_payload["roi_validation_rejections"] += 1
+    _record_roi_reject_reason(roi_payload, reject_reason or "validation_rejected")
+
+
+def _record_roi_candidate_after_validation(roi_payload):
+    if roi_payload is None:
+        return
+    roi_payload["roi_candidates_after_validation"] += 1
+    roi_payload["roi_recognition_attempts"] += 1
+
+
+def _record_roi_recognition_rejection(roi_payload, reject_reason):
+    if roi_payload is None:
+        return
+    roi_payload["roi_recognition_rejections"] += 1
+    _record_roi_reject_reason(roi_payload, reject_reason or "recognition_rejected")
+
+
+def _record_roi_accepted_card(roi_payload):
+    if roi_payload is None:
+        return
+    roi_payload["roi_accepted_cards"] += 1
+
+
+def _record_roi_reject_reason(roi_payload, reject_reason):
+    reasons = roi_payload["roi_reject_reasons"]
+    reasons[reject_reason] = reasons.get(reject_reason, 0) + 1
+
+
+def _record_crop_diagnostics(diagnostics, roi_payload, candidate_debug):
+    diagnostics["crop_diagnostics"].append(candidate_debug)
+    if roi_payload is not None:
+        roi_payload["roi_candidate_diagnostics"].append(candidate_debug)
+
+
+def _finalize_roi_diagnostics(diagnostics, cards):
+    roi_diagnostics = diagnostics.get("roi_diagnostics") or []
+    diagnostics["roi_with_quads_count"] = sum(
+        1 for roi in roi_diagnostics if roi["roi_quads_found"] > 0
+    )
+    diagnostics["roi_with_accepted_card_count"] = sum(
+        1 for roi in roi_diagnostics if roi["roi_accepted_cards"] > 0
+    )
+    diagnostics["accepted_cards_before_dedup"] = len(cards)
+    diagnostics["accepted_cards_after_dedup"] = len(cards)
 
 
 def _quad_center(quad):
@@ -127,6 +317,90 @@ def _frame_to_scene(center_x, center_y, frame_width, frame_height,
     scene_x = (center_x / frame_width * 2.0 - 1.0) * (scene_width / 2.0)
     scene_y = (1.0 - center_y / frame_height * 2.0) * (scene_height / 2.0)
     return float(scene_x), float(scene_y)
+
+
+def _candidate_diagnostics(index, recognition, recognition_debug, candidate_validation=None,
+                           crop=None, roi_payload=None, recognition_attempt_result=None):
+    top_matches = top_match_summary(recognition_debug) if recognition_debug else []
+    validation_payload = _validation_diagnostics(candidate_validation)
+    crop_width, crop_height = _crop_dimensions(crop)
+    crop_keypoints = (
+        int(recognition_debug.crop_keypoints)
+        if recognition_debug is not None else None
+    )
+    return {
+        "index": int(index),
+        "candidate_index": int(index),
+        "roi_index": (
+            int(roi_payload["roi_index"])
+            if roi_payload is not None else None
+        ),
+        "accepted": recognition is not None,
+        "reject_reason": (
+            recognition_debug.reject_reason
+            if recognition_debug is not None
+            else (
+                candidate_validation.reject_reason
+                if candidate_validation is not None and not candidate_validation.accepted
+                else None
+            )
+        ),
+        "candidate_validation": validation_payload,
+        "crop_width": crop_width,
+        "crop_height": crop_height,
+        "crop_keypoints": crop_keypoints,
+        "descriptor_count": crop_keypoints,
+        "recognition_attempt_result": recognition_attempt_result,
+        "top_matches": top_matches,
+        "score_margin": _score_margin(top_matches),
+        "recognition_score": None,
+    }
+
+
+def _crop_dimensions(crop):
+    if crop is None or not hasattr(crop, "shape"):
+        return None, None
+    shape = crop.shape
+    if len(shape) < 2:
+        return None, None
+    return int(shape[1]), int(shape[0])
+
+
+def _validation_diagnostics(candidate_validation):
+    if candidate_validation is None:
+        return None
+    return {
+        "accepted": bool(candidate_validation.accepted),
+        "reject_reason": candidate_validation.reject_reason,
+        "contrast": candidate_validation.contrast,
+        "edge_density": candidate_validation.edge_density,
+        "dark_pixel_ratio": candidate_validation.dark_pixel_ratio,
+        "border_edge_density": candidate_validation.border_edge_density,
+        "border_dark_ratio": candidate_validation.border_dark_ratio,
+    }
+
+
+def _candidate_recognition_score(recognition, recognition_debug):
+    if recognition_debug is not None:
+        top_matches = top_match_summary(recognition_debug, limit=1)
+        if top_matches:
+            return round(min(float(top_matches[0]["score"]) / 30.0, 1.0), 3)
+
+    match_count = float(recognition.get("match_count", 0.0))
+    inlier_ratio = float(recognition.get("inlier_ratio", recognition.get("confidence", 0.0)))
+    if match_count <= 0:
+        return round(max(0.0, min(inlier_ratio, 1.0)), 3)
+    return round(min(match_count / 30.0, 1.0) * max(0.0, min(inlier_ratio, 1.0)), 3)
+
+
+def _score_margin(top_matches):
+    if len(top_matches) < 2:
+        return None
+    return round(
+        float(top_matches[0].get("score", 0.0))
+        - float(top_matches[1].get("score", 0.0)),
+        3,
+    )
 
 
 def _debug_images_enabled():

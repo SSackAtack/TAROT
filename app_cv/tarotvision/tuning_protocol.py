@@ -25,6 +25,7 @@ class ControlMessage:
     mode: str | None = None
     markers: list | None = None
     active_decks: list | None = None
+    scenario: str | None = None
 
 
 ALLOWED_TYPES = {
@@ -36,6 +37,11 @@ ALLOWED_TYPES = {
     "camera_set",
     "calibration_start",
     "calibration_cancel",
+    "autotune_start",
+    "autotune_calibrate",
+    "autotune_apply",
+    "autotune_save",
+    "autotune_cancel",
     "background_capture",
     "background_clear",
     "studio_set_recording_dir",
@@ -75,6 +81,20 @@ def parse_control_message(raw_message):
     if message_type in {"profile_save", "profile_apply"}:
         if "name" not in payload:
             raise ControlMessageError(f"{message_type} requires name")
+        return ControlMessage(type=message_type, name=str(payload["name"]))
+
+    if message_type == "autotune_start":
+        scenario = str(payload.get("scenario", "three_cards"))
+        if scenario not in {"empty", "one_card", "three_cards"}:
+            raise ControlMessageError(f"Invalid autotune scenario: {scenario}")
+        return ControlMessage(type=message_type, scenario=scenario)
+
+    if message_type in {"autotune_calibrate", "autotune_apply", "autotune_cancel"}:
+        return ControlMessage(type=message_type)
+
+    if message_type == "autotune_save":
+        if "name" not in payload:
+            raise ControlMessageError("autotune_save requires name")
         return ControlMessage(type=message_type, name=str(payload["name"]))
 
     if message_type == "studio_set_recording_dir":
