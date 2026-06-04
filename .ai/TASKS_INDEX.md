@@ -46,6 +46,7 @@ Ten plik stanowi centralny rejestr wszystkich zadań (Tasks) realizowanych w pro
 | **TASK-CV-OFFLINE-LAB-STAGE-5-CROP-QUALITY-VALIDATION-BENCHMARK-001** | `APPROVED` | `task/cv-event-first-plan-001-clarify-autotune-runtime` | Codex | Offline benchmark Stage 5 Crop Quality Validation na zatwierdzonym Stage 1+2+3+4 | 2026-06-04 | Stage 5 method approved: quality_metric_suite_v1; next: Research Stage 6 |
 | **TASK-CV-OFFLINE-LAB-STAGE-5-MANUAL-REVIEW-PACK-001** | `DONE` | `task/cv-event-first-plan-001-clarify-autotune-runtime` | Codex | Paczka 6 debug sheetow do manual review Stage 5 dla quality_metric_suite_v1 | 2026-06-04 | Ready for Michal manual review |
 | **TASK-CV-RESEARCH-STAGE-6-CARD-IDENTIFICATION-001** | `DONE` | `task/cv-event-first-plan-001-clarify-autotune-runtime` | Codex | Research Gate Stage 6: card identification dla offline labu state-first | 2026-06-04 | Research complete; pending Supervisor shortlist approval |
+| **TASK-CV-OFFLINE-LAB-STAGE-6-REFERENCE-GROUNDTRUTH-PREFLIGHT-001** | `PROVISIONAL_BLOCKED` | `task/cv-event-first-plan-001-clarify-autotune-runtime` | Codex | Preflight Stage 6 dla reference deck, deck_profile.json i ground_truth.json | 2026-06-04 | Stage 6 preflight implemented; benchmark blocked until reference deck and ground truth are valid |
 | **TASK-CV-SNAPSHOT-001** | `APPROVED` | `master` | Codex | Usunięcie legacy state-first i utrwalenie snapshot-first jako jedynego pipeline CV | 2026-06-01 | APPROVED BY CHATGPT SUPERVISOR (PR #14 + master smoke) |
 | **TASK-CV-SNAPSHOT-002** | `APPROVED` | `master` | Codex | Unicode-safe image I/O i reference loader poza main.py | 2026-06-01 | APPROVED BY CHATGPT SUPERVISOR (PR #14 + master smoke) |
 | **TASK-CV-SNAPSHOT-003** | `APPROVED` | `master` | Codex | Analiza snapshotu na klatce sprostowanej przez ArUco | 2026-06-01 | APPROVED BY CHATGPT SUPERVISOR (PR #14 + master smoke) |
@@ -64,4 +65,5 @@ Ten plik stanowi centralny rejestr wszystkich zadań (Tasks) realizowanych w pro
 * `TODO` — Zadanie zaplanowane, oczekuje na realizację.
 * `IN_PROGRESS` — Zadanie jest w trakcie aktywnej realizacji przez przypisanego agenta AI.
 * `DONE` — Prace kodowe zostały zakończone i zweryfikowane lokalnie.
+* `PROVISIONAL_BLOCKED` — Kod lub dokumentacja zadania są gotowe, ale kolejny etap jest zablokowany przez brak wymaganych danych wejściowych albo decyzji.
 * `APPROVED` — Zadanie pomyślnie przeszło review i zostało scalone z gałęzią główną (`master`).
