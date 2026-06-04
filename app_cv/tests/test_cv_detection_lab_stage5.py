@@ -54,6 +54,18 @@ def _synthetic_crop(width=300, height=495):
     return crop
 
 
+def _synthetic_crop_with_card_margin(top=60, left=24, right=24, bottom=22, width=300, height=495):
+    crop = np.zeros((height, width, 3), dtype=np.uint8)
+    crop[:, :] = (35, 55, 40)
+    x1, y1 = left, top
+    x2, y2 = width - right, height - bottom
+    cv2.rectangle(crop, (x1, y1), (x2, y2), (205, 185, 155), -1)
+    cv2.rectangle(crop, (x1 + 10, y1 + 10), (x2 - 10, y2 - 10), (245, 245, 245), 4)
+    cv2.line(crop, (x1 + 40, y1 + 60), (x2 - 40, y2 - 70), (65, 75, 130), 4)
+    cv2.circle(crop, ((x1 + x2) // 2, (y1 + y2) // 2), 45, (130, 70, 160), -1)
+    return crop
+
+
 class TestStage5FixturePairs(unittest.TestCase):
     def setUp(self):
         self.tmpdir = tempfile.mkdtemp(prefix="stage5_pairs_")
@@ -126,6 +138,37 @@ class TestStage5CropQualityMetrics(unittest.TestCase):
         metrics = result.metrics
 
         self.assertTrue("BAD_ASPECT" in metrics.quality_flags or metrics.aspect_ratio_error_score < 0.75)
+
+    def test_top_margin_detected_on_synthetic_crop(self):
+        crop = _synthetic_crop_with_card_margin(top=60)
+
+        result = evaluate_crop_quality(crop, crop_index=1)
+        metrics = result.metrics
+
+        self.assertGreater(metrics.top_margin_ratio, 0.05)
+        self.assertLess(metrics.background_margin_score, 1.0)
+        self.assertLess(metrics.card_fill_ratio, 1.0)
+
+    def test_crop_without_large_margin_has_lower_top_margin_than_crop_with_margin(self):
+        crop_without_margin = _synthetic_crop_with_card_margin(top=5)
+        crop_with_margin = _synthetic_crop_with_card_margin(top=60)
+
+        without_result = evaluate_crop_quality(crop_without_margin, crop_index=1)
+        with_result = evaluate_crop_quality(crop_with_margin, crop_index=1)
+
+        self.assertGreater(with_result.metrics.top_margin_ratio, without_result.metrics.top_margin_ratio)
+
+    def test_background_margin_score_reacts_to_extra_margin(self):
+        crop_without_margin = _synthetic_crop_with_card_margin(top=5)
+        crop_with_margin = _synthetic_crop_with_card_margin(top=60)
+
+        without_result = evaluate_crop_quality(crop_without_margin, crop_index=1)
+        with_result = evaluate_crop_quality(crop_with_margin, crop_index=1)
+
+        self.assertLess(
+            with_result.metrics.background_margin_score,
+            without_result.metrics.background_margin_score,
+        )
 
 
 class TestStage5BenchmarkOutputs(unittest.TestCase):

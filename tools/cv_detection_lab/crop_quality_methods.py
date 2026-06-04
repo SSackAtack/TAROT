@@ -389,18 +389,51 @@ def _ensure_bgr(img):
 
 
 def _foreground_bbox(gray, edges):
+    h, w = gray.shape[:2]
+    crop_area = float(max(1, h * w))
+
     mask = np.zeros_like(gray, dtype=np.uint8)
     mask[edges > 0] = 255
-    mask[gray > 25] = 255
-    kernel = np.ones((5, 5), dtype=np.uint8)
-    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
-    ys, xs = np.where(mask > 0)
-    h, w = gray.shape[:2]
-    if len(xs) == 0 or len(ys) == 0:
+
+    gx = cv2.Sobel(gray, cv2.CV_32F, 1, 0, ksize=3)
+    gy = cv2.Sobel(gray, cv2.CV_32F, 0, 1, ksize=3)
+    grad = cv2.magnitude(gx, gy)
+    nonzero_grad = grad[grad > 0]
+    if nonzero_grad.size:
+        grad_thr = max(12.0, float(np.percentile(nonzero_grad, 70)))
+        mask[grad > grad_thr] = 255
+
+    short_side = max(1, min(h, w))
+    close_size = max(5, int(short_side * 0.025))
+    if close_size % 2 == 0:
+        close_size += 1
+    close_kernel = np.ones((close_size, close_size), dtype=np.uint8)
+    dilate_kernel = np.ones((max(3, close_size // 2), max(3, close_size // 2)), dtype=np.uint8)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, close_kernel)
+    mask = cv2.dilate(mask, dilate_kernel, iterations=1)
+
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    candidates = []
+    min_bbox_area = crop_area * 0.03
+    for contour in contours:
+        x, y, bw, bh = cv2.boundingRect(contour)
+        bbox_area = float(bw * bh)
+        if bbox_area < min_bbox_area:
+            continue
+        fill_ratio = float(cv2.contourArea(contour)) / max(1.0, bbox_area)
+        edge_pixels = int(np.count_nonzero(edges[y:y + bh, x:x + bw]))
+        edge_support = float(edge_pixels) / max(1.0, bbox_area)
+        covers_nearly_all = bbox_area > crop_area * 0.96
+        if covers_nearly_all and edge_support < 0.01:
+            continue
+        score = bbox_area * (1.0 + edge_support + min(fill_ratio, 1.0))
+        candidates.append((score, x, y, bw, bh))
+
+    if not candidates:
         return (0, 0, w, h)
-    x1, x2 = int(xs.min()), int(xs.max())
-    y1, y2 = int(ys.min()), int(ys.max())
-    return (x1, y1, max(1, x2 - x1 + 1), max(1, y2 - y1 + 1))
+
+    _, x, y, bw, bh = max(candidates, key=lambda item: item[0])
+    return (int(x), int(y), max(1, int(bw)), max(1, int(bh)))
 
 
 def _margin_ratios(bbox, width, height):

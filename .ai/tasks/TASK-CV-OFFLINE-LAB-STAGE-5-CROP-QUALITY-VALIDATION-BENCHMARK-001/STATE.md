@@ -54,3 +54,29 @@ logs/offline_replay/stage5_crop_quality_validation/quality_metric_suite_v1/*/cro
 ```
 
 Do not start Stage 6 before Supervisor review.
+
+## TASK-CV-OFFLINE-LAB-STAGE-5-FOREGROUND-MARGIN-FIX-001
+
+### Summary
+
+Improved Stage 5 foreground/card-area estimation for crop margin metrics.
+
+### Problem
+
+The previous `_foreground_bbox()` could treat nearly the entire crop as foreground because it used a broad brightness condition. This weakened `top_margin_ratio`, `background_margin_score` and `card_fill_ratio`.
+
+### Fix
+
+Stage 5 now estimates foreground/card-like bbox using edge/gradient-supported mask and avoids treating all bright pixels as card foreground.
+
+### Verification
+
+Added regression tests for synthetic top margin and background margin behavior. Stage 5 tests, Stage 1-4 regressions, py_compile, Stage 5 benchmark CLI and full backend suite passed.
+
+### Decision
+
+Stage 5 remains `PROVISIONAL_RECOMMENDED`.
+
+### Required next action
+
+Supervisor review of this fix. Do not prepare Stage 5 manual review pack until the fix is approved.

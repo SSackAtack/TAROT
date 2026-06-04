@@ -115,3 +115,103 @@ OK
 ## Frontend
 
 `NOT_RUN` — task nie zmienia `app_ar/`.
+
+---
+
+## TASK-CV-OFFLINE-LAB-STAGE-5-FOREGROUND-MARGIN-FIX-001
+
+### RED
+
+```powershell
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv;.'; python -m unittest app_cv.tests.test_cv_detection_lab_stage5 -v
+```
+
+Wynik oczekiwany:
+
+```text
+FAILED (failures=3)
+```
+
+Failujace regresje:
+
+```text
+test_top_margin_detected_on_synthetic_crop
+test_crop_without_large_margin_has_lower_top_margin_than_crop_with_margin
+test_background_margin_score_reacts_to_extra_margin
+```
+
+Powod: `top_margin_ratio` pozostawal `0.0`, a `background_margin_score` pozostawal `1.0`, poniewaz broad brightness mask traktowal prawie caly crop jako foreground.
+
+### Stage 5 testy
+
+```powershell
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv;.'; python -m unittest app_cv.tests.test_cv_detection_lab_stage5 -v
+```
+
+Wynik:
+
+```text
+Ran 14 tests in 2.037s
+OK
+```
+
+Nowe regresje:
+
+1. `test_top_margin_detected_on_synthetic_crop` — PASS
+2. `test_crop_without_large_margin_has_lower_top_margin_than_crop_with_margin` — PASS
+3. `test_background_margin_score_reacts_to_extra_margin` — PASS
+
+### Stage 1/2/3/4 regresja
+
+```powershell
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv;.'; python -m unittest app_cv.tests.test_cv_detection_lab_stage1 app_cv.tests.test_cv_detection_lab_stage2 app_cv.tests.test_cv_detection_lab_stage3 app_cv.tests.test_cv_detection_lab_stage4 -v
+```
+
+Wynik:
+
+```text
+Ran 34 tests in 2.182s
+OK
+```
+
+### Py compile
+
+```powershell
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv;.'; python -B -m py_compile tools\cv_detection_lab\crop_quality_methods.py tools\cv_detection_lab\stage5_crop_quality_validation_benchmark.py app_cv\tests\test_cv_detection_lab_stage5.py
+```
+
+Wynik: PASS
+
+### Benchmark CLI
+
+```powershell
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv;.'; python tools\cv_detection_lab\stage5_crop_quality_validation_benchmark.py --fixture logs\live_fixtures\event_first_current_debug_verified --output logs\offline_replay\stage5_crop_quality_validation
+```
+
+Wynik:
+
+```json
+{
+  "recommended_method": "quality_metric_suite_v1",
+  "recommendation_status": "PROVISIONAL_RECOMMENDED",
+  "threshold_status": "BENCHMARK_HEURISTIC_ONLY",
+  "rows": 6
+}
+```
+
+### Full backend suite
+
+```powershell
+$env:PYTHONPATH='C:\tmp\tarot_pydeps;app_cv;.'; python -m unittest discover -s app_cv\tests -v
+```
+
+Wynik:
+
+```text
+Ran 364 tests in 12.878s
+OK
+```
+
+### Frontend
+
+`NOT_RUN` — task nie zmienia `app_ar/`.
