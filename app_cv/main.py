@@ -204,6 +204,60 @@ def update_autotune_recommendation_from_samples():
     return best
 
 
+def autotune_state_collected_count(scenario):
+    if autotune_session is None:
+        return 0
+    return len(autotune_session.samples.get(scenario, []))
+
+
+def record_autotune_sample_from_snapshot(pipeline_sample):
+    global calibration_state
+    if autotune_session is None:
+        return
+        
+    if autotune_session.recommendation is not None or autotune_session.ready_to_score():
+        return
+        
+    scenario = autotune_session.current_scenario()
+    expected_count = 0
+    if scenario == "one_card":
+        expected_count = 1
+    elif scenario == "three_cards":
+        expected_count = 3
+        
+    accepted_count = pipeline_sample.get("accepted_count", 0)
+    if accepted_count != expected_count:
+        return
+        
+    sample = {
+        "scenario": scenario,
+        "timestamp_ms": int(time.time() * 1000),
+        "detected_count": pipeline_sample.get("detected_count", 0),
+        "accepted_count": accepted_count,
+        "expected_count": expected_count,
+        "analysis_ms": pipeline_sample.get("analysis_ms", 0.0),
+        "snapshot_quality_score": pipeline_sample.get("snapshot_quality_score", 0.0),
+        "recognition_confidences": pipeline_sample.get("recognition_confidences", []),
+        "recognition_rejections": pipeline_sample.get("recognition_rejections", 0),
+        "candidate_validation_rejections": pipeline_sample.get("candidate_validation_rejections", 0),
+        "warnings": []
+    }
+    
+    autotune_session.add_sample(scenario, sample)
+    write_autotune_log("sample_collected")
+    
+    calibration_state = {
+        "state": autotune_session.state,
+        "last_score": autotune_session.recommendation["score"] if autotune_session.recommendation else None,
+        "autotune": autotune_status_payload()
+    }
+    
+    collected = autotune_state_collected_count(scenario)
+    add_operator_warning(
+        f"Wizard: Zebrano probke dla '{scenario}' ({collected}/{autotune_session.samples_per_scenario})"
+    )
+
+
 def handle_control_message(message, camera_session):
     global calibration_state
     global active_tuning_profile
@@ -682,7 +736,8 @@ snapshot_pipeline = SnapshotFirstPipeline(
     build_operator_snapshot_fn=build_operator_snapshot,
     operator_warnings=operator_warnings,
     log_dir=LOG_DIR,
-    runtime_profile=RUNTIME_PROFILE
+    runtime_profile=RUNTIME_PROFILE,
+    autotune_sample_recorder=record_autotune_sample_from_snapshot
 )
 snapshot_pipeline.snapshot_sample_count = SNAPSHOT_SAMPLE_COUNT
 snapshot_pipeline.snapshot_sample_interval_ms = SNAPSHOT_SAMPLE_INTERVAL_MS

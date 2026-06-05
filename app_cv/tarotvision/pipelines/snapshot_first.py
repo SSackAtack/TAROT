@@ -23,7 +23,8 @@ class SnapshotFirstPipeline(VisionPipeline):
         build_operator_snapshot_fn,
         operator_warnings,
         log_dir,
-        runtime_profile="default"
+        runtime_profile="default",
+        autotune_sample_recorder=None
     ):
         self.camera_session = camera_session
         self.opencv_preview = opencv_preview
@@ -38,6 +39,7 @@ class SnapshotFirstPipeline(VisionPipeline):
         self.operator_warnings = operator_warnings
         self.log_dir = log_dir
         self.runtime_profile = runtime_profile
+        self.autotune_sample_recorder = autotune_sample_recorder
 
         # Zmienne stanu rurociągu
         self.last_snapshot_cards = []
@@ -199,6 +201,17 @@ class SnapshotFirstPipeline(VisionPipeline):
                     "quality_score": selected.quality.quality_score,
                     "card_count": len(self.last_snapshot_cards),
                 })
+                if self.autotune_sample_recorder is not None:
+                    sample_data = {
+                        "detected_count": diagnostics.get("quads_found", 0),
+                        "accepted_count": len(self.last_snapshot_cards),
+                        "analysis_ms": analysis_ms,
+                        "snapshot_quality_score": selected.quality.quality_score,
+                        "recognition_confidences": [c.get("confidence", 0.0) for c in self.last_snapshot_cards],
+                        "recognition_rejections": diagnostics.get("recognition_rejections", 0),
+                        "candidate_validation_rejections": diagnostics.get("candidate_validation_rejections", 0)
+                    }
+                    self.autotune_sample_recorder(sample_data)
 
         metrics_snapshot = self.runtime_metrics.snapshot()
         runtime_snapshot = {
