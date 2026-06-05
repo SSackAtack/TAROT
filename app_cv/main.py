@@ -208,19 +208,63 @@ def record_autotune_sample_from_snapshot(pipeline_sample):
     elif scenario == "three_cards":
         expected_count = 3
         
+    detected_count = pipeline_sample.get("detected_count", 0)
     accepted_count = pipeline_sample.get("accepted_count", 0)
-    if accepted_count != expected_count:
-        return
-        
+    collected_before = len(autotune_session.samples.get(scenario, []))
+
+    if scenario == "empty":
+        if accepted_count != 0:
+            log_event(
+                f"[WIZARD DIAG] Odrzucono probke empty | "
+                f"detected={detected_count}, accepted={accepted_count} | "
+                f"expected=0/0 | reason=rejected_accepted_cards_on_empty"
+            )
+            add_operator_warning(
+                f"Wizard: Odrzucono pusta mate - wykryto zaakceptowane karty ({accepted_count})"
+            )
+            return
+    else:
+        if detected_count != expected_count:
+            log_event(
+                f"[WIZARD DIAG] Odrzucono probke {scenario} | "
+                f"detected={detected_count}, accepted={accepted_count} | "
+                f"expected={expected_count} | reason=rejected_wrong_geometry"
+            )
+            add_operator_warning(
+                f"Wizard: Odrzucono snapshot dla {scenario} (wykryto {detected_count} zamiast {expected_count} kart)"
+            )
+            return
+
+    # Calculate false positives based on the scenario
+    false_positive_count = 0
+    if scenario == "empty":
+        false_positive_count = detected_count
+    elif scenario == "one_card":
+        false_positive_count = max(0, detected_count - 1)
+    elif scenario == "three_cards":
+        false_positive_count = max(0, detected_count - 3)
+
+    # Calculate recognition score as the average confidence of accepted cards
+    confidences = pipeline_sample.get("recognition_confidences", [])
+    recognition_score = sum(confidences) / len(confidences) if confidences else 0.0
+
+    # Snapshot quality score serves as geometry_score
+    geometry_score = pipeline_sample.get("snapshot_quality_score", 0.0)
+
     sample = {
         "scenario": scenario,
         "timestamp_ms": int(time.time() * 1000),
-        "detected_count": pipeline_sample.get("detected_count", 0),
+        "detected_count": detected_count,
+        "candidate_count": detected_count,
         "accepted_count": accepted_count,
         "expected_count": expected_count,
+        "false_positive_count": false_positive_count,
+        "geometry_score": geometry_score,
+        "recognition_score": recognition_score,
+        "matching_ms": pipeline_sample.get("analysis_ms", 0.0),
         "analysis_ms": pipeline_sample.get("analysis_ms", 0.0),
         "snapshot_quality_score": pipeline_sample.get("snapshot_quality_score", 0.0),
-        "recognition_confidences": pipeline_sample.get("recognition_confidences", []),
+        "recognition_confidences": confidences,
         "recognition_rejections": pipeline_sample.get("recognition_rejections", 0),
         "candidate_validation_rejections": pipeline_sample.get("candidate_validation_rejections", 0),
         "warnings": []
@@ -236,6 +280,11 @@ def record_autotune_sample_from_snapshot(pipeline_sample):
     }
     
     collected = autotune_state_collected_count(scenario)
+    log_event(
+        f"[WIZARD DIAG] Zebrano probke {scenario} | "
+        f"Przed/Po: {collected_before}/{collected} | "
+        f"detected={detected_count}, accepted={accepted_count} | reason=collected"
+    )
     add_operator_warning(
         f"Wizard: Zebrano probke dla '{scenario}' ({collected}/{autotune_session.samples_per_scenario})"
     )
