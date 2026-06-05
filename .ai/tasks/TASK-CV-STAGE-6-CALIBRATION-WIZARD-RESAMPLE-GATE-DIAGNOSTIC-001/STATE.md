@@ -2,7 +2,7 @@
 
 ## Status
 
-MERGED_PENDING_PHYSICAL_SMOKE
+MERGED_AND_VERIFIED
 
 ## Branch
 
@@ -10,12 +10,13 @@ MERGED_PENDING_PHYSICAL_SMOKE
 
 ## Stan aktualny
 
-Zadanie zostało pomyślnie zrealizowane. Bramka `SnapshotGate` re-armuje się poprawnie (potwierdzone nowym testem jednostkowym). Aby rozwiązać problem "braku reakcji" podczas prób kalibracji, dodano czytelne warningi operatorskie w HUD oraz szczegółowe logowanie prób w `cv_runtime.log`. Dzięki temu operator widzi na żywo w HUD powód odrzucenia (np. "wykryto 0 zamiast 1 kart") i może natychmiast skorygować ułożenie karty lub dłoni.
+Zadanie zostało pomyślnie zrealizowane i przetestowane na stanowisku fizycznym (smoke test zakończony sukcesem). Bramka `SnapshotGate` re-armuje się poprawnie i pozwala na kolejne próby. Powody odrzucenia snapshotów są raportowane bezpośrednio w HUD i w oknie Asystenta Kalibracji (bez spamu dzięki deduplikacji).
 
 ## Session Status (2026-06-05)
 
-Gemini zaimplementował warningi HUD i rozbudowane logowanie w `app_cv/main.py`. Napisał testy weryfikacji bramki oraz zaktualizował asercje w capture tests. Całość zweryfikowana zielonym przebiegiem testów jednostkowych (423/423 PASS).
+Gemini zaimplementował warningi HUD, deduplikację ostrzeżeń, informację w oknie Asystenta Kalibracji i rozbudowane logowanie. Testy automatyczne (423/423 PASS) oraz fizyczny smoke test (empty: PASS, one_card: PASS z poprawną diagnozą) zakończyły się sukcesem.
 
 ## Kolejne kroki
 
-1. Scalenie zmian i uruchomienie weryfikacji na fizycznym stanowisku operatorskim przez Michała (weryfikacja działania komunikatów w HUD przy ruchach dłonią).
+1. Oficjalne zatwierdzenie zadania przez Supervisora.
+2. Dalsze prace nad ulepszeniem detekcji geometrycznej (kolejne zadania).
