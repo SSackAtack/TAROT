@@ -15,7 +15,7 @@
 | cancel/reset | PASS | Przycisk Anuluj działa poprawnie, resetuje stan sesji i blokuje przycisk "Skalibruj" |
 | backend logs clean | PASS | Brak tracebacków w logach |
 | Manual UI smoke simulation | PASS | Wszystkie scenariusze i zachowanie przycisków przetestowane pomyślnie w przeglądarce po merge PR #26 |
-| manual camera smoke | FAIL | Przyciski wyboru scenariusza (np. "1 KARTA") pozostają zablokowane (disabled=true) po zakończeniu kalibracji pustej maty |
+| manual camera smoke | PENDING | Oczekiwanie na drugą rundę weryfikacji na fizycznym stanowisku |
 | GitHub Actions CI | PENDING | Oczekiwanie na runy po pushu |
 
 ## Podsumowanie wymagane przez instrukcję zadania:
@@ -24,7 +24,7 @@
 * czy frontend build był: PASS
 * czy backend tests były: PASS
 * czy smoke Studio UI był: PASS (UI smoke simulation: PASS)
-* czy manual camera smoke był: FAIL (przyciski startu zablokowane po kalibracji pustej maty)
+* czy manual camera smoke był: PENDING (Runda 2 w toku)
 * czy GitHub Actions był: PENDING
 
 ## Wykryty błąd logiczny (Blocker 2):

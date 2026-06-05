@@ -1,7 +1,7 @@
 # Walkthrough — TASK-CV-STAGE-6-CALIBRATION-WIZARD-LIVE-CAMERA-SMOKE-001
 
 ## Informacje ogólne
-* Data i godzina: 2026-06-05 14:05
+* Data i godzina: 2026-06-05 15:40
 * Branch: `task/cv-stage-6-calibration-wizard-live-camera-smoke-001`
 * Commit hash: PENDING (dokumentacja)
 * System/Sprzęt: HP EliteBook 830 G6 + AnkerWork C310
@@ -19,7 +19,7 @@
    - System pomyślnie zarejestrował 3/3 próbek i przeszedł do stanu `ready_to_score: true` oraz `overall_wizard_ready: true`.
 
 3. **Wykryty problem (FAIL)**:
-   - Przycisk "Skalibruj" (`autotune_calibrate`) pozostał zablokowany (`disabled = true`).
+   - Przycisk "Skalibruj" (`autotune_calibrate`) pozostał zablokowane (`disabled = true`).
    - Inspekcja kodu wykazała błąd logiczny w [studioConsole.js](file:///e:/Antigravity/Projekty/TAROT/app_ar/src/studio/studioConsole.js#L486):
      ```javascript
      if (btnCalibrate) btnCalibrate.disabled = !(isCollecting && readyToScore)
@@ -57,3 +57,19 @@
 
 5. **Koniec testu**:
    - Zgodnie z wytycznymi zadania integracyjnego, test przerwano po wykryciu blockera. Nie wprowadzano zmian w kodzie produkcyjnym. Zgłoszono błąd do Supervisor review.
+
+## Ponowna weryfikacja po zmergowaniu poprawki Blocker 2 (PR #27)
+
+1. **Pobranie poprawek i merge mastera**:
+   - Zmergowano najnowszy `master` zawierający poprawkę przycisków wyboru scenariusza z [TASK-CV-STAGE-6-CALIBRATION-WIZARD-SCENARIO-BUTTONS-FIX-001](file:///e:/Antigravity/Projekty/TAROT/.ai/tasks/TASK-CV-STAGE-6-CALIBRATION-WIZARD-SCENARIO-BUTTONS-FIX-001/TASK.md) do brancha smoke testu.
+
+2. **Przebieg ponownych testów dymnych (Weryfikacja UI)**:
+   - Podniesiono deweloperski serwer Vite w tle oraz serwer WebSocket.
+   - Zweryfikowano zachowanie przycisków w przeglądarce w stanie `recommendation_ready`:
+     - Przyciski `PUSTA MATA`, `1 KARTA`, `3 KARTY` są w 100% aktywne (`disabled === false`).
+     - Kliknięcie `1 KARTA` poprawnie wysyła komendę WebSocket `{ "type": "autotune_start", "scenario": "one_card" }` na backend.
+     - Kliknięcie `3 KARTY` poprawnie wysyła komendę WebSocket `{ "type": "autotune_start", "scenario": "three_cards" }` na backend.
+     - Przycisk `Anuluj` działa prawidłowo, resetuje stan sesji i przywraca stan `idle`, w którym przyciski scenariuszy nadal są aktywne.
+
+3. **Weryfikacja fizyczna na stanowisku operatorskim**:
+   - PENDING: Weryfikacja przepływu na fizycznym stanowisku HP EliteBook 830 G6 + AnkerWork C310.
