@@ -79,7 +79,7 @@ Ten plik stanowi centralny rejestr wszystkich zadań (Tasks) realizowanych w pro
 | **TASK-CV-STAGE-6-RWS-CALIBRATION-WIZARD-SCORING-001** | `APPROVED` | `master` | Gemini | Ocenianie jakości próbek asystenta kalibracji stanowiska (PR-F3B) | 2026-06-05 | APPROVED BY CHATGPT SUPERVISOR |
 | **TASK-CV-STAGE-6-RWS-CALIBRATION-WIZARD-STATUS-SNAPSHOT-001** | `APPROVED` | `master` | Gemini | Ustabilizowanie backendowego status snapshot dla Calibration Wizard | 2026-06-05 | APPROVED BY CHATGPT SUPERVISOR |
 | **TASK-CV-STAGE-6-RWS-CALIBRATION-WIZARD-STUDIO-PANEL-001** | `APPROVED` | `master` | Gemini | Panel statusu Calibration Wizard w Studio UI | 2026-06-05 | APPROVED BY CHATGPT SUPERVISOR |
-| **TASK-CV-STAGE-6-CALIBRATION-WIZARD-LIVE-CAMERA-SMOKE-001** | `IN_PROGRESS` | `task/cv-stage-6-calibration-wizard-live-camera-smoke-001` | Gemini | Live smoke test Asystenta Kalibracji z fizyczną kamerą | 2026-06-05 | PENDING |
+| **TASK-CV-STAGE-6-CALIBRATION-WIZARD-LIVE-CAMERA-SMOKE-001** | `DONE` | `task/cv-stage-6-calibration-wizard-live-camera-smoke-001` | Gemini | Live smoke test Asystenta Kalibracji z fizyczną kamerą | 2026-06-05 | Oczekuje na review |
 | **TASK-CV-STAGE-6-CALIBRATION-WIZARD-CALIBRATE-BUTTON-FIX-001** | `APPROVED` | `master` | Gemini | Naprawa przycisku Skalibruj po zebraniu próbek | 2026-06-05 | APPROVED BY CHATGPT SUPERVISOR |
 
 ---

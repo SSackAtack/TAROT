@@ -30,3 +30,19 @@
    - Zgodnie z instrukcją zadania, test przerwano bez dokonywania zmian w kodzie produkcyjnym.
    - Wyniki udokumentowano, serwery wyłączono.
    - Zrzuty ekranu dokumentujące stany znajdują się w katalogu scratch.
+
+## Ponowna weryfikacja po zmergowaniu poprawki (PR #26)
+
+1. **Pobranie poprawek i merge mastera**:
+   - Zmergowano najnowszy `master` zawierający fix z [TASK-CV-STAGE-6-CALIBRATION-WIZARD-CALIBRATE-BUTTON-FIX-001](file:///e:/Antigravity/Projekty/TAROT/.ai/tasks/TASK-CV-STAGE-6-CALIBRATION-WIZARD-CALIBRATE-BUTTON-FIX-001/TASK.md) do brancha smoke testu.
+
+2. **Przebieg ponownych testów dymnych**:
+   - Podniesiono deweloperski serwer Vite w tle.
+   - Zweryfikowano wszystkie scenariusze kalibracji (`empty`, `one_card`, `three_cards`) pod kątem zachowania przycisków:
+     - We wszystkich scenariuszach przycisk „Skalibruj” staje się w 100% aktywny (enabled) dokładnie po zebraniu kompletnych próbek (3/3) oraz w stanie `ready_to_score`.
+     - Kliknięcie przycisku „Skalibruj” poprawnie przesyła komendę `{ "type": "autotune_calibrate" }` przez WebSocket.
+     - Przycisk „Anuluj” poprawnie resetuje stan i blokuje przycisk kalibracji.
+   - Wszystkie scenariusze zakończyły się wynikiem **PASS**.
+
+3. **Status końcowy**:
+   - Cały przepływ Asystenta Kalibracji Stanowiska po wdrożeniu poprawki działa stabilnie i bezbłędnie.
