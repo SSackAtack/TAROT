@@ -130,6 +130,8 @@ def build_operator_snapshot(cards=None, metrics=None, runtime=None, layout=None,
 
 
 def add_operator_warning(message):
+    if operator_warnings and operator_warnings[-1] == message:
+        return
     operator_warnings.append(message)
     log_event(f"[OPERATOR] {message}")
 
