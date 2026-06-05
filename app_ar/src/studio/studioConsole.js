@@ -306,6 +306,49 @@ function renderCvExplainability(data) {
     nextEl.textContent = explain.next_action || 'Sprawdz diagnostyke CV.'
 }
 
+const DEFAULT_CALIBRATION_WIZARD_STATUS = {
+    schema_version: 1,
+    mode: "calibration_wizard",
+    scenario: null,
+    state: "idle",
+    collected_count: 0,
+    required_count: 3,
+    ready_to_score: false,
+    quality_report: null,
+    ready_for_session: false,
+    current_step_ready: false,
+    overall_wizard_ready: false,
+    operator_messages: [],
+    warnings: [],
+    blocking_issues: [],
+    recommendation: null,
+    last_score: null,
+    next_action: "Rozpocznij kalibrację stanowiska."
+};
+
+function formatWizardScenario(scenario) {
+    if (scenario === 'empty') return 'Pusta mata'
+    if (scenario === 'one_card') return 'Jedna karta'
+    if (scenario === 'three_cards') return 'Trzy karty'
+    return scenario || 'Brak'
+}
+
+function formatWizardState(state) {
+    if (state === 'idle') return 'Bez aktywnej kalibracji'
+    if (state === 'collecting') return 'Zbieranie próbek'
+    if (state === 'recommendation_ready') return 'Rekomendacja gotowa'
+    if (state === 'cancelled') return 'Anulowano'
+    return state || 'Nieznany'
+}
+
+function formatWizardGrade(grade) {
+    if (grade === 'excellent') return 'Bardzo dobrze'
+    if (grade === 'good') return 'Dobrze'
+    if (grade === 'warning') return 'Wymaga poprawy'
+    if (grade === 'bad') return 'Problem'
+    return grade || '-'
+}
+
 function formatAutotuneNumber(value) {
     const numberValue = Number(value)
     if (!Number.isFinite(numberValue)) return '-'
@@ -314,51 +357,134 @@ function formatAutotuneNumber(value) {
 
 function renderStudioAutotune(data) {
     if (!sidebarEl) return
-    const autotune = data.operator?.calibration?.autotune || {}
+    const autotune = data.operator?.calibration?.autotune || DEFAULT_CALIBRATION_WIZARD_STATUS
     const panel = sidebarEl.querySelector('#studio-autotune-panel')
     const stateEl = sidebarEl.querySelector('#studio-autotune-state')
-    const resultEl = sidebarEl.querySelector('#studio-autotune-result')
-    if (!panel || !stateEl || !resultEl) return
+    if (!panel || !stateEl) return
 
     const state = autotune.state || 'idle'
-    const recommendation = autotune.recommendation || null
-    const progress = autotune.progress || {}
-    const stageResult = autotune.stage_result || null
-    const nextAction = autotune.next_action || ''
     panel.dataset.state = state
-    panel.dataset.stageResult = stageResult?.state || 'WAIT'
-    stateEl.textContent = String(state).toUpperCase()
 
-    if (!recommendation) {
-        const scenarioProgress = Object.entries(progress)
-            .map(([scenario, value]) => `${scenario}: ${value}`)
-            .join(' | ')
-        const collected = progress.samples_collected ?? progress.sample_count ?? 0
-        const target = progress.samples_target ?? progress.target_samples ?? '-'
-        const stageText = stageResult
-            ? `${stageResult.state}: ${stageResult.message}`
-            : (state === 'idle' ? 'Brak rekomendacji (oczekuje na integrację backendu).' : `Zbieranie probek: ${scenarioProgress || `${collected}/${target}`}`)
-        resultEl.textContent = [stageText, nextAction].filter(Boolean).join(' | ')
-        return
+    // 1. Aktualizacja stanu i scenariusza
+    stateEl.textContent = formatWizardState(state).toUpperCase()
+
+    const scenarioVal = panel.querySelector('#studio-autotune-scenario-val')
+    if (scenarioVal) {
+        scenarioVal.textContent = formatWizardScenario(autotune.scenario)
     }
 
-    const profile = recommendation.profile || {}
-    const profileName = recommendation.profile_name || recommendation.name || 'kandydat'
-    const score = recommendation.score ?? recommendation.confidence ?? recommendation.value
-    const confidence = recommendation.confidence
-    const profileSummary = Object.entries(profile)
-        .slice(0, 3)
-        .map(([key, value]) => `${key}=${value}`)
-        .join(', ')
-    const details = [
-        `Profil: ${profileName}`,
-        `Score: ${formatAutotuneNumber(score)}`,
-        confidence !== undefined ? `Pewnosc: ${formatAutotuneNumber(confidence)}` : '',
-        profileSummary,
-        nextAction
-    ].filter(Boolean)
+    const samplesVal = panel.querySelector('#studio-autotune-samples-val')
+    if (samplesVal) {
+        samplesVal.textContent = `${autotune.collected_count ?? 0} / ${autotune.required_count ?? 3}`
+    }
 
-    resultEl.textContent = details.join(' | ')
+    const readyScoreVal = panel.querySelector('#studio-autotune-ready-score-val')
+    if (readyScoreVal) {
+        readyScoreVal.textContent = autotune.ready_to_score ? 'Tak' : 'Nie'
+        readyScoreVal.className = 'studio-autotune-info-value'
+        if (autotune.ready_to_score) {
+            readyScoreVal.classList.add('studio-autotune-value--ok')
+        }
+    }
+
+    // 2. Aktualizacja oceny jakości
+    const qualitySection = panel.querySelector('#studio-autotune-quality-section')
+    const qualityPlaceholder = panel.querySelector('#studio-autotune-quality-placeholder')
+
+    if (autotune.quality_report) {
+        if (qualitySection) qualitySection.style.display = 'block'
+        if (qualityPlaceholder) qualityPlaceholder.style.display = 'none'
+
+        const scoreVal = panel.querySelector('#studio-autotune-score-val')
+        if (scoreVal) {
+            scoreVal.textContent = formatAutotuneNumber(autotune.quality_report.score)
+        }
+
+        const gradeVal = panel.querySelector('#studio-autotune-grade-val')
+        if (gradeVal) {
+            const grade = autotune.quality_report.grade
+            gradeVal.textContent = formatWizardGrade(grade)
+            gradeVal.className = 'studio-autotune-info-value'
+            if (grade === 'excellent' || grade === 'good') {
+                gradeVal.classList.add('studio-autotune-value--ok')
+            } else if (grade === 'warning') {
+                gradeVal.classList.add('studio-autotune-value--warning')
+            } else if (grade === 'bad') {
+                gradeVal.classList.add('studio-autotune-value--bad')
+            }
+        }
+
+        const stepReadyVal = panel.querySelector('#studio-autotune-step-ready-val')
+        if (stepReadyVal) {
+            stepReadyVal.textContent = autotune.current_step_ready ? 'Tak' : 'Nie'
+            stepReadyVal.className = 'studio-autotune-info-value'
+            stepReadyVal.classList.add(autotune.current_step_ready ? 'studio-autotune-value--ok' : 'studio-autotune-value--bad')
+        }
+
+        const wizardReadyVal = panel.querySelector('#studio-autotune-wizard-ready-val')
+        if (wizardReadyVal) {
+            wizardReadyVal.textContent = autotune.overall_wizard_ready ? 'Tak' : 'Nie'
+            wizardReadyVal.className = 'studio-autotune-info-value'
+            wizardReadyVal.classList.add(autotune.overall_wizard_ready ? 'studio-autotune-value--ok' : 'studio-autotune-value--bad')
+        }
+    } else {
+        if (qualitySection) qualitySection.style.display = 'none'
+        if (qualityPlaceholder) qualityPlaceholder.style.display = 'block'
+    }
+
+    // 3. Aktualizacja komunikatów
+    const messagesSection = panel.querySelector('#studio-autotune-messages-section')
+    const blockingList = panel.querySelector('#studio-autotune-blocking-list')
+    const warningsList = panel.querySelector('#studio-autotune-warnings-list')
+    const operatorList = panel.querySelector('#studio-autotune-operator-list')
+
+    const blockingIssues = autotune.blocking_issues || []
+    const warnings = autotune.warnings || []
+    const operatorMessages = autotune.operator_messages || []
+
+    const hasMessages = blockingIssues.length > 0 || warnings.length > 0 || operatorMessages.length > 0
+
+    if (messagesSection) {
+        messagesSection.style.display = hasMessages ? 'block' : 'none'
+    }
+
+    function renderMsgGroup(element, items, prefix) {
+        if (!element) return
+        if (items && items.length > 0) {
+            element.style.display = 'block'
+            element.innerHTML = items.map(item => `<div class="studio-autotune-msg-item">${prefix} ${item}</div>`).join('')
+        } else {
+            element.style.display = 'none'
+            element.innerHTML = ''
+        }
+    }
+
+    renderMsgGroup(blockingList, blockingIssues, '❌')
+    renderMsgGroup(warningsList, warnings, '⚠️')
+    renderMsgGroup(operatorList, operatorMessages, 'ℹ️')
+
+    // 4. Aktualizacja następnego kroku
+    const nextActionVal = panel.querySelector('#studio-autotune-next-action-val')
+    if (nextActionVal) {
+        nextActionVal.textContent = autotune.next_action || 'Rozpocznij kalibrację stanowiska.'
+    }
+
+    // 5. Zarządzanie przyciskami
+    const btnStartEmpty = panel.querySelector('[data-studio-action="autotune_start"][data-scenario="empty"]')
+    const btnStartOne = panel.querySelector('[data-studio-action="autotune_start"][data-scenario="one_card"]')
+    const btnStartThree = panel.querySelector('[data-studio-action="autotune_start"][data-scenario="three_cards"]')
+    const btnCalibrate = panel.querySelector('[data-studio-action="autotune_calibrate"]')
+    const btnCancel = panel.querySelector('[data-studio-action="autotune_cancel"]')
+
+    const isIdleOrCancelled = state === 'idle' || state === 'cancelled'
+    const isCollecting = state === 'collecting'
+    const readyToScore = !!autotune.ready_to_score
+
+    if (btnStartEmpty) btnStartEmpty.disabled = !isIdleOrCancelled
+    if (btnStartOne) btnStartOne.disabled = !isIdleOrCancelled
+    if (btnStartThree) btnStartThree.disabled = !isIdleOrCancelled
+    if (btnCalibrate) btnCalibrate.disabled = !(isCollecting && readyToScore)
+    if (btnCancel) btnCancel.disabled = state === 'idle'
 }
 
 function buildStudioAutotuneProfileName() {
@@ -733,26 +859,74 @@ export function createStudioConsole() {
 
         <div class="studio-card" data-studio-section="autotune">
             <div class="studio-card__header" data-studio-accordion-toggle role="button" tabindex="0">
-                <div class="studio-card__title">Auto Tune</div>
-                <div class="studio-card__subtitle">Kalibracja warunków</div>
+                <div class="studio-card__title">Kalibracja stanowiska</div>
+                <div class="studio-card__subtitle">Asystent kalibracji</div>
                 <span class="studio-card__toggle" aria-label="Zwiń sekcję">-</span>
             </div>
             <div class="studio-card__body">
             <div class="studio-autotune-panel" id="studio-autotune-panel" data-state="idle">
                 <div class="studio-autotune-header">
-                    <span class="studio-autotune-title">Auto Tune</span>
+                    <span class="studio-autotune-title">Asystent kalibracji</span>
                     <span class="studio-autotune-state" id="studio-autotune-state">IDLE</span>
                 </div>
                 <div class="studio-autotune-actions">
-                    <button type="button" data-studio-action="autotune_start" data-scenario="empty" disabled title="Auto Tune oczekuje na integrację backendu">Pusta mata</button>
-                    <button type="button" data-studio-action="autotune_start" data-scenario="one_card" disabled title="Auto Tune oczekuje na integrację backendu">1 karta</button>
-                    <button type="button" data-studio-action="autotune_start" data-scenario="three_cards" disabled title="Auto Tune oczekuje na integrację backendu">3 karty</button>
-                    <button type="button" data-studio-action="autotune_calibrate" disabled title="Auto Tune oczekuje na integrację backendu">Skalibruj</button>
-                    <button type="button" data-studio-action="autotune_apply" disabled title="Auto Tune oczekuje na integrację backendu">Apply</button>
-                    <button type="button" data-studio-action="autotune_save" disabled title="Auto Tune oczekuje na integrację backendu">Save Profile</button>
-                    <button type="button" data-studio-action="autotune_cancel" disabled title="Auto Tune oczekuje na integrację backendu">Cancel</button>
+                    <button type="button" data-studio-action="autotune_start" data-scenario="empty" title="Rozpocznij zbieranie próbki pustej maty">Pusta mata</button>
+                    <button type="button" data-studio-action="autotune_start" data-scenario="one_card" title="Rozpocznij zbieranie próbek z jedną kartą">1 karta</button>
+                    <button type="button" data-studio-action="autotune_start" data-scenario="three_cards" title="Rozpocznij zbieranie próbek z trzema kartami">3 karty</button>
+                    <button type="button" data-studio-action="autotune_calibrate" title="Uruchom kalibrację na zebranych próbkach">Skalibruj</button>
+                    <button type="button" data-studio-action="autotune_cancel" title="Anuluj bieżącą kalibrację">Anuluj</button>
+                    <button type="button" data-studio-action="autotune_apply" style="display: none;" disabled>Apply</button>
+                    <button type="button" data-studio-action="autotune_save" style="display: none;" disabled>Save Profile</button>
                 </div>
-                <div class="studio-autotune-result" id="studio-autotune-result">Brak rekomendacji (oczekuje na integrację backendu).</div>
+                
+                <div class="studio-autotune-info">
+                    <div class="studio-autotune-info-row">
+                        <span class="studio-autotune-info-label">Scenariusz:</span>
+                        <span class="studio-autotune-info-value" id="studio-autotune-scenario-val">-</span>
+                    </div>
+                    <div class="studio-autotune-info-row">
+                        <span class="studio-autotune-info-label">Próbki:</span>
+                        <span class="studio-autotune-info-value" id="studio-autotune-samples-val">0 / 0</span>
+                    </div>
+                    <div class="studio-autotune-info-row">
+                        <span class="studio-autotune-info-label">Gotowe do oceny:</span>
+                        <span class="studio-autotune-info-value" id="studio-autotune-ready-score-val">Nie</span>
+                    </div>
+                </div>
+
+                <div class="studio-autotune-quality" id="studio-autotune-quality-section" style="display: none;">
+                    <div class="studio-autotune-subtitle">Ocena stanowiska</div>
+                    <div class="studio-autotune-info-row">
+                        <span class="studio-autotune-info-label">Wynik (Score):</span>
+                        <span class="studio-autotune-info-value" id="studio-autotune-score-val">-</span>
+                    </div>
+                    <div class="studio-autotune-info-row">
+                        <span class="studio-autotune-info-label">Ocena (Grade):</span>
+                        <span class="studio-autotune-info-value" id="studio-autotune-grade-val">-</span>
+                    </div>
+                    <div class="studio-autotune-info-row">
+                        <span class="studio-autotune-info-label">Krok gotowy:</span>
+                        <span class="studio-autotune-info-value" id="studio-autotune-step-ready-val">Nie</span>
+                    </div>
+                    <div class="studio-autotune-info-row">
+                        <span class="studio-autotune-info-label">Cały wizard gotowy:</span>
+                        <span class="studio-autotune-info-value" id="studio-autotune-wizard-ready-val">Nie</span>
+                    </div>
+                </div>
+                <div class="studio-autotune-placeholder" id="studio-autotune-quality-placeholder">
+                    Brak oceny — zbierz próbki i uruchom kalibrację.
+                </div>
+
+                <div class="studio-autotune-messages" id="studio-autotune-messages-section" style="display: none;">
+                    <div id="studio-autotune-blocking-list" class="studio-autotune-msg-group studio-autotune-msg-group--blocking" style="display: none;"></div>
+                    <div id="studio-autotune-warnings-list" class="studio-autotune-msg-group studio-autotune-msg-group--warning" style="display: none;"></div>
+                    <div id="studio-autotune-operator-list" class="studio-autotune-msg-group studio-autotune-msg-group--operator" style="display: none;"></div>
+                </div>
+
+                <div class="studio-autotune-next-action">
+                    <span class="studio-autotune-next-action-label">Następny krok:</span>
+                    <div class="studio-autotune-next-action-val" id="studio-autotune-next-action-val">Rozpocznij kalibrację stanowiska.</div>
+                </div>
             </div>
             </div>
         </div>

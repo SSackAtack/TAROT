@@ -61,3 +61,5 @@ recordings/
 secrets/
 oauth_tokens/
 
+# === Firebase ===
+.firebase/
