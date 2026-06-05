@@ -1,7 +1,7 @@
 # State of TASK-CV-STAGE-6-RWS-CALIBRATION-WIZARD-SCORING-001
 
 ## Status
-DONE
+APPROVED
 
 ## Session Status (2026-06-05)
 Zaimplementowano i pomyślnie zweryfikowano mechanizm oceniania jakości stanowiska (scoringu) w asystencie kalibracji. Stworzono dedykowany moduł oraz zintegrowano go z komendami WebSocket w `main.py`.
