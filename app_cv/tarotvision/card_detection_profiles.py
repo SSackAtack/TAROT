@@ -28,8 +28,8 @@ class MultiProfileDetectionResult:
 DEFAULT_PROFILES = [
     DetectionProfile("canny_low", "canny", canny_low=20, canny_high=80, min_area_ratio=0.001, contour_mode="list"),
     DetectionProfile("canny_default", "canny", canny_low=50, canny_high=150, min_area_ratio=0.005, contour_mode="external"),
-    DetectionProfile("adaptive_light", "adaptive_light", min_area_ratio=0.001, contour_mode="list"),
-    DetectionProfile("adaptive_dark", "adaptive_dark", min_area_ratio=0.001, contour_mode="list"),
+    DetectionProfile("adaptive_light", "adaptive_light", min_area_ratio=0.001, contour_mode="list", use_min_area_rect_fallback=True),
+    DetectionProfile("adaptive_dark", "adaptive_dark", min_area_ratio=0.001, contour_mode="list", use_min_area_rect_fallback=True),
     DetectionProfile("min_area_rect", "canny", canny_low=20, canny_high=80, min_area_ratio=0.001,
                      contour_mode="list", use_min_area_rect_fallback=True),
 ]
