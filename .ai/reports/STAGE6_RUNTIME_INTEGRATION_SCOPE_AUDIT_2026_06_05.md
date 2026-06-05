@@ -20,16 +20,16 @@ Do wdrożenia pozostały zmiany w silniku uruchomieniowym (runtime) oraz obsług
 
 | File | Classification | Runtime Risk | Suggested PR | Notes |
 |---|---|---:|---|---|
-| [tuning_protocol.py](file:///e:/Antigravity/Projekty/TAROT/app_cv/tarotvision/tuning_protocol.py) | `PR-F1_RUNTIME_PROTOCOL_ONLY` | Low | PR-F1 | Dodaje tylko definicje struktur wiadomości WebSocket. |
-| [main.py](file:///e:/Antigravity/Projekty/TAROT/app_cv/main.py) | `PR-F2_MAIN_WS_COMMANDS` | Medium-High | PR-F2 | Integracja pętli głównej i obsługa stanu autotuningu. |
-| [snapshot_first.py](file:///e:/Antigravity/Projekty/TAROT/app_cv/tarotvision/pipelines/snapshot_first.py) | `PR-F3_AUTOTUNE_RUNTIME_SESSION` | High | PR-F3 / PR-G | Łączy zapis próbek autotuningu (PR-F3) oraz detekcję zmian (PR-G). |
-| [snapshot_analyzer.py](file:///e:/Antigravity/Projekty/TAROT/app_cv/tarotvision/snapshot_analyzer.py) | `PR-F3_AUTOTUNE_RUNTIME_SESSION` | Medium | PR-F3 / PR-G | Dodaje walidację kandydatów (PR-F3) oraz obsługę ROI z detekcji zmian (PR-G). |
-| [card_recognition.py](file:///e:/Antigravity/Projekty/TAROT/app_cv/tarotvision/card_recognition.py) | `PR-F3_AUTOTUNE_RUNTIME_SESSION` | Low-Medium | PR-F3 | Dodaje funkcję debugowania z wyliczaniem metryk dopasowań. |
-| [card_candidate_validation.py](file:///e:/Antigravity/Projekty/TAROT/app_cv/tarotvision/card_candidate_validation.py) | `PR-F3_AUTOTUNE_RUNTIME_SESSION` | Low | PR-F3 | Nowy plik. Waliduje kontury pod kątem jasności, kontrastu i krawędzi. |
-| [change_detection.py](file:///e:/Antigravity/Projekty/TAROT/app_cv/tarotvision/change_detection.py) | `PR-G_EVENT_FIRST_CHANGE_DETECTION` | Low | PR-G | Nowy plik. Analizuje różnice klatek pod kątem ROI. |
-| [background_model.py](file:///e:/Antigravity/Projekty/TAROT/app_cv/tarotvision/background_model.py) | `PR-G_EVENT_FIRST_CHANGE_DETECTION` | Low | PR-G | Dodaje wyliczanie mediany i wskaźnika zmian. |
-| [operator_explainability.py](file:///e:/Antigravity/Projekty/TAROT/app_cv/tarotvision/operator_explainability.py) | `DEFER_OPERATOR_EXPLAINABILITY` | Low | Defer | Wizualizacja stanu na konsoli operatora. |
-| [live_fixture_capture.py](file:///e:/Antigravity/Projekty/TAROT/app_cv/tarotvision/live_fixture_capture.py) | `DEFER_UNKNOWN` | Low | Defer | Narzędzie do automatycznego zapisu klatek testowych. |
+| [tuning_protocol.py](../../app_cv/tarotvision/tuning_protocol.py) | `PR-F1_RUNTIME_PROTOCOL_ONLY` | Low | PR-F1 | Dodaje tylko definicje struktur wiadomości WebSocket. |
+| [main.py](../../app_cv/main.py) | `PR-F2_MAIN_WS_COMMANDS` | Medium-High | PR-F2 | Integracja pętli głównej i obsługa stanu autotuningu. |
+| [snapshot_first.py](../../app_cv/tarotvision/pipelines/snapshot_first.py) | `PR-F3_AUTOTUNE_RUNTIME_SESSION` | High | PR-F3 / PR-G | Łączy zapis próbek autotuningu (PR-F3) oraz detekcję zmian (PR-G). |
+| [snapshot_analyzer.py](../../app_cv/tarotvision/snapshot_analyzer.py) | `PR-F3_AUTOTUNE_RUNTIME_SESSION` | Medium | PR-F3 / PR-G | Dodaje walidację kandydatów (PR-F3) oraz obsługę ROI z detekcji zmian (PR-G). |
+| [card_recognition.py](../../app_cv/tarotvision/card_recognition.py) | `PR-F3_AUTOTUNE_RUNTIME_SESSION` | Low-Medium | PR-F3 | Dodaje funkcję debugowania z wyliczaniem metryk dopasowań. |
+| [card_candidate_validation.py](../../app_cv/tarotvision/card_candidate_validation.py) | `PR-F3_AUTOTUNE_RUNTIME_SESSION` | Low | PR-F3 | Nowy plik. Waliduje kontury pod kątem jasności, kontrastu i krawędzi. |
+| [change_detection.py](../../app_cv/tarotvision/change_detection.py) | `PR-G_EVENT_FIRST_CHANGE_DETECTION` | Low | PR-G | Nowy plik. Analizuje różnice klatek pod kątem ROI. |
+| [background_model.py](../../app_cv/tarotvision/background_model.py) | `PR-G_EVENT_FIRST_CHANGE_DETECTION` | Low | PR-G | Dodaje wyliczanie mediany i wskaźnika zmian. |
+| [operator_explainability.py](../../app_cv/tarotvision/operator_explainability.py) | `DEFER_OPERATOR_EXPLAINABILITY` | Low | Defer | Wizualizacja stanu na konsoli operatora. |
+| [live_fixture_capture.py](../../app_cv/tarotvision/live_fixture_capture.py) | `DEFER_UNKNOWN` | Low | Defer | Narzędzie do automatycznego zapisu klatek testowych. |
 
 ## app_cv/main.py Analysis
 * **Liczba dodanych linii:** 235 linii.
