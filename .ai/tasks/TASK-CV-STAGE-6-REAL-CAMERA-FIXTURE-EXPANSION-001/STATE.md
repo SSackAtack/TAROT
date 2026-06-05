@@ -29,7 +29,7 @@ APPROVED_RWS_EXPANSION_FIXTURE_OFFLINE_ONLY
 
 ## Manual Review Pack Information
 
-- **ZIP Path:** `E:\Antigravity\Projekty\TAROT\logs\offline_replay\stage6_real_camera_fixture_expansion_rws_minimal_manual_review_pack.zip`
+- **ZIP Path:** `logs/offline_replay/stage6_real_camera_fixture_expansion_rws_minimal_manual_review_pack.zip` (Local artifact only, not committed.)
 - **SHA-256:** `1DE6E7FE4750ECBFE1DCFD092B05149B7D6503D40E7BB746B3B3D52C965B1DA8`
 - **Sample Count:** `8`
 - **Preflight Status:** `PASS`

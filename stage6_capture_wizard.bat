@@ -5,6 +5,7 @@ title TarotVision Stage 6 - Minimal RWS Expansion
 color 0E
 cd /d "%~dp0"
 
+rem Fallback deweloperski na wypadek braku lokalnych zależności w Pythonie
 set "PYTHONPATH=C:\tmp\tarot_pydeps_stage6;C:\tmp\tarot_pydeps;%~dp0app_cv;%~dp0"
 set "EXPANSION_WIZARD=tools\cv_detection_lab\stage6_real_camera_fixture_expansion_wizard.py"
 set "LEGACY_WIZARD=tools\cv_detection_lab\stage6_real_camera_capture_wizard.py"
