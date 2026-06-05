@@ -47,11 +47,11 @@ class CameraSession:
     def _open_capture(self, index):
         if platform.system() == "Windows":
             capture = cv2.VideoCapture(index, cv2.CAP_DSHOW)
-            if capture.isOpened():
+            if capture.isOpened() and self._capture_has_visible_frames(capture):
                 logging.info("[CameraSession] Kamera otwarta przez backend DirectShow.")
                 return capture
             capture.release()
-            logging.warning("[CameraSession] DirectShow nie otworzył kamery, używam domyślnego backendu OpenCV.")
+            logging.warning("[CameraSession] DirectShow nie otworzył kamery albo zwraca czarne klatki, używam domyślnego backendu OpenCV.")
         return cv2.VideoCapture(index)
 
     def is_opened(self):
@@ -189,6 +189,16 @@ class CameraSession:
         if shape is None or len(shape) < 2:
             return False
         return shape[1] != self.camera_width or shape[0] != self.camera_height
+
+    def _capture_has_visible_frames(self, capture, sample_count=3, min_mean_gray=1.0):
+        for _ in range(sample_count):
+            ok, frame = capture.read()
+            if not ok or frame is None:
+                continue
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            if float(gray.mean()) >= min_mean_gray:
+                return True
+        return False
 
     def _save_settings(self):
         """Zapisuje obecne ustawienia sprzętowe kamery do pliku."""

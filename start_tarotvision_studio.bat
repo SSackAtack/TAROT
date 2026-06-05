@@ -24,24 +24,24 @@ echo [%date% %time%] Studio launcher start; deck fallback: %TAROTVISION_DECK% >>
 echo.
 
 echo ============================================================
-echo [0/4] Weryfikacja dostępności portu 5173...
+echo [0/4] Weryfikacja dostępności portów 5173, 8765 i 8766...
 echo ============================================================
-powershell -Command "$conn = Get-NetTCPConnection -LocalPort 5173 -ErrorAction SilentlyContinue; if ($conn) { exit 1 } else { exit 0 }"
+powershell -Command "$conn = Get-NetTCPConnection -LocalPort 5173,8765,8766 -ErrorAction SilentlyContinue; if ($conn) { exit 1 } else { exit 0 }"
 if errorlevel 1 goto PORT_BUSY
 
-echo [OK] Port 5173 jest wolny. Kontynuuję...
+echo [OK] Porty 5173, 8765 i 8766 są wolne. Kontynuuję...
 echo.
 goto START_SERVERS
 
 :PORT_BUSY
 color 0C
 echo.
-echo ⚠️  [OSTRZEŻENIE] Port 5173 jest obecnie ZAJĘTY!
-echo Prawdopodobnie inna sesja deweloperska (Vite / Node) działa w tle.
+echo ⚠️  [OSTRZEŻENIE] Port 5173, 8765 albo 8766 jest obecnie ZAJĘTY!
+echo Prawdopodobnie inna sesja Studio/CV/Vite działa w tle.
 echo.
 echo Konsekwencje kontynuacji:
-echo Nowa sesja Vite wystartuje na porcie 5174, a przeglądarka spróbuje
-echo otworzyć port 5173. Spowoduje to brak połączenia z nowym systemem!
+echo Nowa sesja może nie wystartować albo wystartować na innym porcie,
+echo a Studio może połączyć się ze starą sesją backendu bez obrazu.
 echo.
 echo Wybierz akcję:
 echo ------------------------------------------------------------
@@ -61,8 +61,8 @@ goto ABORT_LAUNCH
 
 :KILL_PORT_PROCESS
 echo.
-echo [INFO] Zamykam wiszące procesy na porcie 5173...
-powershell -Command "$proc = Get-NetTCPConnection -LocalPort 5173 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique; foreach ($p in $proc) { Stop-Process -Id $p -Force -ErrorAction SilentlyContinue; Write-Host 'Zatrzymano proces o ID' $p }"
+echo [INFO] Zamykam wiszące procesy na portach 5173, 8765 i 8766...
+powershell -Command "$proc = Get-NetTCPConnection -LocalPort 5173,8765,8766 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique; foreach ($p in $proc) { if ($p -ne 0) { Stop-Process -Id $p -Force -ErrorAction SilentlyContinue; Write-Host 'Zatrzymano proces o ID' $p } }"
 echo [INFO] Odczekanie 2 sekund na zwolnienie portu...
 timeout /t 2 /nobreak >nul
 color 0E

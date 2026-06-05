@@ -85,7 +85,7 @@ Ten plik stanowi centralny rejestr wszystkich zadań (Tasks) realizowanych w pro
 | **TASK-CV-STAGE-6-CALIBRATION-WIZARD-ONE-CARD-DIAGNOSTIC-001** | `DONE` | `master` | Gemini | Diagnoza i naprawa kalibracji dla scenariusza one_card i three_cards | 2026-06-05 | Zweryfikowano jednostkowo (421/421 PASS), oczekuje na smoke test |
 | **TASK-CV-STAGE-6-CALIBRATION-WIZARD-RESAMPLE-GATE-DIAGNOSTIC-001** | `DONE` | `master` | Gemini | Diagnoza i poprawka ponownego zbierania próbek w kreatorze kalibracji | 2026-06-05 | DIAGNOSTICS_VERIFIED_GEOMETRY_FOLLOWUP_REQUIRED (PR #29 + physical smoke diagnostic PASS) |
 | **TASK-CV-STAGE-6-CALIBRATION-WIZARD-ONE-CARD-GEOMETRY-STABILIZATION-001** | `GEOMETRY_VERIFIED_RECOGNITION_FOLLOWUP_REQUIRED` | `task/cv-stage-6-calibration-wizard-one-card-geometry-stabilization-001` | Gemini/Codex | Stabilizacja detekcji geometrycznej one_card w kreatorze kalibracji | 2026-06-05 | Nie gotowe do merge; następny blocker: deck config / recognition acceptance |
-| **TASK-CV-STAGE-6-CALIBRATION-WIZARD-ONE-CARD-RECOGNITION-ACCEPTANCE-001** | `IN_PROGRESS` | `task/cv-stage-6-calibration-wizard-one-card-recognition-acceptance-001` | Codex/Gemini | Diagnostyka recognition acceptance dla jednej karty Gilded po ustabilizowanej geometrii | 2026-06-05 | Diagnostyka recognition_debug wdrożona; czeka na świeży smoke z ruchem |
+| **TASK-CV-STAGE-6-CALIBRATION-WIZARD-ONE-CARD-RECOGNITION-ACCEPTANCE-001** | `IN_PROGRESS` | `task/cv-stage-6-calibration-wizard-one-card-recognition-acceptance-001` | Codex/Gemini | Diagnostyka recognition acceptance dla jednej karty Gilded po ustabilizowanej geometrii | 2026-06-05 | recognition_debug wdrożone; naprawiono czarny preview kamery i konflikt portów; czeka na świeży smoke z ruchem |
 
 ---
 

@@ -74,7 +74,7 @@ def make_preview_handler(frame_store):
                     self.wfile.write(jpeg)
                     self.wfile.write(b"\r\n")
                     time.sleep(0.1)
-                except (BrokenPipeError, ConnectionResetError):
+                except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError, OSError):
                     break
 
     return PreviewHandler

@@ -34,6 +34,17 @@ $env:PYTHONPATH='app_cv'; python -m unittest app_cv.tests.test_autotune_pipeline
 => PASS
 ```
 
+Current session verification:
+
+```text
+cd app_cv
+python -m unittest tests.test_camera_session tests.test_studio_launcher_static
+=> PASS (15 tests)
+
+python -m unittest discover tests
+=> PASS (431 tests)
+```
+
 ## Smoke / diagnostyka fizyczna
 
 Punkt wejścia z poprzedniego taska:
@@ -63,6 +74,18 @@ MSMF camera issue:
 - DirectShow raw resolution check: camera reported 1920x1080 despite requested 1280x720.
 - Runtime resize check: after resize fallback, log reported `Kamera 0 otwarta. Rozdzielczość: 1280x720`.
 - Port conflict check: `WinError 10048` was caused by two local `python main.py` processes; after stopping both, backend listened on `8765` normally.
+
+No-image / black preview issue:
+
+- MJPEG endpoint check before camera backend fallback: endpoint returned valid JPEG frames, but first frame was fully black (`mean_gray=0.0`, min/max `0/0`).
+- Local backend comparison:
+  - `CAP_ANY`: opened, 1280x720, `mean_gray=58.08`.
+  - `CAP_DSHOW`: opened, 1920x1080, `mean_gray=0.0`.
+  - `CAP_MSMF`: opened, 1280x720, `mean_gray=53.65`.
+- After DirectShow-black fallback and backend restart:
+  - MJPEG first frame: 960x540, `mean_gray=53.8`, min/max `0/246`.
+  - Studio preview rendered real camera image in PiP.
+- Launcher regression covered by static test: ports `5173`, `8765`, `8766` are checked together.
 
 ## Zakres
 

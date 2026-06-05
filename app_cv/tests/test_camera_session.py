@@ -17,6 +17,7 @@ class TestCameraSession(unittest.TestCase):
 
     @patch('cv2.VideoCapture')
     def test_open_success(self, mock_vc_class):
+        self.session._capture_has_visible_frames = MagicMock(return_value=True)
         mock_vc = MagicMock()
         mock_vc.isOpened.return_value = True
         mock_vc.get.side_effect = lambda prop_id: 1280 if prop_id == 3 else (720 if prop_id == 4 else -1.0)
@@ -30,10 +31,12 @@ class TestCameraSession(unittest.TestCase):
         self.assertEqual(self.session.frame_width, 1280)
         self.assertEqual(self.session.frame_height, 720)
 
+    @patch('tarotvision.camera.camera_session.CameraSession._capture_has_visible_frames')
     @patch('tarotvision.camera.camera_session.platform.system')
     @patch('cv2.VideoCapture')
-    def test_open_uses_directshow_backend_on_windows(self, mock_vc_class, mock_system):
+    def test_open_uses_directshow_backend_on_windows(self, mock_vc_class, mock_system, mock_visible):
         mock_system.return_value = "Windows"
+        mock_visible.return_value = True
         mock_vc = MagicMock()
         mock_vc.isOpened.return_value = True
         mock_vc.get.side_effect = lambda prop_id: 1280 if prop_id == 3 else (720 if prop_id == 4 else -1.0)
@@ -44,10 +47,12 @@ class TestCameraSession(unittest.TestCase):
         self.assertTrue(opened)
         mock_vc_class.assert_called_once_with(0, 700)
 
+    @patch('tarotvision.camera.camera_session.CameraSession._capture_has_visible_frames')
     @patch('tarotvision.camera.camera_session.platform.system')
     @patch('cv2.VideoCapture')
-    def test_configure_capture_prefers_mjpg_before_resolution_on_windows(self, mock_vc_class, mock_system):
+    def test_configure_capture_prefers_mjpg_before_resolution_on_windows(self, mock_vc_class, mock_system, mock_visible):
         mock_system.return_value = "Windows"
+        mock_visible.return_value = True
         mock_vc = MagicMock()
         mock_vc.isOpened.return_value = True
         mock_vc.get.side_effect = lambda prop_id: 1280 if prop_id == 3 else (720 if prop_id == 4 else -1.0)
@@ -64,12 +69,36 @@ class TestCameraSession(unittest.TestCase):
         self.assertLess(fourcc_index, width_index)
         self.assertLess(fourcc_index, height_index)
 
+    @patch('tarotvision.camera.camera_session.CameraSession._capture_has_visible_frames')
     @patch('tarotvision.camera.camera_session.platform.system')
     @patch('cv2.VideoCapture')
-    def test_open_falls_back_to_default_backend_when_directshow_fails(self, mock_vc_class, mock_system):
+    def test_open_falls_back_to_default_backend_when_directshow_fails(self, mock_vc_class, mock_system, mock_visible):
         mock_system.return_value = "Windows"
+        mock_visible.return_value = False
         dshow_capture = MagicMock()
         dshow_capture.isOpened.return_value = False
+        default_capture = MagicMock()
+        default_capture.isOpened.return_value = True
+        default_capture.get.side_effect = lambda prop_id: 1280 if prop_id == 3 else (720 if prop_id == 4 else -1.0)
+        mock_vc_class.side_effect = [dshow_capture, default_capture]
+
+        opened = self.session.open(0)
+
+        self.assertTrue(opened)
+        self.assertEqual(mock_vc_class.call_count, 2)
+        mock_vc_class.assert_any_call(0, 700)
+        mock_vc_class.assert_any_call(0)
+        dshow_capture.release.assert_called_once()
+        self.assertIs(self.session.capture, default_capture)
+
+    @patch('tarotvision.camera.camera_session.CameraSession._capture_has_visible_frames')
+    @patch('tarotvision.camera.camera_session.platform.system')
+    @patch('cv2.VideoCapture')
+    def test_open_falls_back_to_default_backend_when_directshow_returns_black_frames(self, mock_vc_class, mock_system, mock_visible):
+        mock_system.return_value = "Windows"
+        mock_visible.return_value = False
+        dshow_capture = MagicMock()
+        dshow_capture.isOpened.return_value = True
         default_capture = MagicMock()
         default_capture.isOpened.return_value = True
         default_capture.get.side_effect = lambda prop_id: 1280 if prop_id == 3 else (720 if prop_id == 4 else -1.0)
@@ -97,6 +126,7 @@ class TestCameraSession(unittest.TestCase):
 
     @patch('cv2.VideoCapture')
     def test_read(self, mock_vc_class):
+        self.session._capture_has_visible_frames = MagicMock(return_value=True)
         mock_vc = MagicMock()
         mock_vc.isOpened.return_value = True
         mock_vc.read.return_value = (True, "fake_frame")
@@ -111,6 +141,7 @@ class TestCameraSession(unittest.TestCase):
     @patch('cv2.resize')
     @patch('cv2.VideoCapture')
     def test_read_resizes_frame_when_camera_ignores_requested_resolution(self, mock_vc_class, mock_resize):
+        self.session._capture_has_visible_frames = MagicMock(return_value=True)
         frame = MagicMock()
         frame.shape = (1080, 1920, 3)
         resized = MagicMock()
@@ -134,6 +165,7 @@ class TestCameraSession(unittest.TestCase):
 
     @patch('cv2.VideoCapture')
     def test_close_saves_settings(self, mock_vc_class):
+        self.session._capture_has_visible_frames = MagicMock(return_value=True)
         mock_vc = MagicMock()
         mock_vc.isOpened.return_value = True
         # Zwraca 50.0 dla FOCUS i 1.0 dla AUTOFOCUS
@@ -155,6 +187,7 @@ class TestCameraSession(unittest.TestCase):
 
     @patch('cv2.VideoCapture')
     def test_switch_camera(self, mock_vc_class):
+        self.session._capture_has_visible_frames = MagicMock(return_value=True)
         mock_vc1 = MagicMock()
         mock_vc1.isOpened.return_value = True
         
@@ -177,6 +210,7 @@ class TestCameraSession(unittest.TestCase):
 
     @patch('cv2.VideoCapture')
     def test_set_control(self, mock_vc_class):
+        self.session._capture_has_visible_frames = MagicMock(return_value=True)
         mock_vc = MagicMock()
         mock_vc.isOpened.return_value = True
         mock_vc_class.return_value = mock_vc
@@ -190,6 +224,7 @@ class TestCameraSession(unittest.TestCase):
 
     @patch('cv2.VideoCapture')
     def test_save_settings_prefers_operator_set_value_over_stale_readback(self, mock_vc_class):
+        self.session._capture_has_visible_frames = MagicMock(return_value=True)
         mock_vc = MagicMock()
         mock_vc.isOpened.return_value = True
         mock_vc.get.side_effect = lambda prop_id: 0.0 if prop_id == 28 else -1.0

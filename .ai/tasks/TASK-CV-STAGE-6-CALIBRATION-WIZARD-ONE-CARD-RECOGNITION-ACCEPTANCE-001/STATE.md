@@ -22,6 +22,10 @@ Po hotfixie DirectShow kamera sprzętowo zgłaszała surowe 1920x1080 mimo żąd
 
 Zgłoszony `WinError 10048` na porcie `8765` wynikał z dwóch równoległych procesów `python main.py`; stara instancja trzymała WebSocket. Procesy zostały zamknięte i backend po czystym restarcie poprawnie nasłuchuje na `8765`.
 
+Następna diagnoza braku obrazu wykazała, że endpoint MJPEG działał i zwracał poprawne JPEG-i, ale DirectShow dawał klatki całkowicie czarne (`mean_gray=0.0`). Ten sam indeks kamery przez domyślny backend OpenCV/MSMF dawał normalny obraz (`mean_gray~54-58`). `CameraSession` został więc uodporniony: DirectShow jest akceptowany tylko wtedy, gdy próbne klatki nie są czarne; w przeciwnym razie następuje fallback do domyślnego backendu. Po restarcie backendu preview zwróciło `mean_gray=53.8`, a Studio pokazało realny obraz.
+
+Launcher Studio został rozszerzony o kontrolę portów `5173`, `8765` i `8766`, ponieważ konflikt dotyczył nie tylko Vite, ale też WebSocket i MJPEG preview backendu. MJPEG preview obsługuje teraz także normalne przerwanie połączenia klienta bez czerwonego tracebacka.
+
 ## Session Status (2026-06-05)
 
 - Utworzono zakres diagnostyczny nowego taska.
@@ -34,10 +38,14 @@ Zgłoszony `WinError 10048` na porcie `8765` wynikał z dwóch równoległych pr
 - Dodano DirectShow-first fallback dla kamery na Windows po powtarzalnym błędzie MSMF `grabFrame`.
 - Dodano skalowanie klatek w runtime do 1280x720, gdy sterownik DirectShow ignoruje żądaną rozdzielczość.
 - Zdiagnozowano i usunięto lokalny konflikt portu `8765` spowodowany dwoma procesami `python main.py`.
+- Zdiagnozowano czarny obraz: DirectShow zwracał czarne klatki, a domyślny backend/MSMF zwracał obraz.
+- Dodano fallback z DirectShow do domyślnego backendu, gdy próbne klatki są czarne.
+- Rozszerzono launcher Studio o kontrolę portów `5173`, `8765`, `8766`.
+- Uciszono traceback MJPEG przy normalnym zerwaniu połączenia klienta.
 
 ## Kolejne kroki
 
-1. Uruchomić backend/launcher po hotfixie i potwierdzić brak nowych ostrzeżeń MSMF `grabFrame`.
+1. Przy kolejnym uruchomieniu użyć `.bat`; jeśli wykryje zajęte porty `5173/8765/8766`, wybrać opcję automatycznego zatrzymania starej sesji.
 2. Fizycznie poruszyć kartą/ręką nad stołem i odłożyć kartę Gilded stabilnie na 2-3 sekundy podczas aktywnego scenariusza `one_card`.
 3. Sprawdzić nowy plik `logs/autotune_sessions/*one_card*sample_collected.json` albo `*recommendation_ready.json`.
 4. Na podstawie `recognition_debug` określić root cause: `not_enough_crop_descriptors`, `insufficient_good_matches`, `insufficient_inlier_ratio` albo inny powód.

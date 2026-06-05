@@ -27,6 +27,12 @@ class StudioLauncherStaticTest(unittest.TestCase):
         self.assertIn("set TAROTVISION_DECK=%TAROTVISION_DECK%", source)
         self.assertIn("Aktywne talie wybierasz w Studio", source)
 
+    def test_studio_launcher_checks_frontend_websocket_and_preview_ports(self):
+        source = self._read_launcher()
+
+        self.assertIn("Get-NetTCPConnection -LocalPort 5173,8765,8766", source)
+        self.assertIn("portach 5173, 8765 i 8766", source)
+
 
 if __name__ == "__main__":
     unittest.main()
