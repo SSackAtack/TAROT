@@ -1,7 +1,7 @@
 # State of TASK-CV-STAGE-6-RWS-CALIBRATION-WIZARD-STATUS-SNAPSHOT-001
 
 ## Status
-DONE
+APPROVED
 
 ## Session Status (2026-06-05)
 Uporządkowano i ustabilizowano kontrakt danych statusu WebSocket dla asystenta kalibracji. Wydzielono czysty moduł budowania statusu i zintegrowano go z runtime.

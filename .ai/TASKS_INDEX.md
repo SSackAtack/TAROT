@@ -77,7 +77,7 @@ Ten plik stanowi centralny rejestr wszystkich zadań (Tasks) realizowanych w pro
 | **TASK-CV-STAGE-6-RWS-AUTOTUNE-RUNTIME-COMMANDS-001** | `APPROVED` | `master` | Gemini | Wdrożenie szkieletu komend WebSocket Autotune w runtime (etap 2 PR-F) | 2026-06-05 | APPROVED BY CHATGPT SUPERVISOR |
 | **TASK-CV-STAGE-6-RWS-CALIBRATION-WIZARD-SAMPLE-CAPTURE-001** | `APPROVED` | `master` | Gemini | Podłączenie kontrolowanego zbierania próbek jakościowych z pipeline CV (PR-F3A) | 2026-06-05 | APPROVED BY CHATGPT SUPERVISOR |
 | **TASK-CV-STAGE-6-RWS-CALIBRATION-WIZARD-SCORING-001** | `APPROVED` | `master` | Gemini | Ocenianie jakości próbek asystenta kalibracji stanowiska (PR-F3B) | 2026-06-05 | APPROVED BY CHATGPT SUPERVISOR |
-| **TASK-CV-STAGE-6-RWS-CALIBRATION-WIZARD-STATUS-SNAPSHOT-001** | `DONE` | `task/cv-stage-6-rws-calibration-wizard-status-snapshot` | Gemini | Ustabilizowanie backendowego status snapshot dla Calibration Wizard | 2026-06-05 | Testy targeted, suite oraz smoke test PASS |
+| **TASK-CV-STAGE-6-RWS-CALIBRATION-WIZARD-STATUS-SNAPSHOT-001** | `APPROVED` | `master` | Gemini | Ustabilizowanie backendowego status snapshot dla Calibration Wizard | 2026-06-05 | APPROVED BY CHATGPT SUPERVISOR |
 
 ---
 
