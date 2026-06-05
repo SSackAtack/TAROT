@@ -28,6 +28,9 @@ from tarotvision.preview import OpenCvPreview
 from tarotvision.pipelines import SnapshotFirstPipeline
 from tarotvision.frame_stream import LatestFrameStore, start_preview_server
 from tarotvision.operator_explainability import build_cv_explainability
+from tarotvision.autotune_session import AutotuneSession
+from tarotvision.autotune_session_log import AutotuneSessionLog
+from tarotvision.autotune_profiles import generate_candidate_profiles
 
 # Konfiguracja
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -58,11 +61,27 @@ control_messages = []
 config_session = RuntimeConfigSession()
 runtime_config = config_session.config
 operator_warnings = []
-calibration_state = {"state": "idle", "last_score": None}
+calibration_state = {
+    "state": "idle",
+    "last_score": None,
+    "autotune": {
+        "scenario": None,
+        "state": "idle",
+        "collected_count": 0,
+        "required_count": 3,
+        "ready_to_score": False,
+        "recommendation": None,
+        "last_score": None,
+        "next_action": "Rozpocznij autotuning z poziomu konsoli."
+    }
+}
 profile_store = ProfileStore(os.path.join(LOG_DIR, "calibration_profiles"))
+autotune_session_log = AutotuneSessionLog(os.path.join(LOG_DIR, "autotune_sessions"))
 active_tuning_profile = "default"
 background_model = BackgroundModel()
 pending_background_capture = False
+autotune_session = None
+autotune_candidate_profiles = []
 
 # Inicjalizacja DiagnosticsWriter, CameraSession i OpenCvPreview
 reset_logs = os.environ.get("TAROTVISION_RESET_LOGS") == "1"
@@ -85,6 +104,8 @@ def log_event(message):
 
 
 def build_operator_snapshot(cards=None, metrics=None, runtime=None, layout=None, warnings=None):
+    calibration = copy.deepcopy(calibration_state)
+    calibration["autotune"] = autotune_status_payload()
     return {
         "enabled": True,
         "active_profile": active_tuning_profile,
@@ -92,7 +113,7 @@ def build_operator_snapshot(cards=None, metrics=None, runtime=None, layout=None,
         "parameter_metadata": runtime_config.metadata(),
         "pending_changes": copy.deepcopy(config_session.pending_changes),
         "supported_camera_controls": copy.deepcopy(camera_session.supported_camera_controls),
-        "calibration": copy.deepcopy(calibration_state),
+        "calibration": calibration,
         "warnings": list(operator_warnings[-8:]),
         "explainability": build_cv_explainability(
             cards=cards or [],
@@ -110,10 +131,85 @@ def add_operator_warning(message):
     log_event(f"[OPERATOR] {message}")
 
 
+def autotune_status_payload():
+    if autotune_session is None:
+        return {
+            "scenario": None,
+            "state": "idle",
+            "collected_count": 0,
+            "required_count": 3,
+            "ready_to_score": False,
+            "recommendation": None,
+            "last_score": None,
+            "next_action": "Rozpocznij autotuning z poziomu konsoli."
+        }
+    
+    scenario = autotune_session.current_scenario()
+    samples = autotune_session.samples.get(scenario, []) if scenario else []
+    
+    return {
+        "scenario": scenario,
+        "state": autotune_session.state,
+        "collected_count": len(samples),
+        "required_count": autotune_session.samples_per_scenario,
+        "ready_to_score": autotune_session.ready_to_score(),
+        "recommendation": autotune_session.recommendation,
+        "last_score": autotune_session.recommendation["score"] if autotune_session.recommendation else None,
+        "next_action": autotune_session.next_action()
+    }
+
+
+def current_active_decks():
+    return status_store.get_status().get("operator", {}).get("active_decks", [])
+
+
+def write_autotune_log(event, recommendation=None, profile_name=None):
+    if autotune_session is None:
+        return None
+    try:
+        return autotune_session_log.write_event(
+            event=event,
+            session=autotune_session,
+            active_decks=current_active_decks(),
+            runtime_parameters=runtime_config.values,
+            recommendation=recommendation,
+            profile_name=profile_name,
+        )
+    except OSError as exc:
+        add_operator_warning(f"Nie zapisano logu autotuningu: {exc}")
+        return None
+
+
+def update_autotune_recommendation_from_samples():
+    global calibration_state
+    if autotune_session is None or not autotune_session.ready_to_score():
+        return None
+
+    samples = autotune_session.all_samples()
+    profile_results = [
+        {"profile": profile, "samples": samples}
+        for profile in autotune_candidate_profiles
+    ]
+    from tarotvision.autotune_scoring import choose_best_profile_result
+    best = choose_best_profile_result(profile_results)
+    if best is None:
+        return None
+
+    autotune_session.set_recommendation(best)
+    calibration_state = {
+        "state": "recommendation_ready",
+        "last_score": best["score"],
+        "autotune": autotune_status_payload(),
+    }
+    return best
+
+
 def handle_control_message(message, camera_session):
     global calibration_state
     global active_tuning_profile
     global pending_background_capture
+    global autotune_session
+    global autotune_candidate_profiles
 
     if message.type == "tuning_update":
         try:
@@ -140,7 +236,7 @@ def handle_control_message(message, camera_session):
         return
 
     if message.type == "profile_apply":
-        values = profile_store.load(message.name)
+        values = profile_store.load_parameters(message.name)
         for param_name, value in values.items():
             runtime_config.update(param_name, value)
         config_session.commit_stable()
@@ -179,6 +275,78 @@ def handle_control_message(message, camera_session):
     if message.type == "calibration_cancel":
         calibration_state = {"state": "idle", "last_score": None}
         add_operator_warning("Anulowano kalibracje")
+        return
+
+    if message.type == "autotune_start":
+        autotune_session = AutotuneSession(
+            required_scenarios=(message.scenario,),
+            samples_per_scenario=3,
+        )
+        if message.scenario == "empty":
+            background_model.clear()
+        autotune_candidate_profiles = generate_candidate_profiles()
+        calibration_state = {
+            "state": "collecting",
+            "last_score": None,
+            "autotune": autotune_status_payload(),
+        }
+        write_autotune_log("stage_started")
+        add_operator_warning(f"Autotuning: zbieram probki scenariusza {message.scenario}")
+        return
+
+    if message.type == "autotune_calibrate":
+        if autotune_session is None or not autotune_session.ready_to_score():
+            add_operator_warning("Brak kompletnych probek autotuningu do kalibracji")
+            return
+        recommendation = update_autotune_recommendation_from_samples()
+        write_autotune_log("recommendation_ready", recommendation=recommendation)
+        if recommendation is not None:
+            add_operator_warning(
+                f"Autotuning: rekomendacja gotowa "
+                f"(score={recommendation['score']:.3f}, confidence={recommendation['confidence']})"
+            )
+        return
+
+    if message.type == "autotune_cancel":
+        write_autotune_log("cancelled")
+        autotune_session = None
+        autotune_candidate_profiles = []
+        calibration_state = {
+            "state": "idle",
+            "last_score": None,
+            "autotune": autotune_status_payload(),
+        }
+        add_operator_warning("Anulowano autotuning")
+        return
+
+    if message.type == "autotune_apply":
+        if autotune_session is None or not autotune_session.recommendation:
+            add_operator_warning("Brak rekomendacji autotuningu do zastosowania")
+            return
+        for param_name, value in autotune_session.recommendation["profile"].items():
+            config_session.update(param_name, value)
+        config_session.commit_stable()
+        calibration_state = {
+            "state": "applied",
+            "last_score": autotune_session.recommendation["score"],
+            "autotune": autotune_status_payload(),
+        }
+        write_autotune_log("applied", recommendation=autotune_session.recommendation)
+        add_operator_warning("Zastosowano rekomendacje autotuningu")
+        return
+
+    if message.type == "autotune_save":
+        if autotune_session is None or not autotune_session.recommendation:
+            add_operator_warning("Brak rekomendacji autotuningu do zapisania")
+            return
+        profile_store.save_autotune_recommendation(message.name, autotune_session.recommendation)
+        active_tuning_profile = message.name
+        write_autotune_log(
+            "saved",
+            recommendation=autotune_session.recommendation,
+            profile_name=message.name,
+        )
+        add_operator_warning(f"Zapisano rekomendacje autotuningu jako profil {message.name}")
         return
 
     if message.type == "background_capture":
