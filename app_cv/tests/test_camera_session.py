@@ -138,6 +138,44 @@ class TestCameraSession(unittest.TestCase):
         self.assertTrue(success)
         self.assertEqual(frame, "fake_frame")
 
+    @patch('cv2.VideoCapture')
+    def test_read_resets_failed_read_count_after_success(self, mock_vc_class):
+        self.session._capture_has_visible_frames = MagicMock(return_value=True)
+        mock_vc = MagicMock()
+        mock_vc.isOpened.return_value = True
+        mock_vc.read.return_value = (True, "fake_frame")
+        mock_vc_class.return_value = mock_vc
+
+        self.session.open(0)
+        self.session.failed_read_count = 3
+        success, frame = self.session.read()
+
+        self.assertTrue(success)
+        self.assertEqual(frame, "fake_frame")
+        self.assertEqual(self.session.failed_read_count, 0)
+
+    @patch('tarotvision.camera.camera_session.time.sleep')
+    @patch('cv2.VideoCapture')
+    def test_read_reopens_camera_after_consecutive_failures(self, mock_vc_class, mock_sleep):
+        self.session._capture_has_visible_frames = MagicMock(return_value=True)
+        self.session.reopen_after_failed_reads = 2
+        initial_capture = MagicMock()
+        initial_capture.isOpened.return_value = True
+        initial_capture.read.return_value = (False, None)
+        reopened_capture = MagicMock()
+        reopened_capture.isOpened.return_value = True
+        reopened_capture.get.side_effect = lambda prop_id: 1280 if prop_id == 3 else (720 if prop_id == 4 else -1.0)
+        mock_vc_class.side_effect = [initial_capture, reopened_capture]
+
+        self.session.open(0)
+        self.session.read()
+        self.session.read()
+
+        initial_capture.release.assert_called_once()
+        self.assertIs(self.session.capture, reopened_capture)
+        self.assertEqual(self.session.failed_read_count, 0)
+        self.assertEqual(mock_vc_class.call_count, 2)
+
     @patch('cv2.resize')
     @patch('cv2.VideoCapture')
     def test_read_resizes_frame_when_camera_ignores_requested_resolution(self, mock_vc_class, mock_resize):

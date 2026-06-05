@@ -43,6 +43,9 @@ python -m unittest tests.test_camera_session tests.test_studio_launcher_static
 
 python -m unittest discover tests
 => PASS (431 tests)
+
+python -m unittest tests.test_camera_session
+=> PASS (14 tests, after camera read auto-reopen)
 ```
 
 ## Smoke / diagnostyka fizyczna
@@ -86,6 +89,26 @@ No-image / black preview issue:
   - MJPEG first frame: 960x540, `mean_gray=53.8`, min/max `0/246`.
   - Studio preview rendered real camera image in PiP.
 - Launcher regression covered by static test: ports `5173`, `8765`, `8766` are checked together.
+
+ONE_CARD live smoke after Gilded deck confirmation:
+
+- Stage: `one_card`.
+- Samples collected: `3/3`.
+- Final `stage_result`: PASS.
+- Message: `1 karta poprawna: wykryto i zaakceptowano jedna karte.`
+- `accepted_total`: 3.
+- `false_positive_total`: 0.
+- Per-sample diagnostics:
+  - sample 1: `detected_count=1`, `accepted_count=1`, confidence `0.333`, top match `Gilded_56`, `recognition_rejections=0`.
+  - sample 2: `detected_count=1`, `accepted_count=1`, confidence `0.407`, top match `Gilded_73`, `recognition_rejections=0`.
+  - sample 3: `detected_count=1`, `accepted_count=1`, confidence `0.627`, top match `Gilded_73`, `recognition_rejections=0`.
+- Recommendation confidence: LOW, reason `accepted_cards_reward`.
+- Next action from wizard: `Przejdz do testu 3 karty.`
+
+MSMF warning follow-up:
+
+- Symptom persisted during runtime despite successful sample collection: repeated `CvCapture_MSMF::grabFrame ... can't grab frame`.
+- Added unit-covered `CameraSession` recovery: after consecutive failed reads, release and reopen current camera index; reset counter on the next successful frame.
 
 ## Zakres
 

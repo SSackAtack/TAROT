@@ -26,6 +26,10 @@ Następna diagnoza braku obrazu wykazała, że endpoint MJPEG działał i zwraca
 
 Launcher Studio został rozszerzony o kontrolę portów `5173`, `8765` i `8766`, ponieważ konflikt dotyczył nie tylko Vite, ale też WebSocket i MJPEG preview backendu. MJPEG preview obsługuje teraz także normalne przerwanie połączenia klienta bez czerwonego tracebacka.
 
+Po fizycznym smoke teście Gilded `one_card` zebrał 3/3 próbki i po komendzie `autotune_calibrate` przeszedł jako `PASS`. Każda próbka miała `detected_count=1`, `accepted_count=1`, `recognition_rejections=0`; finalnie `accepted_total=3`, `false_positive_total=0`. Recognition acceptance dla tej konfiguracji nie jest już blockerem w scenariuszu `one_card`.
+
+Mimo udanego smoke testu runtime nadal potrafił spamować ostrzeżeniami MSMF `grabFrame` przy nieudanych odczytach. Dodano mechanizm samonaprawy `CameraSession`: po serii kolejnych nieudanych odczytów kamera jest przeotwierana na tym samym indeksie, a pojedyncze krótkie niepowodzenia są lekko throttlowane, żeby ograniczyć pętlę błędów.
+
 ## Session Status (2026-06-05)
 
 - Utworzono zakres diagnostyczny nowego taska.
@@ -42,11 +46,12 @@ Launcher Studio został rozszerzony o kontrolę portów `5173`, `8765` i `8766`,
 - Dodano fallback z DirectShow do domyślnego backendu, gdy próbne klatki są czarne.
 - Rozszerzono launcher Studio o kontrolę portów `5173`, `8765`, `8766`.
 - Uciszono traceback MJPEG przy normalnym zerwaniu połączenia klienta.
+- Potwierdzono fizyczny `one_card` smoke dla Gilded: `PASS`, `accepted_total=3/3`.
+- Dodano samonaprawę kamery po kolejnych nieudanych odczytach `grabFrame`.
 
 ## Kolejne kroki
 
 1. Przy kolejnym uruchomieniu użyć `.bat`; jeśli wykryje zajęte porty `5173/8765/8766`, wybrać opcję automatycznego zatrzymania starej sesji.
-2. Fizycznie poruszyć kartą/ręką nad stołem i odłożyć kartę Gilded stabilnie na 2-3 sekundy podczas aktywnego scenariusza `one_card`.
-3. Sprawdzić nowy plik `logs/autotune_sessions/*one_card*sample_collected.json` albo `*recommendation_ready.json`.
-4. Na podstawie `recognition_debug` określić root cause: `not_enough_crop_descriptors`, `insufficient_good_matches`, `insufficient_inlier_ratio` albo inny powód.
-5. Dopiero po root cause zdecydować, czy potrzebny jest mały fix, czy raport `DIAGNOSTIC_COMPLETE_FIX_REQUIRED`.
+2. Wykonać opcjonalny scenariusz `three_cards` albo świadomie oznaczyć go jako `NOT_RUN`.
+3. Jeżeli `three_cards` nie jest wymagany do tej decyzji, przygotować status review dla supervisora z wynikiem `one_card PASS 3/3`.
+4. Monitorować, czy samonaprawa kamery ograniczy spam MSMF w dłuższym runtime; jeśli nie, wydzielić osobny task kamery/backendu.

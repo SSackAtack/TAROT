@@ -6,6 +6,7 @@ import os
 import json
 import logging
 import platform
+import time
 import cv2
 from tarotvision.camera_controls import read_camera_control
 
@@ -23,6 +24,8 @@ class CameraSession:
         self.raw_frame_width = camera_width
         self.raw_frame_height = camera_height
         self.resize_to_requested_resolution = False
+        self.failed_read_count = 0
+        self.reopen_after_failed_reads = 5
         self.camera_set_cache = {}
         self.supported_camera_controls = {}
         
@@ -41,6 +44,7 @@ class CameraSession:
         self._configure_capture()
         self._restore_settings()
         self.probe_controls()
+        self.failed_read_count = 0
         logging.info(f"[CameraSession] Kamera {index} otwarta. Rozdzielczość: {self.frame_width}x{self.frame_height}")
         return True
 
@@ -64,7 +68,18 @@ class CameraSession:
             return False, None
         ok, frame = self.capture.read()
         if not ok or frame is None:
+            self.failed_read_count += 1
+            if self.failed_read_count >= self.reopen_after_failed_reads:
+                logging.warning(
+                    "[CameraSession] %s kolejnych nieudanych odczytów kamery; przeotwieram indeks %s.",
+                    self.failed_read_count,
+                    self.camera_index,
+                )
+                self._reopen_current_capture()
+            else:
+                time.sleep(0.03)
             return ok, frame
+        self.failed_read_count = 0
         if self.resize_to_requested_resolution and self._frame_needs_resize(frame):
             frame = cv2.resize(frame, (self.camera_width, self.camera_height))
         return ok, frame
@@ -199,6 +214,21 @@ class CameraSession:
             if float(gray.mean()) >= min_mean_gray:
                 return True
         return False
+
+    def _reopen_current_capture(self):
+        if self.capture is not None:
+            self.capture.release()
+            self.capture = None
+        self.failed_read_count = 0
+        self.capture = self._open_capture(self.camera_index)
+        if not self.capture.isOpened():
+            logging.warning("[CameraSession] Nie udało się przeotworzyć kamery pod indeksem %s", self.camera_index)
+            return False
+        self._configure_capture()
+        self._restore_settings()
+        self.probe_controls()
+        logging.info("[CameraSession] Kamera %s przeotwarta po błędach odczytu.", self.camera_index)
+        return True
 
     def _save_settings(self):
         """Zapisuje obecne ustawienia sprzętowe kamery do pliku."""

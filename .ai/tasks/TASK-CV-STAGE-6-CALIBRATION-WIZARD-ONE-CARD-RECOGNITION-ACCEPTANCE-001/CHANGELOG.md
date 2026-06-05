@@ -13,3 +13,5 @@
 - Uodporniono wybór backendu kamery: DirectShow jest odrzucany, jeśli próbne klatki są całkowicie czarne, i wtedy `CameraSession` wraca do domyślnego backendu OpenCV/MSMF.
 - Uciszono traceback MJPEG preview przy normalnym przerwaniu połączenia klienta (`ConnectionAbortedError`/`OSError`).
 - Rozszerzono `start_tarotvision_studio.bat` o kontrolę i opcjonalne zamykanie procesów na portach `5173`, `8765` i `8766`, żeby uniknąć `WinError 10048` oraz startu Studio na starej sesji.
+- Potwierdzono fizyczny smoke `one_card` dla Gilded: 3/3 próbki, `accepted_total=3`, `recognition_rejections=0`, stage result `PASS`.
+- Dodano automatyczne przeotwarcie kamery po serii kolejnych nieudanych odczytów, aby ograniczyć spam MSMF `grabFrame` w runtime.
