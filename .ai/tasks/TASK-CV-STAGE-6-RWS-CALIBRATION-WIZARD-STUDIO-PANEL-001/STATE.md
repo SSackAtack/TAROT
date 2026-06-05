@@ -1,7 +1,7 @@
 # Status zadania TASK-CV-STAGE-6-RWS-CALIBRATION-WIZARD-STUDIO-PANEL-001
 
 ## Stan aktualny
-Prace nad panelem kalibracji w Studio UI zostały zakończone i zweryfikowane pomyślnie. Zadanie oznaczone jako DONE.
+Prace zostały zakończone, zweryfikowane i pomyślnie zmergowane do gałęzi stabilnej `master`.
 
 ## Co zostało zrobione
 - [x] Utworzenie brancha `task/cv-stage-6-rws-calibration-wizard-studio-panel`
@@ -12,8 +12,9 @@ Prace nad panelem kalibracji w Studio UI zostały zakończone i zweryfikowane po
 - [x] Weryfikacja poprawności kompilacji frontendu (`npm --prefix app_ar run build`) -> PASS
 - [x] Manualne testy dymne z uruchomionym backendem i emulacją WebSocket -> PASS
 - [x] Weryfikacja przycisków startu (`autotune_start`) i anulowania (`autotune_cancel`) -> PASS
-- [x] Sprawdzenie odporności na puste payloady -> PASS
-- [x] Aktualizacja dokumentacji zadań (.ai/tasks/... i .ai/TASKS_INDEX.md)
+- [x] Usunięcie przypadkowego pliku cache `.firebase/` z repozytorium i dodanie reguły do `.gitignore`
+- [x] Wypchnięcie poprawek na zdalny branch
+- [x] Pull Request zmergowany do `master` przez użytkownika.
 
 ## Kolejne kroki
-- Oczekiwanie na review ChatGPT Supervisor i merge do master.
+- Zadanie jest zakończone (APPROVED).

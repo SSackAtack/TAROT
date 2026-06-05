@@ -78,7 +78,7 @@ Ten plik stanowi centralny rejestr wszystkich zadań (Tasks) realizowanych w pro
 | **TASK-CV-STAGE-6-RWS-CALIBRATION-WIZARD-SAMPLE-CAPTURE-001** | `APPROVED` | `master` | Gemini | Podłączenie kontrolowanego zbierania próbek jakościowych z pipeline CV (PR-F3A) | 2026-06-05 | APPROVED BY CHATGPT SUPERVISOR |
 | **TASK-CV-STAGE-6-RWS-CALIBRATION-WIZARD-SCORING-001** | `APPROVED` | `master` | Gemini | Ocenianie jakości próbek asystenta kalibracji stanowiska (PR-F3B) | 2026-06-05 | APPROVED BY CHATGPT SUPERVISOR |
 | **TASK-CV-STAGE-6-RWS-CALIBRATION-WIZARD-STATUS-SNAPSHOT-001** | `APPROVED` | `master` | Gemini | Ustabilizowanie backendowego status snapshot dla Calibration Wizard | 2026-06-05 | APPROVED BY CHATGPT SUPERVISOR |
-| **TASK-CV-STAGE-6-RWS-CALIBRATION-WIZARD-STUDIO-PANEL-001** | `DONE` | `task/cv-stage-6-rws-calibration-wizard-studio-panel` | Gemini | Panel statusu Calibration Wizard w Studio UI | 2026-06-05 | PENDING |
+| **TASK-CV-STAGE-6-RWS-CALIBRATION-WIZARD-STUDIO-PANEL-001** | `APPROVED` | `master` | Gemini | Panel statusu Calibration Wizard w Studio UI | 2026-06-05 | APPROVED BY CHATGPT SUPERVISOR |
 
 ---
 

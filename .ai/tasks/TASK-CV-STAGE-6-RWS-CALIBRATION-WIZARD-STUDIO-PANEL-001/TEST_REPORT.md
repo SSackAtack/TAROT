@@ -8,7 +8,7 @@
 | Backend tests | NOT_RUN | Brak zmian w backendzie (NOT_REQUIRED) |
 | Smoke Studio UI | PASS | Zweryfikowano poprawność renderowania i interakcji z WebSocket |
 | Manual camera smoke | NOT_RUN | Brak fizycznej kamery |
-| GitHub Actions CI | PENDING | Weryfikacja po wypchnięciu zmian |
+| GitHub Actions CI | PASS | Zwerifikowane zielone CI na masterze po merge |
 
 ## Podsumowanie wymagane przez instrukcję zadania:
 
@@ -17,7 +17,7 @@
 * czy backend tests były: NOT_RUN
 * czy smoke Studio UI był: PASS
 * czy manual camera smoke był: NOT_RUN
-* czy GitHub Actions był: PENDING (oczekuje na push)
+* czy GitHub Actions był: PASS
 
 ## Szczegóły weryfikacji manualnej:
 1. Uruchomiono backend `python app_cv/main.py` oraz frontend w trybie deweloperskim `npm run dev`.
