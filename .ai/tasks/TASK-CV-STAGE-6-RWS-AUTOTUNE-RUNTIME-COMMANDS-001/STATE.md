@@ -1,7 +1,7 @@
 # State of TASK-CV-STAGE-6-RWS-AUTOTUNE-RUNTIME-COMMANDS-001
 
 ## Status
-DONE
+APPROVED
 
 ## Session Status (2026-06-05)
 Zaimplementowano bezpieczny szkielet obsługi komend WebSocket autotuningu w `app_cv/main.py`. Wprowadzono nową strukturę `calibration.autotune` w payloadzie statusu, przetestowano automatycznie pakietem testów oraz wykonano pomyślny weryfikacyjny smoke test połączeń.
