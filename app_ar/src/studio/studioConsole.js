@@ -477,13 +477,19 @@ function renderStudioAutotune(data) {
     const btnCancel = panel.querySelector('[data-studio-action="autotune_cancel"]')
 
     const isIdleOrCancelled = state === 'idle' || state === 'cancelled'
-    const isCollecting = state === 'collecting'
-    const readyToScore = !!autotune.ready_to_score
+    const isReadyToScore =
+        autotune.ready_to_score === true ||
+        state === 'ready_to_score' ||
+        (
+            Number(autotune.collected_count) >= Number(autotune.required_count) &&
+            Number(autotune.required_count) > 0 &&
+            state !== 'idle'
+        )
 
     if (btnStartEmpty) btnStartEmpty.disabled = !isIdleOrCancelled
     if (btnStartOne) btnStartOne.disabled = !isIdleOrCancelled
     if (btnStartThree) btnStartThree.disabled = !isIdleOrCancelled
-    if (btnCalibrate) btnCalibrate.disabled = !(isCollecting && readyToScore)
+    if (btnCalibrate) btnCalibrate.disabled = !isReadyToScore
     if (btnCancel) btnCancel.disabled = state === 'idle'
 }
 
