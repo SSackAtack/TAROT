@@ -74,6 +74,7 @@ Ten plik stanowi centralny rejestr wszystkich zadań (Tasks) realizowanych w pro
 | **TASK-CV-STAGE-6-RWS-BENCHMARK-ROBUSTNESS-FIX-001** | `APPROVED` | `task/cv-stage-6-rws-real-camera-benchmarks` | Gemini | Poprawa stabilności raportowania i obsługi błędów w benchmarku RWS | 2026-06-05 | Weryfikacja offline |
 | **TASK-CV-STAGE-6-RWS-BENCHMARK-ROBUSTNESS-FIX-APPROVAL-DOC-001** | `DONE` | `task/cv-stage-6-rws-real-camera-benchmarks` | Gemini | Dokumentacja akceptacji poprawki stabilności benchmarku RWS | 2026-06-05 | Weryfikacja offline |
 | **TASK-CV-STAGE-6-RWS-PROTOCOL-FOUNDATIONS-001** | `DONE` | `task/cv-stage-6-rws-protocol-foundations` | Gemini | Dodanie definicji i walidacji protokołu WebSocket dla Autotune (etap 1 PR-F) | 2026-06-05 | Testy targeted i backend suite OK |
+| **TASK-CV-STAGE-6-RWS-AUTOTUNE-RUNTIME-COMMANDS-001** | `DONE` | `task/cv-stage-6-rws-autotune-runtime-commands` | Gemini | Wdrożenie szkieletu komend WebSocket Autotune w runtime (etap 2 PR-F) | 2026-06-05 | Testy targeted i backend suite OK, smoke test PASS |
 
 ---
 

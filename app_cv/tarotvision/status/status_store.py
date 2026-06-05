@@ -27,7 +27,20 @@ class StatusStore:
                 "parameter_metadata": {},
                 "pending_changes": {},
                 "supported_camera_controls": {},
-                "calibration": {"state": "idle", "last_score": None},
+                "calibration": {
+                    "state": "idle",
+                    "last_score": None,
+                    "autotune": {
+                        "scenario": None,
+                        "state": "idle",
+                        "collected_count": 0,
+                        "required_count": 3,
+                        "ready_to_score": False,
+                        "recommendation": None,
+                        "last_score": None,
+                        "next_action": "Rozpocznij autotuning z poziomu konsoli."
+                    }
+                },
                 "warnings": [],
             },
             table={},
