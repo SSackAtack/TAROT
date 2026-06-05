@@ -44,6 +44,16 @@
      - Przycisk „Anuluj” poprawnie resetuje stan i blokuje przycisk kalibracji.
    - Wszystkie scenariusze w warunkach symulacji zakończyły się wynikiem **PASS**.
 
-3. **Status końcowy**:
-   - Logika interfejsu Asystenta Kalibracji Stanowiska po wdrożeniu poprawki działa stabilnie i bezbłędnie w warunkach symulacji UI.
-   - **Fizyczny test z kamerą (HP EliteBook 830 G6 + AnkerWork C310) pozostaje PENDING (oczekuje na manualną weryfikację operatora).**
+3. **Fizyczny test operatorski (HP EliteBook 830 G6 + AnkerWork C310)**:
+   - Operator (Michał) uruchomił system CV na fizycznym sprzęcie.
+   - Pomyślnie przeprowadzono scenariusz `empty` (Pusta mata) i zebrano 3/3 próbek.
+   - Przycisk "Skalibruj" poprawnie się odblokował i po kliknięciu wywołał kalibrację oraz scoring.
+   - Backend zwrócił stan `recommendation_ready` (wynik score 0.54, ocena "Problem") i zalecił przejście do testu 1 karta.
+
+4. **Wykryty nowy problem (Blocker 2 - FAIL)**:
+   - Po otrzymaniu stanu `recommendation_ready`, wszystkie przyciski wyboru scenariusza (`PUSTA MATA`, `1 KARTA`, `3 KARTY`) oraz przycisk "Skalibruj" pozostały zablokowane (`disabled = true`).
+   - Operator nie mógł kliknąć przycisku `1 KARTA` ani `3 KARTY` bez uprzedniego kliknięcia "Anuluj" (co resetuje cały postęp kalibracji).
+   - Przyczyna: Warunek aktywacji przycisków startowych w [studioConsole.js](file:///e:/Antigravity/Projekty/TAROT/app_ar/src/studio/studioConsole.js#L479) ogranicza ich działanie wyłącznie do stanów `idle` oraz `cancelled`. W stanie `recommendation_ready` przyciski są zablokowane.
+
+5. **Koniec testu**:
+   - Zgodnie z wytycznymi zadania integracyjnego, test przerwano po wykryciu blockera. Nie wprowadzano zmian w kodzie produkcyjnym. Zgłoszono błąd do Supervisor review.

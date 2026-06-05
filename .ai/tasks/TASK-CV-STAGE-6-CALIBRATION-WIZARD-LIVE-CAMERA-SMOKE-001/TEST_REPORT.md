@@ -15,7 +15,7 @@
 | cancel/reset | PASS | Przycisk Anuluj działa poprawnie, resetuje stan sesji i blokuje przycisk "Skalibruj" |
 | backend logs clean | PASS | Brak tracebacków w logach |
 | Manual UI smoke simulation | PASS | Wszystkie scenariusze i zachowanie przycisków przetestowane pomyślnie w przeglądarce po merge PR #26 |
-| manual camera smoke | PENDING | Oczekuje na fizyczny test operatorski (HP EliteBook 830 G6 + AnkerWork C310) |
+| manual camera smoke | FAIL | Przyciski wyboru scenariusza (np. "1 KARTA") pozostają zablokowane (disabled=true) po zakończeniu kalibracji pustej maty |
 | GitHub Actions CI | PENDING | Oczekiwanie na runy po pushu |
 
 ## Podsumowanie wymagane przez instrukcję zadania:
@@ -24,8 +24,29 @@
 * czy frontend build był: PASS
 * czy backend tests były: PASS
 * czy smoke Studio UI był: PASS (UI smoke simulation: PASS)
-* czy manual camera smoke był: PENDING (fizyczny test operatorski)
+* czy manual camera smoke był: FAIL (przyciski startu zablokowane po kalibracji pustej maty)
 * czy GitHub Actions był: PENDING
+
+## Wykryty błąd logiczny (Blocker 2):
+Po zakończeniu scenariusza `empty` i kliknięciu "Skalibruj", backend przechodzi w stan `recommendation_ready` (UI wyświetla "REKOMENDACJA GOTOWA"). 
+
+W pliku `app_ar/src/studio/studioConsole.js` (linie 479-485) przyciski startu scenariusza są aktywowane warunkiem `isIdleOrCancelled`:
+```javascript
+const isIdleOrCancelled = state === 'idle' || state === 'cancelled'
+if (btnStartEmpty) btnStartEmpty.disabled = !isIdleOrCancelled
+if (btnStartOne) btnStartOne.disabled = !isIdleOrCancelled
+if (btnStartThree) btnStartThree.disabled = !isIdleOrCancelled
+```
+Ponieważ `state` wynosi `'recommendation_ready'`, flagi te są trwale ustawiane na `disabled = true`, co uniemożliwia operatorowi przejście do kolejnego kroku (kliknięcia `1 KARTA` lub `3 KARTY`), mimo że instrukcja "NASTĘPNY KROK" wprost to zaleca.
+
+### Sugerowana poprawka:
+Zmienić warunek aktywacji przycisków startu na:
+```javascript
+const canStartScenario = state !== 'collecting' && state !== 'ready_to_score'
+if (btnStartEmpty) btnStartEmpty.disabled = !canStartScenario
+if (btnStartOne) btnStartOne.disabled = !canStartScenario
+if (btnStartThree) btnStartThree.disabled = !canStartScenario
+```
 
 ## Wykryty błąd logiczny:
 W pliku `app_ar/src/studio/studioConsole.js` (linia 443) zdefiniowano warunek włączenia przycisku kalibracji:
