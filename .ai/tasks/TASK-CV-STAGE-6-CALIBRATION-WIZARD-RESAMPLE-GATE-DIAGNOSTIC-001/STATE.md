@@ -2,7 +2,7 @@
 
 ## Status
 
-MERGED_AND_VERIFIED
+DIAGNOSTICS_VERIFIED_GEOMETRY_FOLLOWUP_REQUIRED
 
 ## Branch
 
@@ -10,13 +10,13 @@ MERGED_AND_VERIFIED
 
 ## Stan aktualny
 
-Zadanie zostało pomyślnie zrealizowane i przetestowane na stanowisku fizycznym (smoke test zakończony sukcesem). Bramka `SnapshotGate` re-armuje się poprawnie i pozwala na kolejne próby. Powody odrzucenia snapshotów są raportowane bezpośrednio w HUD i w oknie Asystenta Kalibracji (bez spamu dzięki deduplikacji).
+Zadanie diagnostyczne zostało pomyślnie zrealizowane. Bramka `SnapshotGate` re-armuje się poprawnie i pozwala na kolejne próby. Powody odrzucenia snapshotów ze względu na geometrię są poprawnie raportowane w HUD oraz w oknie Asystenta Kalibracji (bez spamu). Testy dymne wykazały, że diagnostyka działa (PASS), lecz sama kalibracja w scenariuszu `one_card` gubi kartę i wymaga dostrojenia detektora (CALIBRATION_FAIL).
 
 ## Session Status (2026-06-05)
 
-Gemini zaimplementował warningi HUD, deduplikację ostrzeżeń, informację w oknie Asystenta Kalibracji i rozbudowane logowanie. Testy automatyczne (423/423 PASS) oraz fizyczny smoke test (empty: PASS, one_card: PASS z poprawną diagnozą) zakończyły się sukcesem.
+Gemini wdrożył warningi HUD, ich deduplikację, informację w panelu Asystenta oraz rozbudowane logowanie. Testy jednostkowe (423/423 PASS) oraz diagnostyka w teście fizycznym (DIAGNOSTIC_PASS) zostały pomyślnie zweryfikowane.
 
 ## Kolejne kroki
 
-1. Oficjalne zatwierdzenie zadania przez Supervisora.
-2. Dalsze prace nad ulepszeniem detekcji geometrycznej (kolejne zadania).
+1. Oficjalne zamknięcie zadania (diagnostyka zatwierdzona).
+2. Rozpoczęcie stabilizacji geometrii w nowym zadaniu: `TASK-CV-STAGE-6-CALIBRATION-WIZARD-ONE-CARD-GEOMETRY-STABILIZATION-001`.

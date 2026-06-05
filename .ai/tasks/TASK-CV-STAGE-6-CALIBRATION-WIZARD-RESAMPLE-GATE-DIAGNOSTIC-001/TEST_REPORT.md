@@ -17,6 +17,7 @@ Uruchomiono pełny suite testów backendowych poleceniem:
 ## Rezultaty testów fizycznych (Smoke Test)
 
 Przeprowadzono test dymny na stanowisku deweloperskim z kamerą USB (Commit `dd5433d`):
-- **empty**: **PASS** (licznik 3/3, bez fałszywych warningów)
-- **one_card**: **PASS** (bramka wyzwala kolejne próby snapshotów przy ruchu ręką, powód odrzucenia - brak detekcji karty/złe oświetlenie - jest poprawnie raportowany i nie powoduje spamu w HUD)
-- **HUD / UX**: **PASS** (komunikaty o odrzuceniu próbek ze względu na geometrię wyświetlają się w sekcji NASTĘPNY KROK w panelu kalibracji i są deduplikowane)
+- **empty**: **PASS**
+- **one_card**: **DIAGNOSTIC_PASS / CALIBRATION_FAIL** (Bramka wyzwala kolejne próby snapshotów przy ruchu ręką. Diagnoza HUD działa poprawnie, lecz sam licznik nie dochodzi do 3/3 z powodu braku wykrywania karty przez detektor geometryczny na nieskalibrowanym stanowisku)
+- **three_cards**: **NOT_RUN**
+- **HUD/UX**: **PASS** (Deduplikacja działa poprawnie, powód odrzucenia jest precyzyjnie wyświetlany w sekcji NASTĘPNY KROK)

@@ -83,7 +83,7 @@ Ten plik stanowi centralny rejestr wszystkich zadań (Tasks) realizowanych w pro
 | **TASK-CV-STAGE-6-CALIBRATION-WIZARD-CALIBRATE-BUTTON-FIX-001** | `APPROVED` | `master` | Gemini | Naprawa przycisku Skalibruj po zebraniu próbek | 2026-06-05 | APPROVED BY CHATGPT SUPERVISOR |
 | **TASK-CV-STAGE-6-CALIBRATION-WIZARD-SCENARIO-BUTTONS-FIX-001** | `APPROVED` | `master` | Gemini | Naprawa przycisków startu w stanie gotowej rekomendacji | 2026-06-05 | APPROVED BY CHATGPT SUPERVISOR |
 | **TASK-CV-STAGE-6-CALIBRATION-WIZARD-ONE-CARD-DIAGNOSTIC-001** | `DONE` | `master` | Gemini | Diagnoza i naprawa kalibracji dla scenariusza one_card i three_cards | 2026-06-05 | Zweryfikowano jednostkowo (421/421 PASS), oczekuje na smoke test |
-| **TASK-CV-STAGE-6-CALIBRATION-WIZARD-RESAMPLE-GATE-DIAGNOSTIC-001** | `DONE` | `master` | Gemini | Diagnoza i poprawka ponownego zbierania próbek w kreatorze kalibracji | 2026-06-05 | MERGED_AND_VERIFIED (PR #29 + physical smoke PASS) |
+| **TASK-CV-STAGE-6-CALIBRATION-WIZARD-RESAMPLE-GATE-DIAGNOSTIC-001** | `DONE` | `master` | Gemini | Diagnoza i poprawka ponownego zbierania próbek w kreatorze kalibracji | 2026-06-05 | DIAGNOSTICS_VERIFIED_GEOMETRY_FOLLOWUP_REQUIRED (PR #29 + physical smoke diagnostic PASS) |
 
 ---
 
