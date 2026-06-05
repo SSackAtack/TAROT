@@ -46,6 +46,26 @@ class TestCameraSession(unittest.TestCase):
 
     @patch('tarotvision.camera.camera_session.platform.system')
     @patch('cv2.VideoCapture')
+    def test_configure_capture_prefers_mjpg_before_resolution_on_windows(self, mock_vc_class, mock_system):
+        mock_system.return_value = "Windows"
+        mock_vc = MagicMock()
+        mock_vc.isOpened.return_value = True
+        mock_vc.get.side_effect = lambda prop_id: 1280 if prop_id == 3 else (720 if prop_id == 4 else -1.0)
+        mock_vc_class.return_value = mock_vc
+
+        opened = self.session.open(0)
+
+        self.assertTrue(opened)
+        mock_vc.set.assert_any_call(6, 1196444237)
+        calls = mock_vc.set.call_args_list
+        fourcc_index = calls.index(((6, 1196444237),))
+        width_index = calls.index(((3, 1280),))
+        height_index = calls.index(((4, 720),))
+        self.assertLess(fourcc_index, width_index)
+        self.assertLess(fourcc_index, height_index)
+
+    @patch('tarotvision.camera.camera_session.platform.system')
+    @patch('cv2.VideoCapture')
     def test_open_falls_back_to_default_backend_when_directshow_fails(self, mock_vc_class, mock_system):
         mock_system.return_value = "Windows"
         dshow_capture = MagicMock()
@@ -87,6 +107,30 @@ class TestCameraSession(unittest.TestCase):
         
         self.assertTrue(success)
         self.assertEqual(frame, "fake_frame")
+
+    @patch('cv2.resize')
+    @patch('cv2.VideoCapture')
+    def test_read_resizes_frame_when_camera_ignores_requested_resolution(self, mock_vc_class, mock_resize):
+        frame = MagicMock()
+        frame.shape = (1080, 1920, 3)
+        resized = MagicMock()
+        resized.shape = (720, 1280, 3)
+        mock_resize.return_value = resized
+
+        mock_vc = MagicMock()
+        mock_vc.isOpened.return_value = True
+        mock_vc.read.return_value = (True, frame)
+        mock_vc.get.side_effect = lambda prop_id: 1920 if prop_id == 3 else (1080 if prop_id == 4 else -1.0)
+        mock_vc_class.return_value = mock_vc
+
+        self.session.open(0)
+        success, output = self.session.read()
+
+        self.assertTrue(success)
+        self.assertIs(output, resized)
+        mock_resize.assert_called_once_with(frame, (1280, 720))
+        self.assertEqual(self.session.frame_width, 1280)
+        self.assertEqual(self.session.frame_height, 720)
 
     @patch('cv2.VideoCapture')
     def test_close_saves_settings(self, mock_vc_class):

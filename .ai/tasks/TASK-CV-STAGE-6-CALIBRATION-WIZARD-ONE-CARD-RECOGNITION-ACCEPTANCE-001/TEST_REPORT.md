@@ -60,6 +60,9 @@ MSMF camera issue:
 - Backend restarted after DirectShow-first hotfix.
 - Runtime log: `Kamera otwarta przez backend DirectShow`.
 - Runtime log after hotfix did not show new MSMF `grabFrame` warnings in the checked window.
+- DirectShow raw resolution check: camera reported 1920x1080 despite requested 1280x720.
+- Runtime resize check: after resize fallback, log reported `Kamera 0 otwarta. Rozdzielczość: 1280x720`.
+- Port conflict check: `WinError 10048` was caused by two local `python main.py` processes; after stopping both, backend listened on `8765` normally.
 
 ## Zakres
 

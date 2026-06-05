@@ -18,6 +18,10 @@ Po restarcie backendu runtime potwierdził aktywną talię `gilded`, a Studio wi
 
 Podczas przygotowania kolejnego smoke testu operator zgłosił powtarzalny błąd OpenCV MSMF `can't grab frame`. Po zamknięciu okien i restarcie `.bat` problem wracał. Dodano mały hotfix kamery: na Windows `CameraSession` próbuje najpierw backend DirectShow (`cv2.CAP_DSHOW`), a gdy nie zadziała, wraca do domyślnego backendu OpenCV. Lokalny restart backendu potwierdził otwarcie kamery przez DirectShow bez nowych ostrzeżeń MSMF.
 
+Po hotfixie DirectShow kamera sprzętowo zgłaszała surowe 1920x1080 mimo żądania 1280x720. Dodano runtime resize w `CameraSession.read()`: jeśli sterownik ignoruje rozdzielczość, klatki są skalowane do żądanego 1280x720 przed przekazaniem do pipeline. Log po restarcie potwierdził: raw 1920x1080, runtime 1280x720.
+
+Zgłoszony `WinError 10048` na porcie `8765` wynikał z dwóch równoległych procesów `python main.py`; stara instancja trzymała WebSocket. Procesy zostały zamknięte i backend po czystym restarcie poprawnie nasłuchuje na `8765`.
+
 ## Session Status (2026-06-05)
 
 - Utworzono zakres diagnostyczny nowego taska.
@@ -28,6 +32,8 @@ Podczas przygotowania kolejnego smoke testu operator zgłosił powtarzalny błą
 - Zrestartowano backend i potwierdzono runtime `gilded`.
 - Próba zebrania nowego `one_card` nie dała próbek bez fizycznego ruchu.
 - Dodano DirectShow-first fallback dla kamery na Windows po powtarzalnym błędzie MSMF `grabFrame`.
+- Dodano skalowanie klatek w runtime do 1280x720, gdy sterownik DirectShow ignoruje żądaną rozdzielczość.
+- Zdiagnozowano i usunięto lokalny konflikt portu `8765` spowodowany dwoma procesami `python main.py`.
 
 ## Kolejne kroki
 

@@ -9,3 +9,4 @@
 - Rozszerzono payload próbek Calibration Wizard o `recognition_debug`.
 - Dodano testy jednostkowe dla top rejected match, snapshot diagnostics i zapisu próbki wizardu.
 - Dodano hotfix `CameraSession`: na Windows kamera jest otwierana najpierw przez DirectShow (`cv2.CAP_DSHOW`) z fallbackiem do domyślnego backendu, aby ominąć powtarzalny błąd MSMF `grabFrame`.
+- Dodano fallback runtime resize: gdy sterownik kamery raportuje inną rozdzielczość niż żądane 1280x720, `CameraSession.read()` skaluje realną klatkę do rozmiaru oczekiwanego przez pipeline.

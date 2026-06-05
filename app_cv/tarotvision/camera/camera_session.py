@@ -20,6 +20,9 @@ class CameraSession:
         self.camera_index = 0
         self.frame_width = camera_width
         self.frame_height = camera_height
+        self.raw_frame_width = camera_width
+        self.raw_frame_height = camera_height
+        self.resize_to_requested_resolution = False
         self.camera_set_cache = {}
         self.supported_camera_controls = {}
         
@@ -59,7 +62,12 @@ class CameraSession:
         """Odczytuje klatkę z kamery."""
         if not self.is_opened():
             return False, None
-        return self.capture.read()
+        ok, frame = self.capture.read()
+        if not ok or frame is None:
+            return ok, frame
+        if self.resize_to_requested_resolution and self._frame_needs_resize(frame):
+            frame = cv2.resize(frame, (self.camera_width, self.camera_height))
+        return ok, frame
 
     def switch(self, index):
         """Zamyka obecną kamerę i otwiera nową."""
@@ -140,10 +148,47 @@ class CameraSession:
 
     def _configure_capture(self):
         """Wymusza docelową rozdzielczość kamery."""
+        if platform.system() == "Windows":
+            # DirectShow często przyjmuje 720p dopiero po przełączeniu strumienia
+            # na MJPG; bez tego kamera potrafi wrócić do 1080p/YUY2.
+            self.capture.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
         self.capture.set(cv2.CAP_PROP_FRAME_WIDTH, self.camera_width)
         self.capture.set(cv2.CAP_PROP_FRAME_HEIGHT, self.camera_height)
-        self.frame_width = int(self.capture.get(cv2.CAP_PROP_FRAME_WIDTH)) or self.camera_width
-        self.frame_height = int(self.capture.get(cv2.CAP_PROP_FRAME_HEIGHT)) or self.camera_height
+        self.raw_frame_width = self._read_capture_dimension(
+            cv2.CAP_PROP_FRAME_WIDTH,
+            self.camera_width,
+        )
+        self.raw_frame_height = self._read_capture_dimension(
+            cv2.CAP_PROP_FRAME_HEIGHT,
+            self.camera_height,
+        )
+        self.resize_to_requested_resolution = (
+            self.raw_frame_width != self.camera_width
+            or self.raw_frame_height != self.camera_height
+        )
+        if self.resize_to_requested_resolution:
+            logging.warning(
+                "[CameraSession] Kamera zgłosiła rozdzielczość %sx%s zamiast żądanej %sx%s; klatki będą skalowane w runtime.",
+                self.raw_frame_width,
+                self.raw_frame_height,
+                self.camera_width,
+                self.camera_height,
+            )
+        self.frame_width = self.camera_width
+        self.frame_height = self.camera_height
+
+    def _read_capture_dimension(self, prop_id, fallback):
+        try:
+            value = int(self.capture.get(prop_id))
+        except (TypeError, ValueError):
+            return fallback
+        return value if value > 0 else fallback
+
+    def _frame_needs_resize(self, frame):
+        shape = getattr(frame, "shape", None)
+        if shape is None or len(shape) < 2:
+            return False
+        return shape[1] != self.camera_width or shape[0] != self.camera_height
 
     def _save_settings(self):
         """Zapisuje obecne ustawienia sprzętowe kamery do pliku."""
