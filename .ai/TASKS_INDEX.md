@@ -60,8 +60,19 @@ Ten plik stanowi centralny rejestr wszystkich zadań (Tasks) realizowanych w pro
 | **TASK-CV-OFFLINE-LAB-STAGE-6-MANUAL-LABEL-CONFIRMATION-001** | `DONE` | `task/cv-stage-6-offline-lab-core` | Codex | Manualne potwierdzenie etykiet Stage 6 dla fixture Gilded | 2026-06-04 | Ground truth manual_confirmed; preflight PASS; next: Stage 6 Card Identification benchmark |
 | **TASK-CV-OFFLINE-LAB-STAGE-6-CARD-IDENTIFICATION-BENCHMARK-001** | `APPROVED` | `task/cv-stage-6-offline-lab-core` | Codex | Pierwsza fala offline benchmarku Stage 6 Card Identification | 2026-06-04 | APPROVED_STAGE_6_METHOD: orb_bfmatcher_ratio_test; current offline lab fixture only; no runtime integration approval; next: broader Stage 6 validation benchmark |
 | **TASK-CV-OFFLINE-LAB-STAGE-6-SYNTHETIC-VALIDATION-BENCHMARK-001** | `APPROVED` | `task/cv-stage-6-offline-lab-core` | Codex | Deterministyczny synthetic validation benchmark Stage 6: ORB vs AKAZE, reversed i wrong deck | 2026-06-04 | APPROVED_BY_CHATGPT_SUPERVISOR; VALIDATION_PASS_OFFLINE_ONLY: orb_bfmatcher_ratio_test; next: TASK-CV-STAGE-6-REAL-CAMERA-FIXTURE-REVERSED-WRONG-DECK-001; no runtime integration |
-
-
+| **TASK-CV-STAGE-6-REAL-CAMERA-FIXTURE-REVERSED-WRONG-DECK-001** | `DONE` | `task/cv-stage-6-rws-real-camera-benchmarks` | Gemini | Offline tooling i procedura dla real-camera fixture Stage 6 | 2026-06-05 | Weryfikacja offline |
+| **TASK-CV-STAGE-6-REAL-CAMERA-GROUND-TRUTH-REVIEW-001** | `DONE` | `task/cv-stage-6-rws-real-camera-benchmarks` | Gemini | Ręczne rozstrzygnięcie etykiet i review ground truth dla próbki f8d6d84b5ddb5729fa07 | 2026-06-05 | Weryfikacja offline |
+| **TASK-CV-STAGE-6-REAL-CAMERA-ERROR-ANALYSIS-001** | `DONE` | `task/cv-stage-6-rws-real-camera-benchmarks` | Gemini | Analiza błędnych próbek ORB z real-camera benchmarku Stage 6 | 2026-06-05 | Weryfikacja offline |
+| **TASK-CV-STAGE-6-REAL-CAMERA-IDENTIFICATION-BENCHMARK-001** | `DONE` | `task/cv-stage-6-rws-real-camera-benchmarks` | Gemini | Offline benchmark ORB/AKAZE na real-camera fixture Stage 6 | 2026-06-05 | Weryfikacja offline |
+| **TASK-CV-STAGE-6-REAL-CAMERA-QUALITY-GATE-DESIGN-001** | `DONE` | `task/cv-stage-6-rws-real-camera-benchmarks` | Gemini | Projekt offline-only quality gate dla Stage 6 (detekcja flar, cieni) | 2026-06-05 | Weryfikacja offline |
+| **TASK-CV-STAGE-6-REAL-CAMERA-QUALITY-GATE-BENCHMARK-001** | `APPROVED` | `task/cv-stage-6-rws-real-camera-benchmarks` | Gemini | Zaimplementować offline benchmark zatwierdzonego quality gate Stage 6 | 2026-06-05 | Weryfikacja offline |
+| **TASK-CV-STAGE-6-REAL-CAMERA-QUALITY-GATE-APPROVAL-DOC-001** | `DONE` | `task/cv-stage-6-rws-real-camera-benchmarks` | Gemini | Dokumentacja akceptacji offline benchmarku quality gate Stage 6 | 2026-06-05 | Weryfikacja offline |
+| **TASK-CV-STAGE-6-REAL-CAMERA-FIXTURE-EXPANSION-001** | `APPROVED` | `task/cv-stage-6-rws-real-camera-benchmarks` | Gemini | Rozszerzenie real-camera fixture (8 próbek na jasnej macie) | 2026-06-05 | Weryfikacja offline |
+| **TASK-CV-STAGE-6-RWS-WIZARD-HANDOFF-FIX-001** | `DONE` | `task/cv-stage-6-rws-real-camera-benchmarks` | Gemini | Poprawka starterów/wizardów capture i testów po integracji | 2026-06-05 | Weryfikacja offline |
+| **TASK-CV-STAGE-6-RWS-EXPANSION-BENCHMARK-001** | `APPROVED` | `task/cv-stage-6-rws-real-camera-benchmarks` | Gemini | Offline benchmark na rozszerzonym zestawie RWS (8 próbek) | 2026-06-05 | Weryfikacja offline |
+| **TASK-CV-STAGE-6-RWS-EXPANSION-BENCHMARK-APPROVAL-DOC-001** | `DONE` | `task/cv-stage-6-rws-real-camera-benchmarks` | Gemini | Dokumentacja akceptacji benchmarku RWS Expansion | 2026-06-05 | Weryfikacja offline |
+| **TASK-CV-STAGE-6-RWS-BENCHMARK-ROBUSTNESS-FIX-001** | `APPROVED` | `task/cv-stage-6-rws-real-camera-benchmarks` | Gemini | Poprawa stabilności raportowania i obsługi błędów w benchmarku RWS | 2026-06-05 | Weryfikacja offline |
+| **TASK-CV-STAGE-6-RWS-BENCHMARK-ROBUSTNESS-FIX-APPROVAL-DOC-001** | `DONE` | `task/cv-stage-6-rws-real-camera-benchmarks` | Gemini | Dokumentacja akceptacji poprawki stabilności benchmarku RWS | 2026-06-05 | Weryfikacja offline |
 
 ---
 
