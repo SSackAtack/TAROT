@@ -51,6 +51,27 @@ class SnapshotGateTest(unittest.TestCase):
         self.assertEqual(gate.state, "holding_last_good")
         self.assertEqual(gate.last_published_layout_id, 4)
 
+    def test_re_arms_after_publish_or_reject(self):
+        gate = SnapshotGate(SnapshotGateConfig(settle_seconds=1.0))
+
+        # Pierwszy cykl: ruch -> cisza -> sampling -> publikacja
+        gate.update(now_ms=1000, motion_detected=True, changed_ratio=0.20)
+        gate.update(now_ms=2000, motion_detected=False, changed_ratio=0.001)
+        decision = gate.update(now_ms=3000, motion_detected=False, changed_ratio=0.001)
+        self.assertTrue(decision.should_sample)
+        
+        gate.mark_published(layout_id=1, now_ms=3100)
+        self.assertEqual(gate.state, "holding_last_good")
+
+        # Drugi cykl: nowy ruch -> cisza -> sampling -> odrzucenie
+        gate.update(now_ms=4000, motion_detected=True, changed_ratio=0.20)
+        gate.update(now_ms=5000, motion_detected=False, changed_ratio=0.001)
+        decision = gate.update(now_ms=6000, motion_detected=False, changed_ratio=0.001)
+        self.assertTrue(decision.should_sample)
+        
+        gate.mark_rejected()
+        self.assertEqual(gate.state, "holding_last_good")
+
 
 if __name__ == "__main__":
     unittest.main()

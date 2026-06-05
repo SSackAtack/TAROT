@@ -91,6 +91,35 @@ class TestAutotunePipelineSampleCapture(unittest.TestCase):
         
         self.assertEqual(len(main.autotune_session.samples["one_card"]), 1)
         self.assertEqual(main.calibration_state["autotune"]["collected_count"], 1)
+        
+        saved_sample = main.autotune_session.samples["one_card"][0]
+        self.assertEqual(saved_sample["candidate_count"], 1)
+        self.assertEqual(saved_sample["false_positive_count"], 0)
+        self.assertEqual(saved_sample["geometry_score"], 0.88)
+        self.assertEqual(saved_sample["recognition_score"], 0.92)
+        self.assertEqual(saved_sample["matching_ms"], 15.0)
+
+    def test_collects_unrecognized_one_card_sample(self):
+        main.autotune_session = AutotuneSession(required_scenarios=("one_card",), samples_per_scenario=3)
+        
+        # Symulujemy próbkę z 1 wykrytą kartą, ale 0 zaakceptowanymi (rozpoznanymi)
+        pipeline_sample = {
+            "detected_count": 1,
+            "accepted_count": 0,
+            "analysis_ms": 15.0,
+            "snapshot_quality_score": 0.88,
+            "recognition_confidences": []
+        }
+        
+        main.record_autotune_sample_from_snapshot(pipeline_sample)
+        
+        # Próbka POWINNA zostać zebrana pomimo braku rozpoznania (accepted_count == 0)
+        self.assertEqual(len(main.autotune_session.samples["one_card"]), 1)
+        saved_sample = main.autotune_session.samples["one_card"][0]
+        self.assertEqual(saved_sample["candidate_count"], 1)
+        self.assertEqual(saved_sample["accepted_count"], 0)
+        self.assertEqual(saved_sample["false_positive_count"], 0)
+        self.assertEqual(saved_sample["recognition_score"], 0.0)
 
     def test_collects_three_cards_sample_when_expected_count_three(self):
         main.autotune_session = AutotuneSession(required_scenarios=("three_cards",), samples_per_scenario=3)
@@ -107,6 +136,47 @@ class TestAutotunePipelineSampleCapture(unittest.TestCase):
         main.record_autotune_sample_from_snapshot(pipeline_sample)
         
         self.assertEqual(len(main.autotune_session.samples["three_cards"]), 1)
+        saved_sample = main.autotune_session.samples["three_cards"][0]
+        self.assertEqual(saved_sample["candidate_count"], 3)
+        self.assertEqual(saved_sample["false_positive_count"], 0)
+
+    def test_collects_partially_recognized_three_cards_sample(self):
+        main.autotune_session = AutotuneSession(required_scenarios=("three_cards",), samples_per_scenario=3)
+        
+        # Symulujemy próbkę z 3 wykrytymi kartami, ale tylko 1 zaakceptowaną
+        pipeline_sample = {
+            "detected_count": 3,
+            "accepted_count": 1,
+            "analysis_ms": 22.0,
+            "snapshot_quality_score": 0.95,
+            "recognition_confidences": [0.9]
+        }
+        
+        main.record_autotune_sample_from_snapshot(pipeline_sample)
+        
+        self.assertEqual(len(main.autotune_session.samples["three_cards"]), 1)
+        saved_sample = main.autotune_session.samples["three_cards"][0]
+        self.assertEqual(saved_sample["candidate_count"], 3)
+        self.assertEqual(saved_sample["accepted_count"], 1)
+        self.assertEqual(saved_sample["false_positive_count"], 0)
+        self.assertEqual(saved_sample["recognition_score"], 0.9)
+
+    def test_collects_empty_sample_with_false_positives(self):
+        main.autotune_session = AutotuneSession(required_scenarios=("empty",), samples_per_scenario=3)
+        
+        pipeline_sample = {
+            "detected_count": 2,
+            "accepted_count": 0,
+            "analysis_ms": 10.0,
+            "snapshot_quality_score": 0.9
+        }
+        
+        main.record_autotune_sample_from_snapshot(pipeline_sample)
+        
+        self.assertEqual(len(main.autotune_session.samples["empty"]), 1)
+        saved_sample = main.autotune_session.samples["empty"][0]
+        self.assertEqual(saved_sample["candidate_count"], 2)
+        self.assertEqual(saved_sample["false_positive_count"], 2)
 
     def test_does_not_collect_wrong_card_count_for_scenario(self):
         # Oczekujemy 1 karty
@@ -126,6 +196,23 @@ class TestAutotunePipelineSampleCapture(unittest.TestCase):
         # Próbka nie powinna zostać zapisana!
         self.assertEqual(len(main.autotune_session.samples["one_card"]), 0)
         self.assertEqual(main.calibration_state["autotune"]["collected_count"], 0)
+        self.assertTrue(any("Odrzucono snapshot" in w for w in main.operator_warnings))
+
+    def test_does_not_collect_accepted_cards_on_empty_scenario(self):
+        main.autotune_session = AutotuneSession(required_scenarios=("empty",), samples_per_scenario=3)
+        
+        pipeline_sample = {
+            "detected_count": 1,
+            "accepted_count": 1,
+            "analysis_ms": 10.0,
+            "snapshot_quality_score": 0.9,
+            "recognition_confidences": [0.85]
+        }
+        
+        main.record_autotune_sample_from_snapshot(pipeline_sample)
+        
+        self.assertEqual(len(main.autotune_session.samples["empty"]), 0)
+        self.assertTrue(any("Odrzucono pusta mate" in w for w in main.operator_warnings))
 
     def test_does_not_collect_more_than_required_samples(self):
         main.autotune_session = AutotuneSession(required_scenarios=("one_card",), samples_per_scenario=2)
