@@ -4,17 +4,27 @@ Ten dokument definiuje standard przekazywania informacji między modelami AI pra
 
 Cel: Michał nie musi kopiować instrukcji między modelami ani decydować, czy informacja ma trafić do issue, PR review, komentarza czy pliku `.md`. Model zapisujący informację wybiera właściwy kanał GitHuba.
 
+Aktualizacja 2026-06-05: protokół nie wymusza stałej kontroli Supervisora. Każdy agent może samodzielnie realizować i weryfikować prace niskiego ryzyka na branchu roboczym. Supervisor review jest wymagane tylko wtedy, gdy Michał o to poprosi, zmiana jest podwyższonego ryzyka albo dotyczy merge do `master`.
+
 ---
 
 ## 1. Zasada główna
 
-Michał wybiera tylko:
+Michał może wybrać:
 
 - który model zaczyna temat,
 - który model ma sprawdzić wynik,
 - czy informacja ma zostać zapisana w GitHubie.
 
 Model AI wybiera miejsce zapisu.
+
+Jeśli Michał zleca agentowi normalną pracę nad kodem, agent nie musi czekać na ChatGPT Supervisora przed implementacją. Agent klasyfikuje ryzyko zadania i działa zgodnie z poniższymi progami.
+
+| Lane | Kiedy | Uprawnienia agenta | Review |
+|---|---|---|---|
+| Green | Mała/średnia zmiana w istniejącym zakresie, jasne testy, brak publicznego API | implementuj, testuj, commituj, pushuj na branch | niewymagane |
+| Yellow | Kilka modułów, runtime, nowy moduł, kontrakt frontend/backend, niepełna weryfikacja | implementuj na branchu i oznacz ryzyka | rekomendowane przed merge |
+| Red | Architektura, stack, model produktu, kasowanie danych/testów, merge do `master` | zatrzymaj się przed decyzją albo merge | decyzja Michała wymagana |
 
 | Sytuacja | Kanał GitHuba |
 |---|---|
@@ -48,7 +58,13 @@ Przekaż Gemini.
 Gemini, zrób: <opis zadania>
 ```
 
-Po zakończeniu:
+Agent może wykonać Green Lane zadanie end-to-end bez osobnego review. Po zakończeniu wystarczy:
+
+```text
+Gemini/Codex/Opus, zrób, zweryfikuj i wypchnij na branch: <opis zadania>
+```
+
+Po zakończeniu Yellow/Red Lane albo gdy Michał chce niezależnego sprawdzenia:
 
 ```text
 ChatGPT, Gemini skończył, sprawdź.
@@ -80,13 +96,15 @@ Nie oznacza zgody na:
 - duży refaktor,
 - zmianę architektury.
 
-Takie działania wymagają osobnej zgody Michała.
+Takie działania wymagają osobnej zgody Michała, jeśli wpadają w Red Lane. Dla Green Lane zwykłe commit/push na branch roboczy jest częścią normalnej pracy agenta, o ile użytkownik nie zabronił zmian.
 
 ---
 
-## 4. Supervisor Handoff
+## 4. Handoff i review
 
-ChatGPT Supervisor przekazuje zadanie do Gemini w krótkim formacie:
+Formalny handoff jest wymagany tylko dla Yellow/Red Lane, pracy wieloetapowej, przejęcia przez inny model albo review przed merge. Dla Green Lane wystarcza finalny opis zmian, testy i commit.
+
+ChatGPT Supervisor może przekazać zadanie do Gemini w krótkim formacie:
 
 ```markdown
 # SUPERVISOR HANDOFF — TASK-XXX
@@ -125,12 +143,12 @@ Czego nie wolno robić.
 
 ---
 
-## 5. Gemini Report
+## 5. Agent Report
 
-Po wykonaniu zadania Gemini zostawia krótki raport:
+Po wykonaniu Yellow/Red Lane albo pracy przekazywanej innemu agentowi wykonawca zostawia krótki raport:
 
 ```markdown
-# GEMINI REPORT — TASK-XXX
+# AGENT REPORT — TASK-XXX
 
 ## Task
 Nazwa / numer taska.
@@ -156,15 +174,15 @@ Co zmieniono.
 ## Known Risks
 - Ryzyko albo `brak`.
 
-## Request for Supervisor
-APPROVAL / REVIEW / HELP / BLOCKER_DECISION
+## Review Request
+NOT_REQUIRED / REVIEW_RECOMMENDED / HELP / BLOCKER_DECISION
 ```
 
 ---
 
 ## 6. ChatGPT Supervisor Review
 
-Po zakończonym tasku ChatGPT Supervisor używa formatu:
+ChatGPT Supervisor review jest opcjonalne dla Green Lane i zalecane/wymagane zgodnie z progami ryzyka. Po review używa formatu:
 
 ```markdown
 # CHATGPT_SUPERVISOR_REVIEW — TASK-XXX / PR-XXX

@@ -12,10 +12,11 @@ Before coding:
 1. Read `.ai/PROJECT_STATE.md`.
 2. Read `.ai/AI_AGENT_COMMUNICATION_PROTOCOL.md`.
 3. Read `.ai/TASKS_INDEX.md`.
-4. Read the assigned `.ai/tasks/TASK-XXX/TASK.md`.
-5. Confirm scope and files allowed to change.
-6. Do not change files outside scope without owner approval.
-7. After work, update `STATE.md`, `CHANGELOG.md` and `TEST_REPORT.md`.
+4. If the task has an assigned `.ai/tasks/TASK-XXX/TASK.md`, read it.
+5. Check `git status` and identify local changes that must not be overwritten.
+6. Confirm the practical scope from the user request, current branch and nearby code.
+7. For small Green Lane tasks, a dedicated task folder is optional; use commit message, tests and a short final handoff.
+8. For Yellow/Red Lane tasks or work that another agent must continue, update `STATE.md`, `CHANGELOG.md` and `TEST_REPORT.md`.
 
 ---
 
@@ -52,11 +53,13 @@ Konkretnie:
 
 ### 3.2 Dokumentacja Sesji
 
-Po kazdej sesji roboczej (niezaleznie od modelu) nalezy:
+Dokumentacja ma utrwalac decyzje, a nie blokowac szybka prace. Po sesji roboczej agent dobiera ciezar dokumentacji do ryzyka:
 
-1. **Zaktualizowac plan wykonawczy** (`docs/superpowers/plans/`) — oznaczyc wykonane taski, dodac sekcje `Session Status` z data i opisem.
-2. **Zaktualizowac README** jesli zmienily sie metryki, architektura lub instrukcje uruchomienia.
-3. **Commit + push** — nie zostawiaj niezacommitowanych zmian.
+- **Green Lane / mala zmiana**: wystarcza czytelny commit, adekwatne testy i krotki finalny handoff w czacie.
+- **Yellow Lane / srednia zmiana**: zaktualizuj task, plan albo raport, jesli praca ma byc przejeta przez inny model lub wymaga review przed merge.
+- **Red Lane / duza decyzja**: zapisz plan/analize i uzyskaj decyzje Michala przed zmiana architektury, stacku, danych lub merge do `master`.
+- **README** aktualizuj tylko wtedy, gdy zmienily sie instrukcje uruchomienia, architektura, metryki projektu albo zachowanie widoczne dla operatora.
+- **Commit + push** wykonuj po zakonczonej, zweryfikowanej pracy na branchu roboczym, chyba ze Michal wyraznie chce pozostawic zmiany lokalnie.
 
 ### 3.3 Konwencje Kodu
 
@@ -67,9 +70,9 @@ Po kazdej sesji roboczej (niezaleznie od modelu) nalezy:
 
 ### 3.4 Podejmowanie Decyzji
 
-- **Drobne decyzje** (nazewnictwo, refaktor lokalny): podejmuj samodzielnie, opisz w ucommicie.
-- **Srednie decyzje** (nowy modul, zmiana API): opisz w planie, poczekaj na akceptacje Michala.
-- **Duze decyzje** (zmiana architektury, nowa biblioteka, zmiana stacku): opisz w planie z analiza za/przeciw, poczekaj na akceptacje Michala.
+- **Green Lane — autonomia domyslna**: agent moze samodzielnie implementowac, testowac, commitowac i pushowac zmiany niskiego ryzyka w zakresie zadania. Dotyczy to m.in. poprawek bugow, testow, dokumentacji, lokalnych refaktorow i zmian bez publicznego API.
+- **Yellow Lane — praca samodzielna, review przed merge rekomendowane**: agent moze pracowac na branchu, ale oznacza ryzyko w handoffie, jesli zmiana dotyka kilku modulow, runtime, kontraktu frontend/backend, nowego modulu albo ma niepelna weryfikacje.
+- **Red Lane — decyzja Michala wymagana**: zmiana architektury, stacku, modelu produktu, operacje destrukcyjne, usuwanie testow, kasowanie danych, duze usuniecia kodu i merge do `master`.
 - **Nigdy nie usuwaj kodu innego modelu** bez wyjasnienia dlaczego i co go zastepuje.
 
 ### 3.5 Napotkane Problemy
@@ -79,15 +82,17 @@ Jesli napotkasz problem lub niejasnosc w kodzie innego modelu:
 2. **Dodaj komentarz** wyjasniajacy problem (np. `# TODO(zespol): ten prog moze byc za niski — do weryfikacji w Task 8`).
 3. **Opisz w planie** co wymaga dyskusji.
 
-### 3.6 Workflow Gemini -> Codex/ChatGPT Review
+### 3.6 Autonomia agentow i review
 
-Docelowy model pracy przy wiekszych etapach:
+Docelowy model pracy to **autonomia domyslna z progami ryzyka**.
 
-- **Gemini jest wykonawca tokenochlonnych dzialan**: moze robic szerokie analizy, czytac duze fragmenty repozytorium, uruchamiac pelne testy, budowac frontend, porownywac warianty i przygotowywac obszerne notatki robocze.
-- **Codex/ChatGPT jest kuratorem i audytorem jakosci**: po zakonczonym tasku robi niezalezny review zmian, weryfikuje ryzyka regresji, sprawdza zgodnosc z planem i wydaje decyzje `green/yellow/red light`.
-- **Michal podejmuje decyzje produktowe i architektoniczne**: modele moga rekomendowac, ale srednie i duze decyzje nadal wymagaja akceptacji Michala zgodnie z sekcja 3.4.
+- Kazdy agent moze samodzielnie pracowac nad kodem w Green Lane.
+- Supervisor review nie jest wymagany przed kazda implementacja, kazdym commitem ani kazdym pushem na branch roboczy.
+- Review ChatGPT/Codex jest narzedziem dla zmian Yellow/Red Lane, pracy spornej, audytu jakosci albo kontroli przed merge do `master`.
+- Gemini, Codex i Opus moga wykonywac kompletne taski end-to-end, jesli mieszcza sie w zakresie i maja adekwatna weryfikacje.
+- **Michal podejmuje decyzje produktowe, architektoniczne i Red Lane**: modele moga rekomendowac i samodzielnie realizowac Green/Yellow Lane na branchu roboczym, ale Red Lane i merge do `master` wymagaja akceptacji Michala zgodnie z sekcja 3.4.
 
-Gemini po kazdym tasku przekazuje Codexowi krotki pakiet review, zamiast pelnego strumienia rozumowania:
+Agent konczacy Yellow/Red Lane task albo proszacy o review przekazuje krotki pakiet, zamiast pelnego strumienia rozumowania:
 
 ```markdown
 Review Task X: <nazwa>
@@ -109,7 +114,7 @@ Znane ryzyka / decyzje do review:
 - <ryzyko albo "brak">
 ```
 
-Codex/ChatGPT odpowiada w stalym, oszczednym formacie:
+Reviewer odpowiada w stalym, oszczednym formacie:
 
 ```markdown
 LIGHT: GREEN | YELLOW | RED
@@ -121,8 +126,8 @@ NEXT: <kolejny bezpieczny krok>
 Szczegółowy standard przekazywania informacji przez GitHub opisuje `.ai/AI_AGENT_COMMUNICATION_PROTOCOL.md`.
 
 Zasady optymalizacji tokenow:
-- Gemini wykonuje szerokie, tokenochlonne sprawdzenia i streszcza wynik.
-- Codex/ChatGPT w pierwszej kolejnosci analizuje `git diff`, nowe/zmienione testy, punkty integracji i ryzyka runtime.
+- Agent wykonawczy sam odpowiada za podstawowa weryfikacje swojej zmiany.
+- Reviewer w pierwszej kolejnosci analizuje `git diff`, nowe/zmienione testy, punkty integracji i ryzyka runtime.
 - Pelny opis zmian jest wymagany tylko przy `RED light`, zmianie architektury, zmianie publicznego API albo gdy testy nie pokrywaja ryzyka.
 - Nie duplikujemy dlugich opisow w czacie, jesli sa juz zapisane w planie wykonawczym lub commitach.
 
@@ -174,9 +179,10 @@ Natychmiastowe nastepne dzialanie dla nastepnego modelu.
 - ❌ Nie zmieniaj interfejsow publicznych modulow bez aktualizacji wszystkich uzyc.
 - ❌ Nie commituj kodu bez uruchomienia testow (`python -m unittest discover app_cv/tests`).
 - ❌ Nie ignoruj istniejacych planow — przeczytaj je zanim zaczniesz nowa prace.
+- ❌ Nie wymuszaj review Supervisora dla kazdej malej zmiany Green Lane.
 - ❌ Nie ignoruj `.ai/AI_AGENT_COMMUNICATION_PROTOCOL.md` przy przekazywaniu pracy między modelami.
 
 ---
 
-*Ostatnia aktualizacja: 2026-05-31 | Autorzy: Opus (Anthropic Claude), Codex (OpenAI), Gemini (Google DeepMind)*
+*Ostatnia aktualizacja: 2026-06-05 | Autorzy: Opus (Anthropic Claude), Codex (OpenAI), Gemini (Google DeepMind)*
 *Zatwierdzil: Michal*
