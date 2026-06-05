@@ -33,6 +33,7 @@ from tarotvision.autotune_session_log import AutotuneSessionLog
 from tarotvision.autotune_profiles import generate_candidate_profiles
 from tarotvision.calibration_wizard_scoring import score_calibration_wizard_samples
 from tarotvision.calibration_wizard_status import build_calibration_wizard_status
+from tarotvision.calibration_debug import save_calibration_debug
 
 # Konfiguracja
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -217,6 +218,14 @@ def record_autotune_sample_from_snapshot(pipeline_sample):
     if scenario == "empty":
         if accepted_count != 0:
             autotune_session.last_rejection_reason = f"wykryto zaakceptowane karty ({accepted_count}) na pustej macie"
+            save_calibration_debug(
+                frame=pipeline_sample.get("raw_frame"),
+                scenario=scenario,
+                detected_count=detected_count,
+                expected_count=0,
+                detection_debug=pipeline_sample.get("detection_debug"),
+                log_dir=LOG_DIR
+            )
             log_event(
                 f"[WIZARD DIAG] Odrzucono probke empty | "
                 f"detected={detected_count}, accepted={accepted_count} | "
@@ -229,6 +238,14 @@ def record_autotune_sample_from_snapshot(pipeline_sample):
     else:
         if detected_count != expected_count:
             autotune_session.last_rejection_reason = f"wykryto {detected_count} zamiast {expected_count} kart"
+            save_calibration_debug(
+                frame=pipeline_sample.get("raw_frame"),
+                scenario=scenario,
+                detected_count=detected_count,
+                expected_count=expected_count,
+                detection_debug=pipeline_sample.get("detection_debug"),
+                log_dir=LOG_DIR
+            )
             log_event(
                 f"[WIZARD DIAG] Odrzucono probke {scenario} | "
                 f"detected={detected_count}, accepted={accepted_count} | "
