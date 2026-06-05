@@ -88,6 +88,7 @@ Ten plik stanowi centralny rejestr wszystkich zadań (Tasks) realizowanych w pro
 | **TASK-CV-STAGE-6-CALIBRATION-WIZARD-ONE-CARD-RECOGNITION-ACCEPTANCE-001** | `DONE` | `task/cv-stage-6-calibration-wizard-one-card-recognition-acceptance-001` | Codex/Gemini | Diagnostyka recognition acceptance dla jednej karty Gilded po ustabilizowanej geometrii | 2026-06-05 | one_card Gilded live smoke PASS 3/3; następny krok to MVP smoke three_cards/recording, nie dalszy autotuning |
 | **TASK-PROJECT-MVP-RECOVERY-AUDIT-001** | `DONE` | `codex/project-mvp-recovery-audit-2026-06-05` | Codex | Dogłębny audyt ślepych uliczek i plan odzyskania MVP TarotVision | 2026-06-05 | Audyt i plan recovery zapisane; brak zmian w kodzie; active_decks.json pominięty |
 | **TASK-AI-WORKFLOW-LIGHTWEIGHT-AUTONOMY-001** | `DONE` | `codex/project-mvp-recovery-audit-2026-06-05` | Codex | Uproszczenie zasad współpracy agentów: autonomia domyślna, Supervisor tylko dla ryzyka | 2026-06-05 | AGENTS.md i AI protocol zaktualizowane; Green/Yellow/Red Lane wdrożone dokumentacyjnie |
+| **TASK-PROJECT-RECOVERY-SCHEDULE-001** | `DONE` | `codex/project-mvp-recovery-audit-2026-06-05` | Codex | 30-dniowy harmonogram uzdrowienia projektu i dojścia do recording-ready MVP | 2026-06-05 | Harmonogram zapisany; priorytet: runbook, smoke Gilded, recording demo, debt reduction po MVP |
 
 ---
 
