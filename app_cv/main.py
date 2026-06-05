@@ -31,6 +31,7 @@ from tarotvision.operator_explainability import build_cv_explainability
 from tarotvision.autotune_session import AutotuneSession
 from tarotvision.autotune_session_log import AutotuneSessionLog
 from tarotvision.autotune_profiles import generate_candidate_profiles
+from tarotvision.calibration_wizard_scoring import score_calibration_wizard_samples
 
 # Konfiguracja
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -82,6 +83,7 @@ background_model = BackgroundModel()
 pending_background_capture = False
 autotune_session = None
 autotune_candidate_profiles = []
+autotune_quality_report = None
 
 # Inicjalizacja DiagnosticsWriter, CameraSession i OpenCvPreview
 reset_logs = os.environ.get("TAROTVISION_RESET_LOGS") == "1"
@@ -141,7 +143,10 @@ def autotune_status_payload():
             "ready_to_score": False,
             "recommendation": None,
             "last_score": None,
-            "next_action": "Rozpocznij autotuning z poziomu konsoli."
+            "next_action": "Rozpocznij autotuning z poziomu konsoli.",
+            "quality_report": None,
+            "ready_for_session": False,
+            "operator_messages": []
         }
     
     scenario = autotune_session.current_scenario()
@@ -155,7 +160,16 @@ def autotune_status_payload():
         "ready_to_score": autotune_session.ready_to_score(),
         "recommendation": autotune_session.recommendation,
         "last_score": autotune_session.recommendation["score"] if autotune_session.recommendation else None,
-        "next_action": autotune_session.next_action()
+        "next_action": autotune_session.next_action(),
+        "quality_report": autotune_quality_report,
+        "ready_for_session": (
+            autotune_quality_report.get("ready_for_session", False)
+            if autotune_quality_report else False
+        ),
+        "operator_messages": (
+            autotune_quality_report.get("operator_messages", [])
+            if autotune_quality_report else []
+        )
     }
 
 
@@ -264,6 +278,7 @@ def handle_control_message(message, camera_session):
     global pending_background_capture
     global autotune_session
     global autotune_candidate_profiles
+    global autotune_quality_report
 
     if message.type == "tuning_update":
         try:
@@ -339,6 +354,7 @@ def handle_control_message(message, camera_session):
         if message.scenario == "empty":
             background_model.clear()
         autotune_candidate_profiles = generate_candidate_profiles()
+        autotune_quality_report = None
         calibration_state = {
             "state": "collecting",
             "last_score": None,
@@ -352,6 +368,17 @@ def handle_control_message(message, camera_session):
         if autotune_session is None or not autotune_session.ready_to_score():
             add_operator_warning("Brak kompletnych probek autotuningu do kalibracji")
             return
+        
+        autotune_quality_report = score_calibration_wizard_samples(autotune_session.samples)
+        
+        add_operator_warning(
+            f"Wizard: Ocena stanowiska gotowa (score={autotune_quality_report['score']:.3f}, grade={autotune_quality_report['grade']})"
+        )
+        for issue in autotune_quality_report.get("blocking_issues", []):
+            add_operator_warning(f"BLOKADA: {issue}")
+        for warning in autotune_quality_report.get("warnings", []):
+            add_operator_warning(f"OSTRZEZENIE: {warning}")
+
         recommendation = update_autotune_recommendation_from_samples()
         write_autotune_log("recommendation_ready", recommendation=recommendation)
         if recommendation is not None:
@@ -365,6 +392,7 @@ def handle_control_message(message, camera_session):
         write_autotune_log("cancelled")
         autotune_session = None
         autotune_candidate_profiles = []
+        autotune_quality_report = None
         calibration_state = {
             "state": "idle",
             "last_score": None,
