@@ -27,7 +27,7 @@
 - Frontend build (`npm --prefix app_ar run build`)
   - Wynik: **NOT_RUN** (brak zmian we frontendzie)
 - GitHub Actions CI
-  - Wynik: **PENDING** (będzie uruchomiony po pushu brancha)
+  - Wynik: **PASS**
 
 ## Smoke Tests
 
