@@ -1,7 +1,7 @@
 # State of TASK-CV-STAGE-6-RWS-CALIBRATION-WIZARD-SAMPLE-CAPTURE-001
 
 ## Status
-DONE
+APPROVED
 
 ## Session Status (2026-06-05)
 Wdrożono i pomyślnie zweryfikowano mechanizm kontrolowanego zbierania próbek wizardu kalibracji w integracji ze `SnapshotFirstPipeline`.
