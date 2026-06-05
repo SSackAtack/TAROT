@@ -25,10 +25,44 @@ class TestCameraSession(unittest.TestCase):
         opened = self.session.open(0)
         
         self.assertTrue(opened)
-        mock_vc_class.assert_called_once_with(0)
+        self.assertEqual(mock_vc_class.call_count, 1)
         self.assertTrue(self.session.is_opened())
         self.assertEqual(self.session.frame_width, 1280)
         self.assertEqual(self.session.frame_height, 720)
+
+    @patch('tarotvision.camera.camera_session.platform.system')
+    @patch('cv2.VideoCapture')
+    def test_open_uses_directshow_backend_on_windows(self, mock_vc_class, mock_system):
+        mock_system.return_value = "Windows"
+        mock_vc = MagicMock()
+        mock_vc.isOpened.return_value = True
+        mock_vc.get.side_effect = lambda prop_id: 1280 if prop_id == 3 else (720 if prop_id == 4 else -1.0)
+        mock_vc_class.return_value = mock_vc
+
+        opened = self.session.open(0)
+
+        self.assertTrue(opened)
+        mock_vc_class.assert_called_once_with(0, 700)
+
+    @patch('tarotvision.camera.camera_session.platform.system')
+    @patch('cv2.VideoCapture')
+    def test_open_falls_back_to_default_backend_when_directshow_fails(self, mock_vc_class, mock_system):
+        mock_system.return_value = "Windows"
+        dshow_capture = MagicMock()
+        dshow_capture.isOpened.return_value = False
+        default_capture = MagicMock()
+        default_capture.isOpened.return_value = True
+        default_capture.get.side_effect = lambda prop_id: 1280 if prop_id == 3 else (720 if prop_id == 4 else -1.0)
+        mock_vc_class.side_effect = [dshow_capture, default_capture]
+
+        opened = self.session.open(0)
+
+        self.assertTrue(opened)
+        self.assertEqual(mock_vc_class.call_count, 2)
+        mock_vc_class.assert_any_call(0, 700)
+        mock_vc_class.assert_any_call(0)
+        dshow_capture.release.assert_called_once()
+        self.assertIs(self.session.capture, default_capture)
 
     @patch('cv2.VideoCapture')
     def test_open_failed(self, mock_vc_class):

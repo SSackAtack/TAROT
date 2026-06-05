@@ -24,6 +24,16 @@ $env:PYTHONPATH='app_cv'; python -m unittest app_cv.tests.test_autotune_pipeline
 => PASS
 ```
 
+Camera hotfix tests:
+
+```text
+$env:PYTHONPATH='app_cv'; python -m unittest app_cv.tests.test_camera_session -v
+=> PASS
+
+$env:PYTHONPATH='app_cv'; python -m unittest app_cv.tests.test_autotune_pipeline_sample_capture -v
+=> PASS
+```
+
 ## Smoke / diagnostyka fizyczna
 
 Punkt wejścia z poprzedniego taska:
@@ -43,6 +53,13 @@ Current diagnostic run:
 - Studio CV Explain showed one candidate and one accepted card before starting the wizard.
 - `one_card` stage started, but no new sample was collected without a fresh physical motion/snapshot trigger.
 - Required next manual action: move hand/card over the table and place the Gilded card stable for 2-3 seconds, then inspect `recognition_debug` in the new `one_card` autotune JSON.
+
+MSMF camera issue:
+
+- Operator reported repeated `CvCapture_MSMF::grabFrame ... can't grab frame` after closing windows and restarting `.bat`.
+- Backend restarted after DirectShow-first hotfix.
+- Runtime log: `Kamera otwarta przez backend DirectShow`.
+- Runtime log after hotfix did not show new MSMF `grabFrame` warnings in the checked window.
 
 ## Zakres
 

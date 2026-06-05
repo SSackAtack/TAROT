@@ -5,6 +5,7 @@ Moduł zarządzania sesją kamery sprzętowej (CameraSession) TarotVision.
 import os
 import json
 import logging
+import platform
 import cv2
 from tarotvision.camera_controls import read_camera_control
 
@@ -28,7 +29,7 @@ class CameraSession:
     def open(self, index=0):
         """Otwiera kamerę pod zadanym indeksem."""
         self.camera_index = index
-        self.capture = cv2.VideoCapture(index)
+        self.capture = self._open_capture(index)
         
         if not self.capture.isOpened():
             logging.warning(f"[CameraSession] Nie udało się otworzyć kamery pod indeksem {index}")
@@ -39,6 +40,16 @@ class CameraSession:
         self.probe_controls()
         logging.info(f"[CameraSession] Kamera {index} otwarta. Rozdzielczość: {self.frame_width}x{self.frame_height}")
         return True
+
+    def _open_capture(self, index):
+        if platform.system() == "Windows":
+            capture = cv2.VideoCapture(index, cv2.CAP_DSHOW)
+            if capture.isOpened():
+                logging.info("[CameraSession] Kamera otwarta przez backend DirectShow.")
+                return capture
+            capture.release()
+            logging.warning("[CameraSession] DirectShow nie otworzył kamery, używam domyślnego backendu OpenCV.")
+        return cv2.VideoCapture(index)
 
     def is_opened(self):
         """Zwraca True, jeśli kamera jest otwarta."""

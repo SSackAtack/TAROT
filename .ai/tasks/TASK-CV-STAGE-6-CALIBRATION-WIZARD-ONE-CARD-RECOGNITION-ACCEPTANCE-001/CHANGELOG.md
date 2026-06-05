@@ -8,3 +8,4 @@
 - Rozszerzono `SnapshotAnalyzer` o obsługę wyniku `(recognition, debug)` i serializację `recognition_debug`.
 - Rozszerzono payload próbek Calibration Wizard o `recognition_debug`.
 - Dodano testy jednostkowe dla top rejected match, snapshot diagnostics i zapisu próbki wizardu.
+- Dodano hotfix `CameraSession`: na Windows kamera jest otwierana najpierw przez DirectShow (`cv2.CAP_DSHOW`) z fallbackiem do domyślnego backendu, aby ominąć powtarzalny błąd MSMF `grabFrame`.
