@@ -32,6 +32,7 @@ from tarotvision.autotune_session import AutotuneSession
 from tarotvision.autotune_session_log import AutotuneSessionLog
 from tarotvision.autotune_profiles import generate_candidate_profiles
 from tarotvision.calibration_wizard_scoring import score_calibration_wizard_samples
+from tarotvision.calibration_wizard_status import build_calibration_wizard_status
 
 # Konfiguracja
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -134,43 +135,11 @@ def add_operator_warning(message):
 
 
 def autotune_status_payload():
-    if autotune_session is None:
-        return {
-            "scenario": None,
-            "state": "idle",
-            "collected_count": 0,
-            "required_count": 3,
-            "ready_to_score": False,
-            "recommendation": None,
-            "last_score": None,
-            "next_action": "Rozpocznij autotuning z poziomu konsoli.",
-            "quality_report": None,
-            "ready_for_session": False,
-            "operator_messages": []
-        }
-    
-    scenario = autotune_session.current_scenario()
-    samples = autotune_session.samples.get(scenario, []) if scenario else []
-    
-    return {
-        "scenario": scenario,
-        "state": autotune_session.state,
-        "collected_count": len(samples),
-        "required_count": autotune_session.samples_per_scenario,
-        "ready_to_score": autotune_session.ready_to_score(),
-        "recommendation": autotune_session.recommendation,
-        "last_score": autotune_session.recommendation["score"] if autotune_session.recommendation else None,
-        "next_action": autotune_session.next_action(),
-        "quality_report": autotune_quality_report,
-        "ready_for_session": (
-            autotune_quality_report.get("ready_for_session", False)
-            if autotune_quality_report else False
-        ),
-        "operator_messages": (
-            autotune_quality_report.get("operator_messages", [])
-            if autotune_quality_report else []
-        )
-    }
+    return build_calibration_wizard_status(
+        session=autotune_session,
+        quality_report=autotune_quality_report,
+        default_required_count=3,
+    )
 
 
 def current_active_decks():
