@@ -15,8 +15,10 @@ class AutotuneSession:
         self.samples = {scenario: [] for scenario in self.required_scenarios}
         self.state = "collecting"
         self.recommendation = None
+        self.last_rejection_reason = None
 
     def add_sample(self, scenario, sample):
+        self.last_rejection_reason = None
         if scenario not in self.samples:
             raise ValueError(f"Unknown autotune scenario: {scenario}")
         if len(self.samples[scenario]) < self.samples_per_scenario:
@@ -75,6 +77,8 @@ class AutotuneSession:
     def next_action(self):
         result = self.stage_result()
         if result["state"] == "COLLECTING":
+            if getattr(self, "last_rejection_reason", None):
+                return f"Odrzucono próbkę: {self.last_rejection_reason}. Ruch wyzwoli kolejną."
             return "Nie ruszaj stolu, czekam na stabilne snapshoty."
         if result["state"] == "FAIL":
             return "Kliknij Skalibruj albo popraw swiatlo/mate."

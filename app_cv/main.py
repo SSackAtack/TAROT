@@ -216,6 +216,7 @@ def record_autotune_sample_from_snapshot(pipeline_sample):
 
     if scenario == "empty":
         if accepted_count != 0:
+            autotune_session.last_rejection_reason = f"wykryto zaakceptowane karty ({accepted_count}) na pustej macie"
             log_event(
                 f"[WIZARD DIAG] Odrzucono probke empty | "
                 f"detected={detected_count}, accepted={accepted_count} | "
@@ -227,6 +228,7 @@ def record_autotune_sample_from_snapshot(pipeline_sample):
             return
     else:
         if detected_count != expected_count:
+            autotune_session.last_rejection_reason = f"wykryto {detected_count} zamiast {expected_count} kart"
             log_event(
                 f"[WIZARD DIAG] Odrzucono probke {scenario} | "
                 f"detected={detected_count}, accepted={accepted_count} | "
@@ -367,6 +369,7 @@ def handle_control_message(message, camera_session):
         return
 
     if message.type == "autotune_start":
+        operator_warnings.clear()
         autotune_session = AutotuneSession(
             required_scenarios=(message.scenario,),
             samples_per_scenario=3,
