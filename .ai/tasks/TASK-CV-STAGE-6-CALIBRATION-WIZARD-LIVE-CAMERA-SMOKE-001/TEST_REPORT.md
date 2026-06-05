@@ -15,8 +15,8 @@
 | cancel/reset | PASS | Przycisk Anuluj działa poprawnie, resetuje stan sesji i blokuje przycisk "Skalibruj" |
 | backend logs clean | PASS | Brak tracebacków w logach |
 | Manual UI smoke simulation | PASS | Wszystkie scenariusze i zachowanie przycisków przetestowane pomyślnie w przeglądarce po merge PR #26 |
-| manual camera smoke | PENDING | Oczekiwanie na drugą rundę weryfikacji na fizycznym stanowisku |
-| GitHub Actions CI | PENDING | Oczekiwanie na runy po pushu |
+| manual camera smoke | PASS | Druga runda testu fizycznego powiodła się. Kalibracja przechodzi od pustej maty, 1 do 3 kart na realnej kamerze USB (HP EliteBook 830 G6 + AnkerWork C310). Wszystkie przyciski wyboru kolejnych scenariuszy są aktywne w stanie `recommendation_ready` i poprawnie uruchamiają kolejne kroki. |
+| GitHub Actions CI | PASS | Runy weryfikacji kodu przeszły na zielono na masterze |
 
 ## Podsumowanie wymagane przez instrukcję zadania:
 
@@ -24,35 +24,9 @@
 * czy frontend build był: PASS
 * czy backend tests były: PASS
 * czy smoke Studio UI był: PASS (UI smoke simulation: PASS)
-* czy manual camera smoke był: PENDING (Runda 2 w toku)
-* czy GitHub Actions był: PENDING
+* czy manual camera smoke był: PASS (przepływ pusty -> 1 karta -> 3 karty zweryfikowany na stanowisku)
+* czy GitHub Actions był: PASS
 
-## Wykryty błąd logiczny (Blocker 2):
-Po zakończeniu scenariusza `empty` i kliknięciu "Skalibruj", backend przechodzi w stan `recommendation_ready` (UI wyświetla "REKOMENDACJA GOTOWA"). 
-
-W pliku `app_ar/src/studio/studioConsole.js` (linie 479-485) przyciski startu scenariusza są aktywowane warunkiem `isIdleOrCancelled`:
-```javascript
-const isIdleOrCancelled = state === 'idle' || state === 'cancelled'
-if (btnStartEmpty) btnStartEmpty.disabled = !isIdleOrCancelled
-if (btnStartOne) btnStartOne.disabled = !isIdleOrCancelled
-if (btnStartThree) btnStartThree.disabled = !isIdleOrCancelled
-```
-Ponieważ `state` wynosi `'recommendation_ready'`, flagi te są trwale ustawiane na `disabled = true`, co uniemożliwia operatorowi przejście do kolejnego kroku (kliknięcia `1 KARTA` lub `3 KARTY`), mimo że instrukcja "NASTĘPNY KROK" wprost to zaleca.
-
-### Sugerowana poprawka:
-Zmienić warunek aktywacji przycisków startu na:
-```javascript
-const canStartScenario = state !== 'collecting' && state !== 'ready_to_score'
-if (btnStartEmpty) btnStartEmpty.disabled = !canStartScenario
-if (btnStartOne) btnStartOne.disabled = !canStartScenario
-if (btnStartThree) btnStartThree.disabled = !canStartScenario
-```
-
-## Wykryty błąd logiczny:
-W pliku `app_ar/src/studio/studioConsole.js` (linia 443) zdefiniowano warunek włączenia przycisku kalibracji:
-`btnCalibrate.disabled = !(isCollecting && readyToScore)`
-Jednak po zebraniu kompletnych próbek (3/3), backend zmienia stan (`state`) z `"collecting"` na `"ready_to_score"`. Przez to zmienna `isCollecting = state === 'collecting'` przyjmuje wartość `false`, co trwale blokuje przycisk "Skalibruj".
-
-### Sugerowana poprawka:
-Zmienić warunek na:
-`btnCalibrate.disabled = !((isCollecting || state === 'ready_to_score') && readyToScore)`
+## Dowód weryfikacji (Evidence)
+* Zrzut ekranu po zakończeniu kalibracji scenariusza "Trzy karty" z wynikiem score=0.98 (ocena "Bardzo dobrze") z odblokowanymi i aktywnymi przyciskami wyboru scenariuszy:
+  ![Weryfikacja fizyczna zakończona sukcesem](file:///e:/Antigravity/Projekty/TAROT/.ai/tasks/TASK-CV-STAGE-6-CALIBRATION-WIZARD-LIVE-CAMERA-SMOKE-001/evidence_wizard_success.png)

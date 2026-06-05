@@ -1,7 +1,7 @@
 # Walkthrough — TASK-CV-STAGE-6-CALIBRATION-WIZARD-LIVE-CAMERA-SMOKE-001
 
 ## Informacje ogólne
-* Data i godzina: 2026-06-05 15:40
+* Data i godzina: 2026-06-05 15:45
 * Branch: `task/cv-stage-6-calibration-wizard-live-camera-smoke-001`
 * Commit hash: PENDING (dokumentacja)
 * System/Sprzęt: HP EliteBook 830 G6 + AnkerWork C310
@@ -19,7 +19,7 @@
    - System pomyślnie zarejestrował 3/3 próbek i przeszedł do stanu `ready_to_score: true` oraz `overall_wizard_ready: true`.
 
 3. **Wykryty problem (FAIL)**:
-   - Przycisk "Skalibruj" (`autotune_calibrate`) pozostał zablokowane (`disabled = true`).
+   - Przycisk "Skalibruj" (`autotune_calibrate`) pozostał zablokowany (`disabled = true`).
    - Inspekcja kodu wykazała błąd logiczny w [studioConsole.js](file:///e:/Antigravity/Projekty/TAROT/app_ar/src/studio/studioConsole.js#L486):
      ```javascript
      if (btnCalibrate) btnCalibrate.disabled = !(isCollecting && readyToScore)
@@ -71,5 +71,8 @@
      - Kliknięcie `3 KARTY` poprawnie wysyła komendę WebSocket `{ "type": "autotune_start", "scenario": "three_cards" }` na backend.
      - Przycisk `Anuluj` działa prawidłowo, resetuje stan sesji i przywraca stan `idle`, w którym przyciski scenariuszy nadal są aktywne.
 
-3. **Weryfikacja fizyczna na stanowisku operatorskim**:
-   - PENDING: Weryfikacja przepływu na fizycznym stanowisku HP EliteBook 830 G6 + AnkerWork C310.
+3. **Weryfikacja fizyczna na stanowisku operatorskim (HP EliteBook 830 G6 + AnkerWork C310)**:
+   - Operator (Michał) pomyślnie przeszedł pełną procedurę kalibracji od Pustej maty, przez 1 kartę, aż do 3 kart.
+   - W stanie `recommendation_ready` przyciski wyboru kolejnych scenariuszy były aktywne. Kliknięcie ich poprawnie rozpoczynało kolejne etapy bez wiszenia.
+   - Po zebraniu 3/3 próbek dla scenariusza "Trzy karty" i uruchomieniu kalibracji, system zwrócił wynik **score=0.98** (ocena **Bardzo dobrze**).
+   - Pełna sekwencja kalibracji stanowiska zakończyła się pełnym sukcesem (**PASS**).
