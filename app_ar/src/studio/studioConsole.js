@@ -476,7 +476,11 @@ function renderStudioAutotune(data) {
     const btnCalibrate = panel.querySelector('[data-studio-action="autotune_calibrate"]')
     const btnCancel = panel.querySelector('[data-studio-action="autotune_cancel"]')
 
-    const isIdleOrCancelled = state === 'idle' || state === 'cancelled'
+    const canStartScenario =
+        state === 'idle' ||
+        state === 'cancelled' ||
+        state === 'recommendation_ready'
+
     const isReadyToScore =
         autotune.ready_to_score === true ||
         state === 'ready_to_score' ||
@@ -486,9 +490,9 @@ function renderStudioAutotune(data) {
             state !== 'idle'
         )
 
-    if (btnStartEmpty) btnStartEmpty.disabled = !isIdleOrCancelled
-    if (btnStartOne) btnStartOne.disabled = !isIdleOrCancelled
-    if (btnStartThree) btnStartThree.disabled = !isIdleOrCancelled
+    if (btnStartEmpty) btnStartEmpty.disabled = !canStartScenario
+    if (btnStartOne) btnStartOne.disabled = !canStartScenario
+    if (btnStartThree) btnStartThree.disabled = !canStartScenario
     if (btnCalibrate) btnCalibrate.disabled = !isReadyToScore
     if (btnCancel) btnCancel.disabled = state === 'idle'
 }
