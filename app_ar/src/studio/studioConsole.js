@@ -16,6 +16,11 @@ let isDecksInitialized = false
 let loadedDecksList = []
 let activeDecksState = []
 let isDecksApplying = false
+let studioPreviewMode = 'pip'
+let studioPipSize = Number(localStorage.getItem('studio:pipSize') || 30)
+const studioSidebarCollapsedStorageKey = 'studio:sidebarCollapsedSections'
+const studioSidebarDefaultOpenSections = new Set(['transport', 'preview', 'autotune', 'cv-diagnostics'])
+let studioSidebarCollapsedSections = loadStudioSidebarCollapsedSections()
 
 const studioCameraLabels = {
     CAP_PROP_FOCUS: 'Ostrość',
@@ -96,6 +101,113 @@ function updateStudioActiveDecksStatus(selectedIds = activeDecksState) {
     const names = selectedIds.map(getStudioDeckDisplayName).join(', ')
     statusEl.textContent = `Aktywne teraz: ${names}`
     statusEl.classList.remove('studio-active-decks-status--warning')
+}
+
+function loadStudioSidebarCollapsedSections() {
+    try {
+        const rawValue = localStorage.getItem(studioSidebarCollapsedStorageKey)
+        const parsed = rawValue ? JSON.parse(rawValue) : []
+        const collapsedSections = new Set(Array.isArray(parsed) ? parsed : [])
+        collapsedSections.delete('preview')
+        return collapsedSections
+    } catch {
+        return new Set()
+    }
+}
+
+function saveStudioSidebarCollapsedSections() {
+    localStorage.setItem(
+        studioSidebarCollapsedStorageKey,
+        JSON.stringify(Array.from(studioSidebarCollapsedSections))
+    )
+}
+
+function isStudioSidebarSectionCollapsed(sectionId) {
+    if (studioSidebarCollapsedSections.has(sectionId)) return true
+    return !studioSidebarDefaultOpenSections.has(sectionId)
+}
+
+function setStudioSidebarSectionCollapsed(section, collapsed) {
+    const sectionId = section.dataset.studioSection
+    if (!sectionId) return
+
+    section.dataset.collapsed = collapsed ? 'true' : 'false'
+    const toggle = section.querySelector('.studio-card__toggle')
+    if (toggle) {
+        toggle.textContent = collapsed ? '+' : '-'
+        toggle.setAttribute('aria-label', collapsed ? 'Rozwiń sekcję' : 'Zwiń sekcję')
+    }
+
+    if (collapsed) {
+        studioSidebarCollapsedSections.add(sectionId)
+    } else {
+        studioSidebarCollapsedSections.delete(sectionId)
+    }
+    saveStudioSidebarCollapsedSections()
+}
+
+function initializeStudioSidebarAccordions() {
+    if (!sidebarEl) return
+    sidebarEl.querySelectorAll('.studio-card[data-studio-section]').forEach((section) => {
+        const sectionId = section.dataset.studioSection
+        setStudioSidebarSectionCollapsed(section, isStudioSidebarSectionCollapsed(sectionId))
+    })
+
+    sidebarEl.addEventListener('click', (event) => {
+        const header = event.target.closest('.studio-card__header[data-studio-accordion-toggle]')
+        if (!header || !sidebarEl.contains(header)) return
+        const section = header.closest('.studio-card[data-studio-section]')
+        if (!section) return
+        const collapsed = section.dataset.collapsed === 'true'
+        setStudioSidebarSectionCollapsed(section, !collapsed)
+    })
+
+    sidebarEl.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return
+        const header = event.target.closest('.studio-card__header[data-studio-accordion-toggle]')
+        if (!header || !sidebarEl.contains(header)) return
+        event.preventDefault()
+        const section = header.closest('.studio-card[data-studio-section]')
+        if (!section) return
+        const collapsed = section.dataset.collapsed === 'true'
+        setStudioSidebarSectionCollapsed(section, !collapsed)
+    })
+}
+
+function setStudioPreviewMode(mode) {
+    const allowedModes = new Set(['table', 'camera', 'pip'])
+    studioPreviewMode = allowedModes.has(mode) ? mode : 'pip'
+    const overlay = document.querySelector('.studio-preview-overlay')
+    if (overlay) {
+        overlay.dataset.previewMode = studioPreviewMode
+    }
+    if (!sidebarEl) return
+    sidebarEl.querySelectorAll('[data-preview-mode]').forEach((button) => {
+        button.classList.toggle('studio-preview-mode-btn--active', button.dataset.previewMode === studioPreviewMode)
+    })
+}
+
+function setStudioPipSize(value, shouldPersist = true) {
+    const numericValue = Number(value)
+    const nextSize = Number.isFinite(numericValue) ? Math.min(45, Math.max(20, numericValue)) : 30
+    studioPipSize = nextSize
+    const overlay = document.querySelector('.studio-preview-overlay')
+    if (overlay) {
+        overlay.style.setProperty('--studio-pip-width', `${studioPipSize}%`)
+    }
+    if (sidebarEl) {
+        const slider = sidebarEl.querySelector('#studio-pip-size-slider')
+        const valueEl = sidebarEl.querySelector('#studio-pip-size-value')
+        if (slider && document.activeElement !== slider) {
+            slider.value = String(studioPipSize)
+        }
+        if (valueEl) {
+            valueEl.textContent = `${studioPipSize}%`
+        }
+    }
+    if (shouldPersist) {
+        localStorage.setItem('studio:pipSize', String(studioPipSize))
+    }
 }
 
 function getCvExplainabilityFallback(data) {
@@ -192,6 +304,69 @@ function renderCvExplainability(data) {
     })
 
     nextEl.textContent = explain.next_action || 'Sprawdz diagnostyke CV.'
+}
+
+function formatAutotuneNumber(value) {
+    const numberValue = Number(value)
+    if (!Number.isFinite(numberValue)) return '-'
+    return numberValue.toFixed(2)
+}
+
+function renderStudioAutotune(data) {
+    if (!sidebarEl) return
+    const autotune = data.operator?.calibration?.autotune || {}
+    const panel = sidebarEl.querySelector('#studio-autotune-panel')
+    const stateEl = sidebarEl.querySelector('#studio-autotune-state')
+    const resultEl = sidebarEl.querySelector('#studio-autotune-result')
+    if (!panel || !stateEl || !resultEl) return
+
+    const state = autotune.state || 'idle'
+    const recommendation = autotune.recommendation || null
+    const progress = autotune.progress || {}
+    const stageResult = autotune.stage_result || null
+    const nextAction = autotune.next_action || ''
+    panel.dataset.state = state
+    panel.dataset.stageResult = stageResult?.state || 'WAIT'
+    stateEl.textContent = String(state).toUpperCase()
+
+    if (!recommendation) {
+        const scenarioProgress = Object.entries(progress)
+            .map(([scenario, value]) => `${scenario}: ${value}`)
+            .join(' | ')
+        const collected = progress.samples_collected ?? progress.sample_count ?? 0
+        const target = progress.samples_target ?? progress.target_samples ?? '-'
+        const stageText = stageResult
+            ? `${stageResult.state}: ${stageResult.message}`
+            : (state === 'idle' ? 'Brak rekomendacji (oczekuje na integrację backendu).' : `Zbieranie probek: ${scenarioProgress || `${collected}/${target}`}`)
+        resultEl.textContent = [stageText, nextAction].filter(Boolean).join(' | ')
+        return
+    }
+
+    const profile = recommendation.profile || {}
+    const profileName = recommendation.profile_name || recommendation.name || 'kandydat'
+    const score = recommendation.score ?? recommendation.confidence ?? recommendation.value
+    const confidence = recommendation.confidence
+    const profileSummary = Object.entries(profile)
+        .slice(0, 3)
+        .map(([key, value]) => `${key}=${value}`)
+        .join(', ')
+    const details = [
+        `Profil: ${profileName}`,
+        `Score: ${formatAutotuneNumber(score)}`,
+        confidence !== undefined ? `Pewnosc: ${formatAutotuneNumber(confidence)}` : '',
+        profileSummary,
+        nextAction
+    ].filter(Boolean)
+
+    resultEl.textContent = details.join(' | ')
+}
+
+function buildStudioAutotuneProfileName() {
+    const stamp = new Date().toISOString()
+        .replace(/[-:]/g, '')
+        .replace(/\..+$/, '')
+        .replace('T', '_')
+    return `studio_live_${stamp}`
 }
 
 function initStudioDecksPanel() {
@@ -381,8 +556,10 @@ export function createStudioConsole() {
     // 5. Stwórz centralny preview overlay z safe guides
     const previewOverlay = document.createElement('div')
     previewOverlay.className = 'studio-preview-overlay'
+    previewOverlay.dataset.previewMode = studioPreviewMode
+    previewOverlay.style.setProperty('--studio-pip-width', `${studioPipSize}%`)
     previewOverlay.innerHTML = `
-        <div class="studio-preview-label">LIVE CAMERA PREVIEW</div>
+        <div class="studio-preview-label">CAMERA / TABLE PREVIEW</div>
         <div class="studio-camera-preview">
             <img id="studio-camera-preview-img" src="http://localhost:8766/video_feed.mjpg" alt="Podgląd kamery CV">
         </div>
@@ -397,11 +574,13 @@ export function createStudioConsole() {
     sidebar.className = 'studio-sidebar'
     sidebar.innerHTML = `
         <!-- Sekcja 1: Nagrywanie -->
-        <div class="studio-card">
-            <div class="studio-card__header">
+        <div class="studio-card" data-studio-section="transport">
+            <div class="studio-card__header" data-studio-accordion-toggle role="button" tabindex="0">
                 <div class="studio-card__title">Transport i Nagrywanie</div>
                 <div class="studio-card__subtitle" id="studio-rec-state">OFFLINE</div>
+                <span class="studio-card__toggle" aria-label="Zwiń sekcję">-</span>
             </div>
+            <div class="studio-card__body">
             <div class="studio-rec-info">
                 <div class="studio-rec-item">
                     <div class="studio-rec-item__label">Elapsed Time</div>
@@ -420,28 +599,57 @@ export function createStudioConsole() {
                 </div>
                 <div class="studio-path-status" id="studio-path-status">Stan: Brak walidacji</div>
             </div>
+            </div>
         </div>
 
         <!-- Sekcja 1b: Kamera sprzętowa -->
-        <div class="studio-card">
-            <div class="studio-card__header">
-                <div class="studio-card__title">Kamera sprzętowo</div>
+        <div class="studio-card" data-studio-section="camera">
+            <div class="studio-card__header" data-studio-accordion-toggle role="button" tabindex="0">
+                <div class="studio-card__title">Kamera sprzętowa</div>
                 <div class="studio-card__subtitle">Focus / Exposure</div>
+                <span class="studio-card__toggle" aria-label="Rozwiń sekcję">+</span>
             </div>
+            <div class="studio-card__body">
             <div class="studio-camera-controls" id="studio-camera-controls">
                 Brak danych z kamery. Kliknij odczyt.
             </div>
             <button class="studio-btn-action" id="studio-camera-probe-btn" style="width: 100%; justify-content: center; height: 32px;">
                 Odczyt kamery
             </button>
+            </div>
+        </div>
+
+        <div class="studio-card" data-studio-section="preview">
+            <div class="studio-card__header" data-studio-accordion-toggle role="button" tabindex="0">
+                <div class="studio-card__title">Widok podglądu</div>
+                <div class="studio-card__subtitle">Table / Camera / PiP</div>
+                <span class="studio-card__toggle" aria-label="Rozwiń sekcję">+</span>
+            </div>
+            <div class="studio-card__body">
+            <div class="studio-preview-mode-panel" id="studio-preview-mode-panel">
+                <div class="studio-preview-mode-label">Widok</div>
+                <div class="studio-preview-mode-actions">
+                    <button type="button" class="studio-preview-mode-btn" data-preview-mode="table">Wirtualny stół</button>
+                    <button type="button" class="studio-preview-mode-btn" data-preview-mode="camera">Kamera</button>
+                    <button type="button" class="studio-preview-mode-btn studio-preview-mode-btn--active" data-preview-mode="pip">PiP</button>
+                </div>
+                <label class="studio-pip-size-control">
+                    <span>PiP size</span>
+                    <input type="range" min="20" max="45" step="1" value="${studioPipSize}" id="studio-pip-size-slider">
+                    <output id="studio-pip-size-value">${studioPipSize}%</output>
+                </label>
+            </div>
+            </div>
         </div>
 
         <!-- Sekcja 2: Reżyser / Sceny -->
-        <div class="studio-card">
-            <div class="studio-card__header">
+        <div class="studio-card" data-studio-section="director">
+            <div class="studio-card__header" data-studio-accordion-toggle role="button" tabindex="0">
                 <div class="studio-card__title">Tryb Reżysera i Kadr</div>
                 <div class="studio-card__subtitle">Director Mode</div>
+                <span class="studio-card__toggle" aria-label="Rozwiń sekcję">+</span>
             </div>
+            <div class="studio-card__body">
             <div class="studio-scenes-grid">
                 <button class="studio-scene-btn studio-scene-btn--active" data-scene="table">
                     <span class="icon">🎴</span><span>Stół</span>
@@ -459,14 +667,17 @@ export function createStudioConsole() {
                     <span class="icon">🤖</span><span>Automatyczny Reżyser (Auto)</span>
                 </button>
             </div>
+            </div>
         </div>
 
         <!-- Sekcja 3: Mikser Audio -->
-        <div class="studio-card">
-            <div class="studio-card__header">
+        <div class="studio-card" data-studio-section="audio">
+            <div class="studio-card__header" data-studio-accordion-toggle role="button" tabindex="0">
                 <div class="studio-card__title">Mikser Audio (Offline Mixer)</div>
                 <div class="studio-card__subtitle">Audio Levels</div>
+                <span class="studio-card__toggle" aria-label="Rozwiń sekcję">+</span>
             </div>
+            <div class="studio-card__body">
             <div class="studio-audio-mixer">
                 <!-- Kanał Mic -->
                 <div class="studio-audio-channel">
@@ -497,14 +708,17 @@ export function createStudioConsole() {
                     <button class="studio-audio-channel__mute-btn" id="mute-master">🔊</button>
                 </div>
             </div>
+            </div>
         </div>
  
         <!-- Sekcja 4: Aktywne Talie (Active Decks Selection) -->
-        <div class="studio-card">
-            <div class="studio-card__header">
+        <div class="studio-card" data-studio-section="decks">
+            <div class="studio-card__header" data-studio-accordion-toggle role="button" tabindex="0">
                 <div class="studio-card__title">Aktywne Talie (Active Decks)</div>
                 <div class="studio-card__subtitle" id="studio-decks-count">Wybierz 1-3 talie</div>
+                <span class="studio-card__toggle" aria-label="Rozwiń sekcję">+</span>
             </div>
+            <div class="studio-card__body">
             <div class="studio-active-decks-status studio-active-decks-status--warning" id="studio-active-decks-status">
                 Wybierz 1-3 talie przed kalibracją
             </div>
@@ -514,14 +728,43 @@ export function createStudioConsole() {
             <button class="studio-btn-action" id="studio-decks-apply-btn" style="width: 100%; justify-content: center; height: 32px;" disabled>
                 Zastosuj Wybór (Apply)
             </button>
+            </div>
+        </div>
+
+        <div class="studio-card" data-studio-section="autotune">
+            <div class="studio-card__header" data-studio-accordion-toggle role="button" tabindex="0">
+                <div class="studio-card__title">Auto Tune</div>
+                <div class="studio-card__subtitle">Kalibracja warunków</div>
+                <span class="studio-card__toggle" aria-label="Zwiń sekcję">-</span>
+            </div>
+            <div class="studio-card__body">
+            <div class="studio-autotune-panel" id="studio-autotune-panel" data-state="idle">
+                <div class="studio-autotune-header">
+                    <span class="studio-autotune-title">Auto Tune</span>
+                    <span class="studio-autotune-state" id="studio-autotune-state">IDLE</span>
+                </div>
+                <div class="studio-autotune-actions">
+                    <button type="button" data-studio-action="autotune_start" data-scenario="empty" disabled title="Auto Tune oczekuje na integrację backendu">Pusta mata</button>
+                    <button type="button" data-studio-action="autotune_start" data-scenario="one_card" disabled title="Auto Tune oczekuje na integrację backendu">1 karta</button>
+                    <button type="button" data-studio-action="autotune_start" data-scenario="three_cards" disabled title="Auto Tune oczekuje na integrację backendu">3 karty</button>
+                    <button type="button" data-studio-action="autotune_calibrate" disabled title="Auto Tune oczekuje na integrację backendu">Skalibruj</button>
+                    <button type="button" data-studio-action="autotune_apply" disabled title="Auto Tune oczekuje na integrację backendu">Apply</button>
+                    <button type="button" data-studio-action="autotune_save" disabled title="Auto Tune oczekuje na integrację backendu">Save Profile</button>
+                    <button type="button" data-studio-action="autotune_cancel" disabled title="Auto Tune oczekuje na integrację backendu">Cancel</button>
+                </div>
+                <div class="studio-autotune-result" id="studio-autotune-result">Brak rekomendacji (oczekuje na integrację backendu).</div>
+            </div>
+            </div>
         </div>
 
         <!-- Sekcja 5: Diagnostyka CV -->
-        <div class="studio-card">
-            <div class="studio-card__header">
+        <div class="studio-card" data-studio-section="cv-diagnostics">
+            <div class="studio-card__header" data-studio-accordion-toggle role="button" tabindex="0">
                 <div class="studio-card__title">Diagnostyka CV Health</div>
                 <div class="studio-card__subtitle">Engine status</div>
+                <span class="studio-card__toggle" aria-label="Zwiń sekcję">-</span>
             </div>
+            <div class="studio-card__body">
             <div class="studio-cv-grid">
                 <div class="studio-cv-item">
                     <span class="studio-cv-item__label">FPS:</span>
@@ -555,10 +798,12 @@ export function createStudioConsole() {
                     <span class="studio-cv-explain-next" id="studio-cv-explain-next">Czekam na dane CV.</span>
                 </div>
             </div>
+            </div>
         </div>
     `
     hudContainer.appendChild(sidebar)
     sidebarEl = sidebar
+    initializeStudioSidebarAccordions()
 
     // 7. Stwórz dolny pasek transportu (Bottombar)
     const bottombar = document.createElement('div')
@@ -622,6 +867,49 @@ function initStudioConsoleEvents() {
     if (cameraProbeBtn) {
         cameraProbeBtn.addEventListener('click', () => {
             sendControlMessage({ type: 'camera_probe' })
+        })
+    }
+
+    const previewModePanel = sidebarEl.querySelector('#studio-preview-mode-panel')
+    if (previewModePanel) {
+        previewModePanel.addEventListener('click', (event) => {
+            const button = event.target.closest('[data-preview-mode]')
+            if (!button) return
+            setStudioPreviewMode(button.dataset.previewMode)
+        })
+        const pipSizeSlider = previewModePanel.querySelector('#studio-pip-size-slider')
+        if (pipSizeSlider) {
+            pipSizeSlider.addEventListener('input', () => {
+                setStudioPipSize(pipSizeSlider.value)
+            })
+        }
+    }
+    setStudioPreviewMode(studioPreviewMode)
+    setStudioPipSize(studioPipSize, false)
+
+    const autotunePanel = sidebarEl.querySelector('#studio-autotune-panel')
+    if (autotunePanel) {
+        autotunePanel.addEventListener('click', (event) => {
+            const button = event.target.closest('[data-studio-action]')
+            if (!button) return
+            const action = button.dataset.studioAction
+            if (action === 'autotune_start') {
+                sendControlMessage({
+                    type: 'autotune_start',
+                    scenario: button.dataset.scenario || 'empty'
+                })
+                return
+            }
+            if (action === 'autotune_save') {
+                sendControlMessage({
+                    type: 'autotune_save',
+                    name: buildStudioAutotuneProfileName()
+                })
+                return
+            }
+            if (action === 'autotune_calibrate' || action === 'autotune_apply' || action === 'autotune_cancel') {
+                sendControlMessage({ type: action })
+            }
         })
     }
 
@@ -1151,6 +1439,7 @@ export function updateStudioConsole(data) {
     }
 
     renderCvExplainability(data)
+    renderStudioAutotune(data)
 
     // 4b. Ostrzeżenia operatora w Studio HUD
     const cvWarningBox = sidebarEl.querySelector('#cv-warning-box')
