@@ -20,7 +20,7 @@
 - `npm --prefix app_ar run build`
   - Wynik: **NOT_RUN** (brak zmian we frontendzie)
 - GitHub Actions CI
-  - Wynik: **PENDING** (będzie uruchomiony po pushu brancha)
+  - Wynik: **PASS**
 
 ## Smoke Tests
 - Uruchomienie backendu i weryfikacja za pomocą skryptu `smoke_test.py` (odczyt stanu, autotune_start, autotune_calibrate, autotune_cancel) -> **PASS**
