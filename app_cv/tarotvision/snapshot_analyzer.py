@@ -7,6 +7,7 @@ import numpy as np
 
 from tarotvision.card_detection_profiles import find_card_quads_multi_profile
 from tarotvision.card_recognition import deskew_card_crop
+from tarotvision.recognition_debug import top_match_summary
 
 
 @dataclass(frozen=True)
@@ -37,6 +38,7 @@ class SnapshotAnalyzer:
             "quads_found": 0,
             "recognition_attempts": 0,
             "recognition_rejections": 0,
+            "recognition_debug": [],
         }
         frame_height, frame_width = frame.shape[:2]
 
@@ -54,6 +56,13 @@ class SnapshotAnalyzer:
             _write_debug_crop(crop, diagnostics["recognition_attempts"])
 
             recognition = self.recognize_crop(crop) if self.recognize_crop else None
+            recognition_debug = None
+            if isinstance(recognition, tuple):
+                recognition, recognition_debug = recognition
+            if recognition_debug is not None:
+                diagnostics["recognition_debug"].append(
+                    _serialize_recognition_debug(recognition_debug)
+                )
             if not recognition:
                 diagnostics["recognition_rejections"] += 1
                 continue
@@ -127,6 +136,14 @@ def _frame_to_scene(center_x, center_y, frame_width, frame_height,
     scene_x = (center_x / frame_width * 2.0 - 1.0) * (scene_width / 2.0)
     scene_y = (1.0 - center_y / frame_height * 2.0) * (scene_height / 2.0)
     return float(scene_x), float(scene_y)
+
+
+def _serialize_recognition_debug(debug):
+    return {
+        "crop_keypoints": int(debug.crop_keypoints),
+        "reject_reason": debug.reject_reason,
+        "top_matches": top_match_summary(debug, limit=5),
+    }
 
 
 def _debug_images_enabled():

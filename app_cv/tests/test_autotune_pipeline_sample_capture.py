@@ -108,7 +108,17 @@ class TestAutotunePipelineSampleCapture(unittest.TestCase):
             "accepted_count": 0,
             "analysis_ms": 15.0,
             "snapshot_quality_score": 0.88,
-            "recognition_confidences": []
+            "recognition_confidences": [],
+            "recognition_debug": [{
+                "crop_keypoints": 74,
+                "reject_reason": "insufficient_good_matches",
+                "top_matches": [{
+                    "name": "Gilded_08",
+                    "score": 5.0,
+                    "match_count": 10,
+                    "inlier_ratio": 0.5,
+                }],
+            }],
         }
         
         main.record_autotune_sample_from_snapshot(pipeline_sample)
@@ -120,6 +130,8 @@ class TestAutotunePipelineSampleCapture(unittest.TestCase):
         self.assertEqual(saved_sample["accepted_count"], 0)
         self.assertEqual(saved_sample["false_positive_count"], 0)
         self.assertEqual(saved_sample["recognition_score"], 0.0)
+        self.assertEqual(saved_sample["recognition_debug"][0]["reject_reason"], "insufficient_good_matches")
+        self.assertEqual(saved_sample["recognition_debug"][0]["top_matches"][0]["name"], "Gilded_08")
 
     def test_collects_three_cards_sample_when_expected_count_three(self):
         main.autotune_session = AutotuneSession(required_scenarios=("three_cards",), samples_per_scenario=3)

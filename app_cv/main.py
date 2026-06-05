@@ -17,7 +17,7 @@ from tarotvision.profile_store import ProfileStore
 from tarotvision.camera_controls import read_camera_control
 from tarotvision.calibration_session import choose_best_candidate
 from tarotvision.table_calibration import TableCalibration
-from tarotvision.card_recognition import recognize_card_crop
+from tarotvision.card_recognition import recognize_card_crop_with_debug
 from tarotvision.background_model import BackgroundModel
 from tarotvision.reference_loader import load_active_reference_cards
 from tarotvision.card_detection_profiles import find_card_quads_multi_profile
@@ -286,6 +286,7 @@ def record_autotune_sample_from_snapshot(pipeline_sample):
         "analysis_ms": pipeline_sample.get("analysis_ms", 0.0),
         "snapshot_quality_score": pipeline_sample.get("snapshot_quality_score", 0.0),
         "recognition_confidences": confidences,
+        "recognition_debug": pipeline_sample.get("recognition_debug", []),
         "recognition_rejections": pipeline_sample.get("recognition_rejections", 0),
         "candidate_validation_rejections": pipeline_sample.get("candidate_validation_rejections", 0),
         "warnings": []
@@ -750,14 +751,14 @@ def recognize_snapshot_crop(gray_crop):
     ratio_thresh = config_values.get("RATIO_THRESH", 0.79)
     min_inlier_ratio = config_values.get("MIN_INLIER_RATIO", 0.25)
 
-    result = recognize_card_crop(
+    result, debug = recognize_card_crop_with_debug(
         crop_for_matching, reference_cards, orb, flann,
         min_good_matches=min_match_count,
         lowe_ratio=ratio_thresh,
         min_inlier_ratio=min_inlier_ratio
     )
     if result is None:
-        return None
+        return None, debug
 
     angle_deg = result.get("homography_angle_deg", 0.0)
     log_event(
@@ -772,7 +773,7 @@ def recognize_snapshot_crop(gray_crop):
         "confidence": result.get("confidence", 0.0),
         "orientation": result.get("orientation", "unknown"),
         "homography_angle_deg": angle_deg,
-    }
+    }, debug
 
 
 snapshot_analyzer = SnapshotAnalyzer(

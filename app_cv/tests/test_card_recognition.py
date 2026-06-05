@@ -10,6 +10,7 @@ from tarotvision.card_recognition import (
     NORMALIZED_CARD_HEIGHT,
     deskew_card_crop,
     recognize_card_crop,
+    recognize_card_crop_with_debug,
     load_reference_cards,
     resolve_orientation_with_margin,
 )
@@ -118,6 +119,43 @@ class RecognizeCardCropTest(unittest.TestCase):
         result = recognize_card_crop(gray_crop, {}, orb, matcher)
 
         self.assertIsNone(result)
+
+    def test_debug_reports_best_rejected_match_when_good_matches_below_threshold(self):
+        try:
+            import cv2
+        except ImportError:
+            self.skipTest("cv2 not available")
+
+        mock_card_matcher = MagicMock()
+        mock_card_matcher.knnMatch.return_value = [
+            [cv2.DMatch(i, i, 1.0), cv2.DMatch(i, i, 10.0)] for i in range(10)
+        ]
+        reference_cards = {
+            "Gilded_08": {
+                "keypoints": [cv2.KeyPoint(float(i), 0.0, 1.0) for i in range(20)],
+                "descriptors": np.zeros((20, 32), dtype=np.uint8),
+                "matcher": mock_card_matcher,
+            }
+        }
+        mock_orb = MagicMock()
+        mock_orb.detectAndCompute.return_value = (
+            [cv2.KeyPoint(float(i), 0.0, 1.0) for i in range(20)],
+            np.zeros((20, 32), dtype=np.uint8),
+        )
+
+        result, debug = recognize_card_crop_with_debug(
+            np.zeros((NORMALIZED_CARD_HEIGHT, NORMALIZED_CARD_WIDTH), dtype=np.uint8),
+            reference_cards,
+            mock_orb,
+            MagicMock(),
+            min_good_matches=12,
+        )
+
+        self.assertIsNone(result)
+        self.assertEqual(debug.reject_reason, "insufficient_good_matches")
+        self.assertEqual(debug.crop_keypoints, 20)
+        self.assertEqual(debug.top_matches[0]["name"], "Gilded_08")
+        self.assertEqual(debug.top_matches[0]["match_count"], 10)
 
 
 class LoadReferenceCardsTest(unittest.TestCase):

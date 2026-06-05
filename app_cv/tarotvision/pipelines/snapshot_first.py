@@ -208,6 +208,7 @@ class SnapshotFirstPipeline(VisionPipeline):
                         "analysis_ms": analysis_ms,
                         "snapshot_quality_score": selected.quality.quality_score,
                         "recognition_confidences": [c.get("confidence", 0.0) for c in self.last_snapshot_cards],
+                        "recognition_debug": diagnostics.get("recognition_debug", []),
                         "recognition_rejections": diagnostics.get("recognition_rejections", 0),
                         "candidate_validation_rejections": diagnostics.get("candidate_validation_rejections", 0),
                         "detection_debug": diagnostics.get("detection"),

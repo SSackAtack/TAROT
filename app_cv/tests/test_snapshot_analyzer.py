@@ -4,6 +4,7 @@ import math
 import numpy as np
 
 from tarotvision.card_detection_profiles import MultiProfileDetectionResult
+from tarotvision.recognition_debug import RecognitionDebug
 from tarotvision.snapshot_analyzer import SnapshotAnalyzer
 
 
@@ -106,6 +107,40 @@ class SnapshotAnalyzerTest(unittest.TestCase):
         self.assertEqual(result.diagnostics["quads_found"], 1)
         self.assertEqual(result.diagnostics["recognition_attempts"], 1)
         self.assertEqual(result.diagnostics["recognition_rejections"], 1)
+
+    def test_records_recognition_debug_for_rejected_crop(self):
+        quad = np.array([[[10, 10]], [[20, 10]], [[20, 30]], [[10, 30]]],
+                        dtype=np.float32)
+        debug = RecognitionDebug(
+            crop_keypoints=74,
+            top_matches=[{
+                "name": "Gilded_08",
+                "score": 5.0,
+                "match_count": 10,
+                "inlier_ratio": 0.5,
+            }],
+            reject_reason="insufficient_good_matches",
+        )
+        analyzer = SnapshotAnalyzer(
+            find_quads=lambda frame: [quad],
+            crop_card=lambda frame, quad: "crop",
+            recognize_crop=lambda crop: (None, debug),
+        )
+
+        result = analyzer.analyze(np.zeros((40, 40, 3), dtype=np.uint8))
+
+        self.assertEqual(result.card_count, 0)
+        self.assertEqual(result.diagnostics["recognition_rejections"], 1)
+        self.assertEqual(result.diagnostics["recognition_debug"][0], {
+            "crop_keypoints": 74,
+            "reject_reason": "insufficient_good_matches",
+            "top_matches": [{
+                "name": "Gilded_08",
+                "score": 5.0,
+                "match_count": 10,
+                "inlier_ratio": 0.5,
+            }],
+        })
 
     def test_uses_injected_find_quads_without_debug_detector(self):
         quad = np.array([[[10, 10]], [[20, 10]], [[20, 30]], [[10, 30]]],
