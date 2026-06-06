@@ -133,7 +133,7 @@ Te progi są parametrami runtime, ale nie uruchamiamy nowego autotuningu jako pi
 - Create: `app_cv/tarotvision/snapshot_session_store.py`
 - Create: `app_cv/tests/test_snapshot_session_store.py`
 
-- [ ] **Step 1: Write failing lifecycle tests**
+- [x] **Step 1: Write failing lifecycle tests**
 
 Create `app_cv/tests/test_snapshot_session_store.py`:
 
@@ -217,7 +217,7 @@ if __name__ == "__main__":
     unittest.main()
 ```
 
-- [ ] **Step 2: Run failing tests**
+- [x] **Step 2: Run failing tests**
 
 Run:
 
@@ -228,7 +228,7 @@ python -m unittest app_cv.tests.test_snapshot_session_store -v
 
 Expected: FAIL because `tarotvision.snapshot_session_store` does not exist.
 
-- [ ] **Step 3: Implement store**
+- [x] **Step 3: Implement store**
 
 Create `app_cv/tarotvision/snapshot_session_store.py`:
 
@@ -315,7 +315,7 @@ class SnapshotSessionStore:
         )
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 Run:
 
@@ -326,7 +326,7 @@ python -m unittest app_cv.tests.test_snapshot_session_store -v
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 Run:
 
@@ -348,7 +348,7 @@ git commit -m "feat: add snapshot session store"
 - Modify: `app_cv/tarotvision/background_model.py`
 - Modify: `app_cv/tests/test_background_model.py`
 
-- [ ] **Step 1: Add failing tests**
+- [x] **Step 1: Add failing tests**
 
 Append to `app_cv/tests/test_background_model.py`:
 
@@ -383,7 +383,7 @@ Append to `app_cv/tests/test_background_model.py`:
         self.assertLess(empty_ratio, 0.05)
 ```
 
-- [ ] **Step 2: Run failing tests**
+- [x] **Step 2: Run failing tests**
 
 Run:
 
@@ -394,7 +394,7 @@ python -m unittest app_cv.tests.test_background_model -v
 
 Expected: FAIL because `capture_many` and `roi_foreground_ratio` do not exist.
 
-- [ ] **Step 3: Implement methods**
+- [x] **Step 3: Implement methods**
 
 Modify `app_cv/tarotvision/background_model.py` to add:
 
@@ -438,7 +438,7 @@ Modify `app_cv/tarotvision/background_model.py` to add:
         return float(np.count_nonzero(roi)) / float(roi.size)
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 Run:
 
@@ -449,7 +449,7 @@ python -m unittest app_cv.tests.test_background_model -v
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 Run:
 
@@ -471,7 +471,7 @@ git commit -m "feat: add empty reference roi semantics"
 - Create: `app_cv/tarotvision/change_detection.py`
 - Create: `app_cv/tests/test_change_detection.py`
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 Create `app_cv/tests/test_change_detection.py`:
 
@@ -557,7 +557,7 @@ if __name__ == "__main__":
     unittest.main()
 ```
 
-- [ ] **Step 2: Run failing tests**
+- [x] **Step 2: Run failing tests**
 
 Run:
 
@@ -568,7 +568,7 @@ python -m unittest app_cv.tests.test_change_detection -v
 
 Expected: FAIL because `change_detection.py` does not exist.
 
-- [ ] **Step 3: Implement detector**
+- [x] **Step 3: Implement detector**
 
 Implement `app_cv/tarotvision/change_detection.py` using the old branch as baseline, but classify every ROI with both previous and current foreground ratios:
 
@@ -702,7 +702,7 @@ def _classify(previous_ratio, current_ratio, threshold):
     return "noise_or_lighting"
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 Run:
 
@@ -713,7 +713,7 @@ python -m unittest app_cv.tests.test_background_model app_cv.tests.test_change_d
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 Run:
 
@@ -735,7 +735,7 @@ git commit -m "feat: add state-first change detector"
 - Modify: `app_cv/tarotvision/snapshot_analyzer.py`
 - Modify: `app_cv/tests/test_snapshot_analyzer.py`
 
-- [ ] **Step 1: Add ROI contract tests**
+- [x] **Step 1: Add ROI contract tests**
 
 Add tests that call:
 
@@ -750,7 +750,7 @@ Expected:
 - global full-frame path still works when `roi_hints=None`,
 - empty `roi_hints=[]` returns no cards and does not run global fallback.
 
-- [ ] **Step 2: Implement non-breaking signature**
+- [x] **Step 2: Implement non-breaking signature**
 
 Change analyzer signature to:
 
@@ -764,7 +764,7 @@ Implementation rule:
 - `roi_hints == []`: return zero cards with ROI diagnostics.
 - non-empty `roi_hints`: crop each ROI, analyze locally, translate card coordinates back to table coordinates.
 
-- [ ] **Step 3: Run targeted tests**
+- [x] **Step 3: Run targeted tests**
 
 Run:
 
@@ -775,7 +775,7 @@ python -m unittest app_cv.tests.test_snapshot_analyzer -v
 
 Expected: PASS.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 Run:
 
@@ -797,7 +797,7 @@ git commit -m "feat: support roi snapshot analysis"
 - Modify: `app_cv/tarotvision/table_state.py`
 - Modify: `app_cv/tests/test_table_state.py`
 
-- [ ] **Step 1: Add tests**
+- [x] **Step 1: Add tests**
 
 Add tests for:
 
@@ -814,7 +814,7 @@ Expected:
 - moved/replaced card is not silently deleted,
 - `to_layout_cards()` returns cards compatible with current payload shape.
 
-- [ ] **Step 2: Implement event methods**
+- [x] **Step 2: Implement event methods**
 
 Extend `TrackedCard` with optional `bbox`:
 
@@ -838,7 +838,7 @@ def to_layout_cards(self):
     ...
 ```
 
-- [ ] **Step 3: Run tests**
+- [x] **Step 3: Run tests**
 
 Run:
 
@@ -849,7 +849,7 @@ python -m unittest app_cv.tests.test_table_state -v
 
 Expected: PASS.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 Run:
 
@@ -1138,7 +1138,7 @@ python tools/cv_detection_lab/runtime_state_first_smoke.py
 
 Expected: PASS or a report naming the exact pair and count mismatch.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 Run:
 
