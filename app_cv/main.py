@@ -981,6 +981,9 @@ while True:
         motion_result = motion_detector.update(np.zeros((8, 8), dtype=np.uint8))
     runtime_metrics.add("motion_changed_ratio", motion_result.changed_ratio)
 
+    if motion_result.motion_detected:
+        log_event(f"[RUCH] Wykryto ruch! changed_ratio={motion_result.changed_ratio:.4f}")
+
 
     pipeline_result = vision_pipeline.process_frame(
         frame=frame,
