@@ -87,6 +87,13 @@ class SnapshotAnalyzer:
         diagnostics["accepted_cards_before_dedup"] = 0
         diagnostics["accepted_cards_after_dedup"] = 0
 
+        global_quads = None
+        global_detection_debug = None
+        if self.find_quads_with_debug is not None:
+            detection_result = self.find_quads_with_debug(frame)
+            global_quads = detection_result.quads
+            global_detection_debug = detection_result.debug
+
         for roi_index, roi_bbox in enumerate(roi_hints):
             x, y, w, h = _clip_bbox(roi_bbox, frame_width, frame_height)
             roi_frame = frame[y:y + h, x:x + w]
@@ -110,10 +117,15 @@ class SnapshotAnalyzer:
                 frame_width,
                 frame_height,
             )
-            if self.find_quads_with_debug is not None:
-                detection_result = self.find_quads_with_debug(roi_frame)
-                quads = detection_result.quads
-                roi_diag["roi_detection"] = detection_result.debug
+
+            if global_quads is not None:
+                quads = []
+                for quad in global_quads:
+                    cx, cy = _quad_center(quad)
+                    if x <= cx <= x + w and y <= cy <= y + h:
+                        local_quad = _translate_quad(quad, -x, -y)
+                        quads.append(local_quad)
+                roi_diag["roi_detection"] = global_detection_debug
             elif roi_mask is not None:
                 extraction_result = extract_card_quads_from_roi(roi_frame, roi_mask)
                 quads = extraction_result.quads
