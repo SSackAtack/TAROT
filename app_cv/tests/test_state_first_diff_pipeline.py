@@ -77,7 +77,7 @@ class TestStateFirstDiffPipeline(unittest.TestCase):
         self.assertEqual(kwargs["layout"]["session"]["active"], False)
         self.assertEqual(kwargs["layout"]["session"]["empty_reference_locked"], False)
 
-    def test_updates_snapshot_gate_with_motion_fields(self):
+    def test_updates_snapshot_gate_with_wall_clock_milliseconds_and_motion_fields(self):
         pipeline, _, _, _, _, _ = self._pipeline()
         motion_result = MagicMock()
         motion_result.motion_detected = True
@@ -91,11 +91,11 @@ class TestStateFirstDiffPipeline(unittest.TestCase):
             frame_loop_start=123.0,
         )
 
-        pipeline.snapshot_gate.update.assert_called_once_with(
-            now_ms=123.0,
-            motion_detected=True,
-            changed_ratio=0.17,
-        )
+        _, kwargs = pipeline.snapshot_gate.update.call_args
+        self.assertGreaterEqual(kwargs["now_ms"], 1_000_000_000_000)
+        self.assertNotEqual(kwargs["now_ms"], 123.0)
+        self.assertEqual(kwargs["motion_detected"], True)
+        self.assertEqual(kwargs["changed_ratio"], 0.17)
 
     def test_operator_snapshot_gets_state_first_runtime_context(self):
         build_operator_snapshot = MagicMock(return_value={"active_decks": ["gilded"]})
