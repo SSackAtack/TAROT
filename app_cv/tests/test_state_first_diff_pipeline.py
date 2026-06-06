@@ -206,6 +206,47 @@ class TestStateFirstDiffPipeline(unittest.TestCase):
         self.assertEqual(table_state.cards["Gilded_01"].bbox, (30, 30, 40, 60))
         self.assertEqual(table_state.cards["Gilded_02"].bbox, (90, 30, 40, 60))
 
+    def test_added_roi_deduplicates_overlapping_recognition_candidates(self):
+        store = SnapshotSessionStore(clock_ms=MagicMock(return_value=1000))
+        store.start_session()
+        store.capture_empty_reference(self._frame(0))
+        pipeline, _, table_state, change_detector, snapshot_analyzer, status_store = self._pipeline(
+            session_store=store
+        )
+        region = ChangeRegion((20, 20, 80, 90), 0.22, "added", 0.0, 0.9)
+        change_detector.detect.return_value = ChangeDetectionResult([region], 0.22, False, 0, 0)
+        snapshot_analyzer.analyze.return_value = self._analysis_result([
+            {
+                "name": "Gilded_01",
+                "x": 52,
+                "y": 65,
+                "angle": 0,
+                "confidence": 0.74,
+                "bbox": [30, 30, 46, 70],
+            },
+            {
+                "name": "Gilded_02",
+                "x": 54,
+                "y": 66,
+                "angle": 0,
+                "confidence": 0.91,
+                "bbox": [32, 32, 45, 68],
+            },
+        ])
+
+        pipeline.process_frame(
+            frame=self._frame(50),
+            motion_result=MagicMock(),
+            frame_width=160,
+            frame_height=120,
+            frame_loop_start=123.0,
+        )
+
+        self.assertNotIn("Gilded_01", table_state.cards)
+        self.assertIn("Gilded_02", table_state.cards)
+        _, kwargs = status_store.update_cv_state.call_args
+        self.assertEqual(kwargs["layout"]["accepted_card_count"], 1)
+
     def test_removed_roi_updates_table_state_without_analyzer(self):
         store = SnapshotSessionStore(clock_ms=MagicMock(return_value=1000))
         store.start_session()

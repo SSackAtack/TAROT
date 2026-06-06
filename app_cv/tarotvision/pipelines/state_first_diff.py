@@ -100,6 +100,7 @@ class StateFirstDiffPipeline(VisionPipeline):
         if roi_hints:
             analysis = self.snapshot_analyzer.analyze(current_snapshot.image, roi_hints=roi_hints)
             accepted_cards = list(getattr(analysis, "cards", []) or [])
+            accepted_cards = _deduplicate_overlapping_cards(accepted_cards)
             self._apply_accepted_cards(accepted_cards, roi_hints)
 
         if removed_ids or accepted_cards:
@@ -251,3 +252,44 @@ class StateFirstDiffPipeline(VisionPipeline):
             "current_snapshot": getattr(store, "current_snapshot", None) is not None,
             "ready_for_diff": bool(store.ready_for_diff()) if hasattr(store, "ready_for_diff") else False,
         }
+
+
+def _deduplicate_overlapping_cards(cards, min_iou=0.55):
+    ordered = sorted(
+        cards,
+        key=lambda card: float(card.get("confidence", 0.0)),
+        reverse=True,
+    )
+    kept = []
+    for card in ordered:
+        bbox = card.get("bbox")
+        if bbox is None:
+            kept.append(card)
+            continue
+        if any(_bbox_iou(bbox, kept_card.get("bbox")) >= min_iou for kept_card in kept):
+            continue
+        kept.append(card)
+    return kept
+
+
+def _bbox_iou(first, second):
+    if first is None or second is None:
+        return 0.0
+    ax, ay, aw, ah = [float(value) for value in first]
+    bx, by, bw, bh = [float(value) for value in second]
+    ax2 = ax + aw
+    ay2 = ay + ah
+    bx2 = bx + bw
+    by2 = by + bh
+
+    inter_x1 = max(ax, bx)
+    inter_y1 = max(ay, by)
+    inter_x2 = min(ax2, bx2)
+    inter_y2 = min(ay2, by2)
+    inter_w = max(0.0, inter_x2 - inter_x1)
+    inter_h = max(0.0, inter_y2 - inter_y1)
+    intersection = inter_w * inter_h
+    union = aw * ah + bw * bh - intersection
+    if union <= 0.0:
+        return 0.0
+    return intersection / union
