@@ -43,6 +43,20 @@ class OperatorExplainabilityTest(unittest.TestCase):
         self.assertEqual(result["severity"], "warn")
         self.assertEqual(result["next_action"], "Zostaw mate nieruchomo przez kilka sekund.")
 
+    def test_counts_aruco_markers_from_table_marker_ids(self):
+        result = build_cv_explainability(
+            cards=[],
+            metrics={},
+            runtime={"table": {"calibrated": True, "marker_ids": [10, 11, 12, 13]}},
+            layout={"state": "waiting_for_stable_frame"},
+            operator={"active_decks": ["gilded"]},
+            warnings=[],
+        )
+
+        aruco_step = next(step for step in result["steps"] if step["id"] == "aruco")
+        self.assertEqual(aruco_step["state"], "ok")
+        self.assertEqual(aruco_step["value"], "4/4")
+
     def test_detected_cards_are_ok(self):
         result = build_cv_explainability(
             cards=[{"id": "card-1"}],

@@ -19,7 +19,8 @@ def build_cv_explainability(cards, metrics, runtime, layout, operator, warnings)
     active_decks = operator.get("active_decks") or []
     layout_state = layout.get("state") or "unknown"
     table_status = runtime.get("table") if isinstance(runtime.get("table"), dict) else {}
-    aruco_markers = runtime.get("aruco_markers", table_status.get("markers_detected", 0)) or 0
+    marker_ids = table_status.get("marker_ids") or []
+    aruco_markers = runtime.get("aruco_markers", table_status.get("markers_detected", len(marker_ids))) or 0
     aruco_calibrated = bool(runtime.get("aruco_calibrated", table_status.get("calibrated", False)))
     candidate_count = runtime.get("candidate_count", metrics.get("snapshot_quads_found"))
     if candidate_count is None:

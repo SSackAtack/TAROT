@@ -204,12 +204,16 @@ class StateFirstDiffPipeline(VisionPipeline):
         if extra:
             layout.update(extra)
 
+        table_status = self.table_calibration.status()
+        marker_ids = table_status.get("marker_ids") or []
         runtime_snapshot = {
             "profile": self.runtime_profile,
             "capture_width": frame_width,
             "capture_height": frame_height,
             "schedule_mode": "state_first_diff",
-            "table": self.table_calibration.status(),
+            "table": table_status,
+            "aruco_calibrated": bool(table_status.get("calibrated", False)),
+            "aruco_markers": len(marker_ids),
         }
         metrics_snapshot = self.runtime_metrics.snapshot()
         self.status_store.update_cv_state(
