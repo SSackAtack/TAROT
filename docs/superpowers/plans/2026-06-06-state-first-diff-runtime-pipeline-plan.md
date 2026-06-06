@@ -1100,7 +1100,7 @@ git commit -m "feat: add state-first session controls"
 - Create: `tools/cv_detection_lab/runtime_state_first_smoke.py`
 - Create: `app_cv/tests/test_runtime_state_first_fixture_contract.py`
 
-- [ ] **Step 1: Build smoke script**
+- [x] **Step 1: Build smoke script**
 
 Script inputs:
 
@@ -1127,7 +1127,7 @@ Expected counts:
 0, 1, 3, 2, 1, 3
 ```
 
-- [ ] **Step 2: Run script**
+- [x] **Step 2: Run script**
 
 Run:
 
@@ -1352,3 +1352,26 @@ Task 8 completed:
 Verification:
 
 - `npm --prefix E:\Antigravity\Projekty\TAROT\app_ar run build` => PASS.
+
+Task 9 completed:
+
+- added `tools/cv_detection_lab/runtime_state_first_smoke.py`,
+- added `app_cv/tests/test_runtime_state_first_fixture_contract.py`,
+- smoke target: `logs/live_fixtures/event_first_current_debug_verified`.
+
+Verification:
+
+- `python -m unittest app_cv.tests.test_runtime_state_first_fixture_contract -v` => PASS,
+- `python -m py_compile tools\cv_detection_lab\runtime_state_first_smoke.py app_cv\tests\test_runtime_state_first_fixture_contract.py` => PASS,
+- `python tools\cv_detection_lab\runtime_state_first_smoke.py` => diagnostic report `FAIL`.
+
+Current detector result on real fixture:
+
+- `empty->empty`: PASS, actual 0 / expected 0,
+- `empty->one_card`: PASS, actual 1 / expected 1,
+- `empty->three_cards`: FAIL, actual 2 / expected 3,
+- `one_card->three_cards`: FAIL, actual 4 / expected 2,
+- `one_card->empty`: PASS, actual 1 / expected 1,
+- `three_cards->empty`: FAIL, actual 2 / expected 3.
+
+Conclusion: state-first diff is useful for add/remove one-card workflows, but multi-card ROI grouping still needs a follow-up before using three-card counts as an MVP gate.
