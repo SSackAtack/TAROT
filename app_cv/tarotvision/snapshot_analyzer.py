@@ -118,39 +118,53 @@ class SnapshotAnalyzer:
                 frame_height,
             )
 
-            if global_quads is not None:
-                quads = []
-                for quad in global_quads:
-                    cx, cy = _quad_center(quad)
-                    if x <= cx <= x + w and y <= cy <= y + h:
-                        local_quad = _translate_quad(quad, -x, -y)
-                        quads.append(local_quad)
-                roi_diag["roi_detection"] = global_detection_debug
-            elif roi_mask is not None:
-                extraction_result = extract_card_quads_from_roi(roi_frame, roi_mask)
-                quads = extraction_result.quads
-                roi_diag["roi_detection"] = extraction_result.debug
-            else:
-                quads = self.find_quads(roi_frame)
-
-            roi_diag["roi_quads_found"] = len(quads)
-            diagnostics["quads_found"] += len(quads)
-            if quads:
-                diagnostics["roi_with_quads_count"] += 1
-
             accepted_before = len(cards)
             attempts_before = diagnostics["recognition_attempts"]
             rejections_before = diagnostics["recognition_rejections"]
-            for quad in quads:
-                self._recognize_quad(
-                    source_frame=roi_frame,
-                    crop_quad=quad,
-                    layout_quad=_translate_quad(quad, x, y),
-                    cards=cards,
-                    diagnostics=diagnostics,
-                    frame_width=frame_width,
-                    frame_height=frame_height,
-                )
+
+            if global_quads is not None:
+                quads_in_roi = 0
+                for quad in global_quads:
+                    cx, cy = _quad_center(quad)
+                    if x <= cx <= x + w and y <= cy <= y + h:
+                        quads_in_roi += 1
+                        self._recognize_quad(
+                            source_frame=frame,
+                            crop_quad=quad,
+                            layout_quad=quad,
+                            cards=cards,
+                            diagnostics=diagnostics,
+                            frame_width=frame_width,
+                            frame_height=frame_height,
+                        )
+                roi_diag["roi_quads_found"] = quads_in_roi
+                diagnostics["quads_found"] += quads_in_roi
+                if quads_in_roi > 0:
+                    diagnostics["roi_with_quads_count"] += 1
+                roi_diag["roi_detection"] = global_detection_debug
+            else:
+                if roi_mask is not None:
+                    extraction_result = extract_card_quads_from_roi(roi_frame, roi_mask)
+                    quads = extraction_result.quads
+                    roi_diag["roi_detection"] = extraction_result.debug
+                else:
+                    quads = self.find_quads(roi_frame)
+
+                roi_diag["roi_quads_found"] = len(quads)
+                diagnostics["quads_found"] += len(quads)
+                if quads:
+                    diagnostics["roi_with_quads_count"] += 1
+
+                for quad in quads:
+                    self._recognize_quad(
+                        source_frame=roi_frame,
+                        crop_quad=quad,
+                        layout_quad=_translate_quad(quad, x, y),
+                        cards=cards,
+                        diagnostics=diagnostics,
+                        frame_width=frame_width,
+                        frame_height=frame_height,
+                    )
             accepted_count = len(cards) - accepted_before
             roi_diag["roi_accepted_cards"] = accepted_count
             roi_diag["roi_recognition_attempts"] = diagnostics["recognition_attempts"] - attempts_before
