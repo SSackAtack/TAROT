@@ -110,14 +110,14 @@ class SnapshotAnalyzer:
                 frame_width,
                 frame_height,
             )
-            if roi_mask is not None:
-                extraction_result = extract_card_quads_from_roi(roi_frame, roi_mask)
-                quads = extraction_result.quads
-                roi_diag["roi_detection"] = extraction_result.debug
-            elif self.find_quads_with_debug is not None:
+            if self.find_quads_with_debug is not None:
                 detection_result = self.find_quads_with_debug(roi_frame)
                 quads = detection_result.quads
                 roi_diag["roi_detection"] = detection_result.debug
+            elif roi_mask is not None:
+                extraction_result = extract_card_quads_from_roi(roi_frame, roi_mask)
+                quads = extraction_result.quads
+                roi_diag["roi_detection"] = extraction_result.debug
             else:
                 quads = self.find_quads(roi_frame)
 
