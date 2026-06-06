@@ -57,6 +57,8 @@ class TestStateFirstDiffPipeline(unittest.TestCase):
     def test_waits_for_locked_empty_reference_without_analyzer_call(self):
         pipeline, _, _, change_detector, snapshot_analyzer, status_store = self._pipeline()
         motion_result = MagicMock()
+        motion_result.motion_detected = True
+        motion_result.changed_ratio = 0.23
 
         pipeline.process_frame(
             frame=self._frame(10),
@@ -72,6 +74,26 @@ class TestStateFirstDiffPipeline(unittest.TestCase):
         self.assertEqual(kwargs["layout"]["state"], "waiting_for_empty_reference")
         self.assertEqual(kwargs["layout"]["session"]["active"], False)
         self.assertEqual(kwargs["layout"]["session"]["empty_reference_locked"], False)
+
+    def test_updates_snapshot_gate_with_motion_fields(self):
+        pipeline, _, _, _, _, _ = self._pipeline()
+        motion_result = MagicMock()
+        motion_result.motion_detected = True
+        motion_result.changed_ratio = 0.17
+
+        pipeline.process_frame(
+            frame=self._frame(10),
+            motion_result=motion_result,
+            frame_width=160,
+            frame_height=120,
+            frame_loop_start=123.0,
+        )
+
+        pipeline.snapshot_gate.update.assert_called_once_with(
+            now_ms=123.0,
+            motion_detected=True,
+            changed_ratio=0.17,
+        )
 
     def test_added_roi_is_analyzed_and_current_snapshot_committed(self):
         store = SnapshotSessionStore(clock_ms=MagicMock(return_value=1000))

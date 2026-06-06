@@ -35,7 +35,11 @@ class StateFirstDiffPipeline(VisionPipeline):
 
     def process_frame(self, frame, motion_result, frame_width, frame_height, frame_loop_start):
         self.frame_index += 1
-        gate_decision = self.snapshot_gate.update(motion_result, frame_loop_start)
+        gate_decision = self.snapshot_gate.update(
+            now_ms=frame_loop_start,
+            motion_detected=motion_result.motion_detected,
+            changed_ratio=motion_result.changed_ratio,
+        )
         analysis_frame = self._analysis_frame(frame)
 
         if not self._has_empty_reference():
