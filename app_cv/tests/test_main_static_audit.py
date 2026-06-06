@@ -65,8 +65,8 @@ class TestMainStaticAudit(unittest.TestCase):
             error_msg = "\n".join(visitor.errors)
             self.fail(f"Statyczny audyt main.py wykrył problemy:\n{error_msg}")
 
-    def test_snapshot_first_is_the_only_runtime_pipeline(self):
-        """Weryfikuje, że main.py nie utrzymuje już runtime'owego fallbacku state-first."""
+    def test_state_first_diff_pipeline_is_flag_gated(self):
+        """Nowy pipeline diff może istnieć tylko za jawnie ustawioną flagą runtime."""
         self.assertTrue(os.path.exists(self.main_py_path), f"Plik {self.main_py_path} nie istnieje")
 
         with open(self.main_py_path, "r", encoding="utf-8") as f:
@@ -82,9 +82,25 @@ class TestMainStaticAudit(unittest.TestCase):
         found = [token for token in forbidden_tokens if token in source]
         if found:
             self.fail(
-                "main.py powinien uruchamiać wyłącznie SnapshotFirstPipeline; wykryto legacy tokeny: "
+                "main.py nie powinien wracać do starego legacy fallbacku; wykryto tokeny: "
                 + ", ".join(found)
             )
+        self.assertIn('PIPELINE_MODE = os.environ.get("TAROTVISION_PIPELINE", "snapshot_first")', source)
+        self.assertIn('if PIPELINE_MODE == "state_first_diff":', source)
+        self.assertIn("vision_pipeline = StateFirstDiffPipeline(", source)
+        self.assertIn("vision_pipeline = snapshot_pipeline", source)
+
+    def test_main_supports_state_first_session_commands(self):
+        self.assertTrue(os.path.exists(self.main_py_path), f"Plik {self.main_py_path} nie istnieje")
+
+        with open(self.main_py_path, "r", encoding="utf-8") as f:
+            source = f.read()
+
+        self.assertIn("snapshot_session_store.start_session()", source)
+        self.assertIn("pending_session_empty_capture = True", source)
+        self.assertIn("snapshot_session_store.capture_empty_reference(capture_frame)", source)
+        self.assertIn("snapshot_session_store.end_session()", source)
+        self.assertIn('message.type == "session_resync_table"', source)
 
     def test_websocket_thread_is_disabled_in_test_mode(self):
         """Import main.py w testach nie powinien startować serwera WebSocket."""

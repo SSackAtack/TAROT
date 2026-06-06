@@ -962,7 +962,7 @@ git commit -m "feat: add state-first diff pipeline skeleton"
 - Modify: `app_cv/main.py`
 - Modify: `app_cv/tests/test_main_static_audit.py` if needed
 
-- [ ] **Step 1: Add protocol tests**
+- [x] **Step 1: Add protocol tests**
 
 Add commands:
 
@@ -979,7 +979,7 @@ Expected parser result:
 ControlMessage(type="session_start")
 ```
 
-- [ ] **Step 2: Wire runtime flag**
+- [x] **Step 2: Wire runtime flag**
 
 In `main.py`, use:
 
@@ -998,7 +998,7 @@ else:
 
 Keep default as `snapshot_first` until physical smoke approves state-first.
 
-- [ ] **Step 3: Lock empty reference commands**
+- [x] **Step 3: Lock empty reference commands**
 
 Rules:
 
@@ -1010,7 +1010,7 @@ session_end -> unlocks session and allows reset
 session_resync_table -> one-time SnapshotFirstPipeline full analysis or explicit current state rebuild
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 Run:
 
@@ -1022,7 +1022,7 @@ python -m py_compile app_cv\main.py app_cv\tarotvision\pipelines\state_first_dif
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 Run:
 
@@ -1328,3 +1328,17 @@ Task 6 completed:
 Verification:
 
 - `python -m unittest app_cv.tests.test_state_first_diff_pipeline app_cv.tests.test_pipelines_contract -v` => PASS.
+
+Task 7 completed:
+
+- added session control messages: `session_start`, `session_capture_empty_reference`, `session_end`, `session_resync_table`,
+- wired `TAROTVISION_PIPELINE=state_first_diff` as an opt-in runtime flag while keeping `snapshot_first` as default,
+- connected `SnapshotSessionStore` empty-reference locking and protected `background_clear` during active state-first sessions.
+
+Verification:
+
+- `python -m unittest app_cv.tests.test_tuning_protocol app_cv.tests.test_main_static_audit -v` => PASS,
+- `python -m unittest app_cv.tests.test_state_first_diff_pipeline app_cv.tests.test_pipelines_contract -v` => PASS,
+- `python -m py_compile app_cv\main.py app_cv\tarotvision\tuning_protocol.py app_cv\tarotvision\pipelines\state_first_diff.py app_cv\tests\test_tuning_protocol.py app_cv\tests\test_main_static_audit.py` => PASS,
+- `TAROTVISION_TEST_MODE=1 python -c "import main; ..."` => PASS for default `SnapshotFirstPipeline`,
+- `TAROTVISION_TEST_MODE=1 TAROTVISION_PIPELINE=state_first_diff python -c "import main; ..."` => PASS for `StateFirstDiffPipeline`.

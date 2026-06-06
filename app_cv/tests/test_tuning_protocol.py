@@ -36,6 +36,16 @@ class TuningProtocolTest(unittest.TestCase):
 
         self.assertEqual(message.type, "background_clear")
 
+    def test_parses_session_commands(self):
+        for command_type in [
+            "session_start",
+            "session_capture_empty_reference",
+            "session_end",
+            "session_resync_table",
+        ]:
+            message = parse_control_message(f'{{"type": "{command_type}"}}')
+            self.assertEqual(message.type, command_type)
+
     def test_parses_profile_apply(self):
         message = parse_control_message('{"type": "profile_apply", "name": "studio_day"}')
 

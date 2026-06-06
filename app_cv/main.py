@@ -23,9 +23,12 @@ from tarotvision.reference_loader import load_active_reference_cards
 from tarotvision.card_detection_profiles import find_card_quads_multi_profile
 from tarotvision.snapshot_gate import SnapshotGate, SnapshotGateConfig
 from tarotvision.snapshot_analyzer import SnapshotAnalyzer
+from tarotvision.snapshot_session_store import SnapshotSessionStore
+from tarotvision.change_detection import ChangeDetector
+from tarotvision.table_state import TableState
 from tarotvision.camera import CameraSession
 from tarotvision.preview import OpenCvPreview
-from tarotvision.pipelines import SnapshotFirstPipeline
+from tarotvision.pipelines import SnapshotFirstPipeline, StateFirstDiffPipeline
 from tarotvision.frame_stream import LatestFrameStore, start_preview_server
 from tarotvision.operator_explainability import build_cv_explainability
 from tarotvision.autotune_session import AutotuneSession
@@ -51,6 +54,7 @@ CAMERA_EXPOSURE_LOCKED = True   # Ustawienie operatorskie: blokada ekspozycji zm
 SNAPSHOT_SETTLE_SECONDS = 0.5
 SNAPSHOT_SAMPLE_COUNT = 1
 SNAPSHOT_SAMPLE_INTERVAL_MS = 250
+PIPELINE_MODE = os.environ.get("TAROTVISION_PIPELINE", "snapshot_first")
 
 from tarotvision.status import StatusStore, DiagnosticsWriter
 
@@ -83,6 +87,8 @@ autotune_session_log = AutotuneSessionLog(os.path.join(LOG_DIR, "autotune_sessio
 active_tuning_profile = "default"
 background_model = BackgroundModel()
 pending_background_capture = False
+snapshot_session_store = SnapshotSessionStore()
+pending_session_empty_capture = False
 autotune_session = None
 autotune_candidate_profiles = []
 autotune_quality_report = None
@@ -316,6 +322,9 @@ def handle_control_message(message, camera_session):
     global calibration_state
     global active_tuning_profile
     global pending_background_capture
+    global pending_session_empty_capture
+    global table_state
+    global vision_pipeline
     global autotune_session
     global autotune_candidate_profiles
     global autotune_quality_report
@@ -478,8 +487,39 @@ def handle_control_message(message, camera_session):
         return
 
     if message.type == "background_clear":
+        if snapshot_session_store.session_active:
+            add_operator_warning("Nie czyszcze pustej maty w aktywnej sesji state-first")
+            return
         background_model.clear()
         add_operator_warning("Wyczyszczono model pustej maty")
+        return
+
+    if message.type == "session_start":
+        snapshot_session_store.start_session()
+        pending_session_empty_capture = False
+        add_operator_warning("State-first: rozpoczęto sesję, przechwyć pustą matę")
+        return
+
+    if message.type == "session_capture_empty_reference":
+        if not snapshot_session_store.session_active:
+            add_operator_warning("State-first: najpierw rozpocznij sesję")
+            return
+        if snapshot_session_store.empty_reference_locked:
+            add_operator_warning("State-first: pusta mata jest już zablokowana dla tej sesji")
+            return
+        pending_session_empty_capture = True
+        add_operator_warning("State-first: zlecono przechwycenie pustej maty z następnej klatki")
+        return
+
+    if message.type == "session_end":
+        snapshot_session_store.end_session()
+        pending_session_empty_capture = False
+        add_operator_warning("State-first: zakończono sesję i odblokowano pustą matę")
+        return
+
+    if message.type == "session_resync_table":
+        snapshot_session_store.discard_current_snapshot()
+        add_operator_warning("State-first: zlecono resync stołu; pełny rebuild zostanie dopracowany w smoke/runtime")
         return
 
     if message.type == "studio_set_recording_dir":
@@ -606,6 +646,9 @@ def handle_control_message(message, camera_session):
                 json.dump(active_data, f, indent=2, ensure_ascii=False)
 
             load_reference_cards(message.active_decks)
+            table_state = TableState(list(reference_cards.keys()))
+            if "vision_pipeline" in globals() and hasattr(vision_pipeline, "table_state"):
+                vision_pipeline.table_state = table_state
             status_store.update_active_decks(message.active_decks)
             add_operator_warning(f"Studio: Pomyslnie wdrożono aktywne talie: {message.active_decks} (Hot-Reload OK)")
         except Exception as e:
@@ -742,6 +785,8 @@ def load_reference_cards(active_ids=None):
 load_reference_cards()
 table_calibration = TableCalibration(table_width=CAMERA_WIDTH, table_height=CAMERA_HEIGHT)
 log_event("[ARUCO] Modul kalibracji stolu zainicjalizowany (markery ID 10-13, DICT_4X4_50)")
+table_state = TableState(list(reference_cards.keys()))
+change_detector = ChangeDetector()
 
 
 def recognize_snapshot_crop(gray_crop):
@@ -810,6 +855,23 @@ snapshot_pipeline = SnapshotFirstPipeline(
 )
 snapshot_pipeline.snapshot_sample_count = SNAPSHOT_SAMPLE_COUNT
 snapshot_pipeline.snapshot_sample_interval_ms = SNAPSHOT_SAMPLE_INTERVAL_MS
+if PIPELINE_MODE == "state_first_diff":
+    vision_pipeline = StateFirstDiffPipeline(
+        snapshot_session_store=snapshot_session_store,
+        change_detector=change_detector,
+        snapshot_analyzer=snapshot_analyzer,
+        table_state=table_state,
+        snapshot_gate=snapshot_gate,
+        status_store=status_store,
+        table_calibration=table_calibration,
+        runtime_metrics=runtime_metrics,
+        runtime_config=runtime_config,
+        build_operator_snapshot_fn=build_operator_snapshot,
+        operator_warnings=operator_warnings,
+        runtime_profile="state_first_diff",
+    )
+else:
+    vision_pipeline = snapshot_pipeline
 
 # 3. Inicjalizacja Kamery — jawnie ustawiamy 720p (1280x720) dla wiecej cech ORB z wiekszej odleglosci
 if os.environ.get("TAROTVISION_TEST_MODE") != "1":
@@ -891,6 +953,13 @@ while True:
             add_operator_warning("Przechwycono model pustej maty")
         pending_background_capture = False
 
+    if pending_session_empty_capture:
+        capture_frame = table_calibration.warp_frame(frame) if table_calibration.calibrated else frame
+        if capture_frame is not None:
+            snapshot_session_store.capture_empty_reference(capture_frame)
+            add_operator_warning("State-first: przechwycono i zablokowano pustą matę")
+        pending_session_empty_capture = False
+
     gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
     # Zastosowanie CLAHE — obiekt tworzony RAZ na poczatku, nie w kazdej klatce
@@ -911,7 +980,7 @@ while True:
     runtime_metrics.add("motion_changed_ratio", motion_result.changed_ratio)
 
 
-    pipeline_result = snapshot_pipeline.process_frame(
+    pipeline_result = vision_pipeline.process_frame(
         frame=frame,
         motion_result=motion_result,
         frame_width=frame_width,
