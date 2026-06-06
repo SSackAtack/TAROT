@@ -17,6 +17,29 @@ Ten plik przedstawia aktualny status techniczny oraz architekturę projektu Taro
 
 ---
 
+## MVP Recovery Mode (2026-06-06)
+
+Aktualny priorytet: pierwsze recording-ready MVP na jednej kontrolowanej talii Gilded. Sukces tego etapu oznacza, że operator może uruchomić aplikację, przejść preflight, rozłożyć karty, zobaczyć wynik w Studio/AR i nagrać krótką sesję testową.
+
+Autotune/Calibration Wizard jest traktowany jako preflight i diagnostyka, nie jako główny cel produktu. Dalsze prace tuningowe mają być uruchamiane tylko wtedy, gdy bezpośrednio usuwają blocker MVP smoke lub recording demo.
+
+Freeze do czasu MVP:
+
+- nowe profile autotune,
+- dalsze luzowanie geometrii bez świeżego smoke `empty`,
+- multi-deck hardening,
+- duże refaktory runtime/UI,
+- offline lab bez bezpośredniej decyzji dla MVP,
+- rozszerzanie zakresu talii poza Gilded.
+
+Najbliższa sekwencja pracy:
+
+1. Operator runbook.
+2. MVP physical smoke Gilded: `empty`, `one_card`, `three_cards`.
+3. Recording demo albo jeden wąski blocker task.
+
+---
+
 ## 2. Główne Moduły Systemu
 
 ### Backend (`app_cv/`)
@@ -67,9 +90,10 @@ Ten plik przedstawia aktualny status techniczny oraz architekturę projektu Taro
 
 ## 5. Następne Priorytety
 
-1. **Operator feedback / CV explainability:** Usprawnić Studio tak, aby operator widział nie tylko ostrzeżenie, ale też konkretną przyczynę braku rozpoznania: brak markerów ArUco, brak stabilnego snapshotu, brak kandydatów kart, odrzucenie przez recognition threshold albo konflikt aktywnych talii.
-2. **Dalsze małe zadania stabilizacyjne:** Realizacja drobnych, bezpiecznych poprawek w systemie deweloperskim bez wprowadzania ryzykownych zmian w kodzie mastera.
-3. Dalsza integracja audio/reżysera w Konsoli Studio.
+1. **Operator MVP runbook:** Jedna instrukcja startu, preflight i decyzji GO/WARN/STOP dla fizycznego setupu Gilded.
+2. **MVP physical smoke Gilded:** `empty`, `one_card`, `three_cards`, preview i klasyfikacja ewentualnego jednego blockera.
+3. **Recording-ready demo:** Krótka sesja nagraniowa albo jednoznaczny raport ostatniego blockera.
+4. **Dług techniczny po MVP:** Dopiero po decyzji demo uporządkować README, `PROJECT_STATE`, `main.py`/Studio UI i backlog.
 
 > [!IMPORTANT]
 > **Status gałęzi roboczych (Zakończone / Historyczne):**

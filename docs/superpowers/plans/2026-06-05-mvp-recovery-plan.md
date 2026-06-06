@@ -31,9 +31,20 @@ Wykonać poniższe zadania w kolejności. Nie zaczynać nowych prac tuningowych 
 
 ---
 
+## WIP Limit
+
+- Maksymalnie 2 aktywne taski kodowe naraz.
+- Maksymalnie 1 aktywny task CV/tuning naraz.
+- Maksymalnie 1 branch oczekujący na decyzję Michała.
+- Każdy nowy task musi wskazać bezpośredni wpływ na MVP.
+- Task autotune jest dopuszczalny tylko, jeśli usuwa konkretny blocker smoke/demo albo redukuje złożoność.
+- `app_ar/public/active_decks.json` pozostaje lokalną konfiguracją operatora i nie jest commitowany bez wyraźnej zgody.
+
+---
+
 ## Task 1: MVP Recovery Lock
 
-**Status:** zaplanowane
+**Status:** wykonane 2026-06-06
 **Cel:** jawnie zamrozić rozrost autotuningu i ustawić wspólną definicję sukcesu MVP.
 
 ### Files
@@ -329,4 +340,10 @@ bez zgody operatora.
 
 Codex wykonał audyt i zapisał plan recovery. Nie zmieniono kodu runtime. `active_decks.json` pozostał lokalną konfiguracją operatora i ma być pominięty w commicie.
 
-Commit hash: do uzupełnienia po commicie tej dokumentacji.
+Commit hash: `a92ef1f`.
+
+## Session Status (2026-06-06)
+
+Codex rozpoczął wykonanie planu naprawczego od Task 0 / MVP Recovery Lock. Zaktualizowano stan projektu, dodano WIP limit i oznaczono stare taski autotune/offline jako historyczne względem MVP Recovery Mode. Nie zmieniono kodu runtime. `active_decks.json` pozostał lokalną konfiguracją operatora i ma być pominięty w commicie.
+
+Commit hash: recorded in git history for `docs: ustaw tryb MVP recovery`.

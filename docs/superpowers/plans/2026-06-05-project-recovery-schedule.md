@@ -75,7 +75,7 @@ Nie minimalizujemy teraz:
 - Read: `analizy/audyt_mvp_recovery_2026-06-05.md`
 - Read: `analizy/audyt_zasad_wspolpracy_agentow_2026-06-05.md`
 
-- [ ] **Step 1: Oznacz MVP Recovery Mode w stanie projektu**
+- [x] **Step 1: Oznacz MVP Recovery Mode w stanie projektu**
 
 W `.ai/PROJECT_STATE.md` dodaj lub zaktualizuj sekcję:
 
@@ -93,7 +93,7 @@ Freeze do czasu MVP:
 - offline lab bez bezpośredniej decyzji dla MVP.
 ```
 
-- [ ] **Step 2: Oznacz nieaktywne albo historyczne taski**
+- [x] **Step 2: Oznacz nieaktywne albo historyczne taski**
 
 W `.ai/TASKS_INDEX.md` nie kasuj tasków. Dopisz w statusie review aktualnych tasków CV, które nie są potrzebne do MVP:
 
@@ -103,7 +103,7 @@ Historyczne / nieaktywne w MVP Recovery Mode
 
 Dotyczy tylko tasków, które nie są bieżącym blockerem `three_cards`, runbooka, preview albo recording demo.
 
-- [ ] **Step 3: Ustal limit WIP**
+- [x] **Step 3: Ustal limit WIP**
 
 W planie recovery dodaj sekcję:
 
@@ -116,7 +116,7 @@ W planie recovery dodaj sekcję:
 - każdy nowy task musi wskazać wpływ na MVP.
 ```
 
-- [ ] **Step 4: Verification**
+- [x] **Step 4: Verification**
 
 Run:
 
@@ -132,7 +132,7 @@ Expected:
 - `active_decks.json` nie jest staged,
 - brak zmian kodu runtime.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
 git add .ai/PROJECT_STATE.md .ai/TASKS_INDEX.md docs/superpowers/plans/2026-06-05-mvp-recovery-plan.md
@@ -889,3 +889,7 @@ one clear next product milestone
 ## Session Status (2026-06-05)
 
 Codex prepared this schedule after the MVP recovery audit and lightweight autonomy update. No production code was changed. The plan is intended to be executed by autonomous agents using Green/Yellow/Red Lane classification.
+
+## Session Status (2026-06-06)
+
+Task 0 execution completed. MVP Recovery Mode was written into `.ai/PROJECT_STATE.md`, WIP limits were added to the MVP recovery plan, and stale autotune/offline tasks were marked as historical for MVP Recovery Mode in `.ai/TASKS_INDEX.md`. Runtime code was not changed. Verification: `git diff --check` PASS; `active_decks.json` confirmed as local unstaged operator config. Commit: recorded in git history for `docs: ustaw tryb MVP recovery`.
