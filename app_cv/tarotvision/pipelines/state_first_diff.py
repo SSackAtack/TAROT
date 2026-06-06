@@ -235,6 +235,9 @@ class StateFirstDiffPipeline(VisionPipeline):
             card_id = card.get("name")
             if not card_id:
                 continue
+            bbox = card.get("bbox", fallback_bbox)
+            if bbox is not None:
+                self.table_state.remove_cards_intersecting_bbox(bbox, min_iou=0.10)
             self.table_state.upsert_locked(
                 card_id,
                 card.get("x", 0.0),
@@ -242,7 +245,7 @@ class StateFirstDiffPipeline(VisionPipeline):
                 card.get("angle", 0.0),
                 card.get("confidence", 0.0),
                 self.frame_index,
-                bbox=card.get("bbox", fallback_bbox),
+                bbox=bbox,
             )
 
     def _idle_state(self, regions):
