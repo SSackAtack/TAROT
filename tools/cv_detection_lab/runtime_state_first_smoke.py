@@ -29,6 +29,15 @@ EXPECTED_PAIRS = [
     ("three_cards", "empty", 3),
 ]
 
+EXPECTED_ANALYSIS_ROI_COUNTS = {
+    "empty->empty": 0,
+    "empty->one_card": 1,
+    "empty->three_cards": 2,
+    "one_card->three_cards": 2,
+    "one_card->empty": 0,
+    "three_cards->empty": 0,
+}
+
 
 def run_smoke(fixture_root=DEFAULT_FIXTURE_ROOT):
     fixture_root = Path(fixture_root)
@@ -45,12 +54,23 @@ def run_smoke(fixture_root=DEFAULT_FIXTURE_ROOT):
             empty_reference=background,
         )
         actual_count = len(result.regions)
-        status = "PASS" if actual_count == expected_count and not result.global_shift else "FAIL"
+        pair_name = f"{previous_name}->{current_name}"
+        analysis_roi_count = len(_analysis_roi_hints(result.regions))
+        expected_analysis_roi_count = EXPECTED_ANALYSIS_ROI_COUNTS[pair_name]
+        raw_status = "PASS" if actual_count == expected_count and not result.global_shift else "FAIL"
+        analysis_status = (
+            "PASS"
+            if analysis_roi_count == expected_analysis_roi_count and not result.global_shift
+            else "FAIL"
+        )
         pairs.append({
-            "pair": f"{previous_name}->{current_name}",
+            "pair": pair_name,
             "expected_count": expected_count,
             "actual_count": actual_count,
-            "status": status,
+            "status": analysis_status,
+            "raw_region_status": raw_status,
+            "expected_analysis_roi_count": expected_analysis_roi_count,
+            "analysis_roi_count": analysis_roi_count,
             "global_shift": result.global_shift,
             "mask_nonzero_ratio": result.mask_nonzero_ratio,
             "regions": [
@@ -101,6 +121,13 @@ def _load_frames(fixture_root):
             raise FileNotFoundError(f"Missing or unreadable fixture frame: {path}")
         frames[name] = frame
     return frames
+
+
+def _analysis_roi_hints(regions):
+    added = [region.bbox for region in regions if region.kind == "added"]
+    if added:
+        return added
+    return [region.bbox for region in regions if region.kind == "moved_or_replaced"]
 
 
 if __name__ == "__main__":

@@ -174,6 +174,42 @@ class TestStateFirstDiffPipeline(unittest.TestCase):
         self.assertEqual(kwargs["cards"], [])
         self.assertEqual(kwargs["layout"]["state"], "state_updated")
 
+    def test_added_regions_take_priority_over_moved_slivers(self):
+        store = SnapshotSessionStore(clock_ms=MagicMock(return_value=1000))
+        store.start_session()
+        store.capture_empty_reference(self._frame(0))
+        table_state = TableState(["Gilded_01", "Gilded_02"])
+        table_state.upsert_locked("Gilded_01", 50, 50, 0, 0.9, 1, bbox=(70, 30, 40, 60))
+        pipeline, _, table_state, change_detector, snapshot_analyzer, _ = self._pipeline(
+            session_store=store,
+            table_state=table_state,
+        )
+        added = ChangeRegion((20, 20, 40, 60), 0.10, "added", 0.0, 0.8)
+        moved_sliver = ChangeRegion((70, 35, 10, 55), 0.02, "moved_or_replaced", 0.8, 0.9)
+        change_detector.detect.return_value = ChangeDetectionResult([added, moved_sliver], 0.12, False, 0, 0)
+        snapshot_analyzer.analyze.return_value = self._analysis_result([
+            {
+                "name": "Gilded_02",
+                "x": 30,
+                "y": 60,
+                "angle": 0,
+                "confidence": 0.88,
+                "bbox": [20, 20, 40, 60],
+            },
+        ])
+
+        pipeline.process_frame(
+            frame=self._frame(50),
+            motion_result=MagicMock(),
+            frame_width=160,
+            frame_height=120,
+            frame_loop_start=123.0,
+        )
+
+        self.assertEqual(snapshot_analyzer.analyze.call_args.kwargs["roi_hints"], [(20, 20, 40, 60)])
+        self.assertEqual(table_state.cards["Gilded_01"].phase, "needs_reverify")
+        self.assertEqual(table_state.cards["Gilded_01"].reverify_reason, "moved_or_replaced")
+
     def test_noise_discards_current_and_keeps_previous_snapshot(self):
         store = SnapshotSessionStore(clock_ms=MagicMock(return_value=1000))
         store.start_session()

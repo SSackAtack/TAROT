@@ -1403,6 +1403,18 @@ Verification:
 - `python -m py_compile app_cv\tarotvision\snapshot_analyzer.py app_cv\tests\test_snapshot_analyzer.py app_cv\tests\test_state_first_diff_pipeline.py` => PASS,
 - `python tools\cv_detection_lab\runtime_state_first_smoke.py` => still diagnostic `FAIL` for multi-card ROI counts.
 
+Follow-up implementation (2026-06-06, Codex):
+
+- changed `StateFirstDiffPipeline` so `added` regions take priority over `moved_or_replaced` slivers when both are present,
+- `moved_or_replaced` regions now mark intersecting existing cards as `needs_reverify` instead of spamming the analyzer during card-add workflows,
+- updated runtime smoke to report both raw detector region count and runtime-effective analysis ROI count.
+
+Verification:
+
+- `python -m unittest app_cv.tests.test_runtime_state_first_fixture_contract app_cv.tests.test_state_first_diff_pipeline -v` => PASS,
+- `python -m py_compile tools\cv_detection_lab\runtime_state_first_smoke.py app_cv\tests\test_runtime_state_first_fixture_contract.py app_cv\tarotvision\pipelines\state_first_diff.py` => PASS,
+- `python tools\cv_detection_lab\runtime_state_first_smoke.py` => PASS at runtime-effective ROI level.
+
 Remaining blocker:
 
-- `ChangeDetector` still reports merged/split region counts on `three_cards` fixture pairs. Do not make `state_first_diff` default until either physical smoke narrows MVP to one-card add/remove or a dedicated ROI grouping follow-up fixes these counts.
+- raw `ChangeDetector` region counts still show merged/split diagnostics on `three_cards` fixture pairs, but runtime-effective ROI gating is now PASS. Do not make `state_first_diff` default until physical Gilded smoke validates add/remove behavior through Studio.

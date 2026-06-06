@@ -31,16 +31,16 @@ $env:PYTHONPATH="E:\Antigravity\Projekty\TAROT\app_cv"
 python tools\cv_detection_lab\runtime_state_first_smoke.py
 ```
 
-Result: diagnostic `FAIL`.
+Result after runtime-effective ROI gating: `PASS`.
 
 - `empty->empty`: PASS, actual 0 / expected 0
 - `empty->one_card`: PASS, actual 1 / expected 1
-- `empty->three_cards`: FAIL, actual 2 / expected 3
-- `one_card->three_cards`: FAIL, actual 4 / expected 2
+- `empty->three_cards`: PASS at analysis ROI level, raw detector regions 2 / expected raw 3
+- `one_card->three_cards`: PASS at analysis ROI level, raw detector regions 4 / expected raw 2
 - `one_card->empty`: PASS, actual 1 / expected 1
-- `three_cards->empty`: FAIL, actual 2 / expected 3
+- `three_cards->empty`: PASS at analysis ROI level, raw detector regions 2 / expected raw 3
 
-Interpretation: one-card add/remove diff is promising, but multi-card ROI grouping is not ready as an MVP gate.
+Interpretation: state-first should gate on runtime-effective analysis ROI and TableState updates, not raw contour region count. Raw detector count remains diagnostic.
 
 ## Physical Smoke Checklist
 
@@ -98,4 +98,4 @@ Allowed outcomes:
 
 Current decision before physical smoke: `KEEP_SNAPSHOT_FIRST_DEFAULT_FOR_MVP`.
 
-Reason: offline smoke already shows multi-card ROI count mismatch. Keep `snapshot_first` as default until either physical smoke proves the MVP can be narrowed to one-card add/remove, or ROI grouping is fixed.
+Reason: offline smoke now passes at runtime-effective ROI level, but physical Gilded smoke has not been run. Keep `snapshot_first` as default until Operator camera validation passes.

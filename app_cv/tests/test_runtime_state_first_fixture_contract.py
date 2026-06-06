@@ -6,7 +6,11 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from tools.cv_detection_lab.runtime_state_first_smoke import EXPECTED_PAIRS, run_smoke
+from tools.cv_detection_lab.runtime_state_first_smoke import (
+    EXPECTED_ANALYSIS_ROI_COUNTS,
+    EXPECTED_PAIRS,
+    run_smoke,
+)
 
 
 class TestRuntimeStateFirstFixtureContract(unittest.TestCase):
@@ -22,6 +26,8 @@ class TestRuntimeStateFirstFixtureContract(unittest.TestCase):
                 ("three_cards", "empty", 3),
             ],
         )
+        self.assertEqual(EXPECTED_ANALYSIS_ROI_COUNTS["one_card->three_cards"], 2)
+        self.assertEqual(EXPECTED_ANALYSIS_ROI_COUNTS["three_cards->empty"], 0)
 
     def test_smoke_report_names_each_pair_and_mismatch(self):
         with tempfile.TemporaryDirectory(prefix="state_first_smoke_") as tmpdir:
@@ -36,6 +42,8 @@ class TestRuntimeStateFirstFixtureContract(unittest.TestCase):
         failing = [item for item in report["pairs"] if item["status"] == "FAIL"]
         self.assertTrue(failing)
         self.assertTrue(all("expected_count" in item and "actual_count" in item for item in failing))
+        self.assertTrue(all("analysis_roi_count" in item for item in report["pairs"]))
+        self.assertTrue(all("raw_region_status" in item for item in report["pairs"]))
 
     def _write_fixture(self, root):
         frames = {

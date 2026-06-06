@@ -87,6 +87,7 @@ class StateFirstDiffPipeline(VisionPipeline):
             )
 
         removed_ids = self._apply_removed_regions(change_result.regions)
+        reverify_ids = self._apply_moved_regions(change_result.regions)
         roi_hints = self._roi_hints_for_analysis(change_result.regions)
         accepted_cards = []
         if roi_hints:
@@ -110,6 +111,7 @@ class StateFirstDiffPipeline(VisionPipeline):
                 "change_region_count": len(change_result.regions),
                 "roi_count": len(roi_hints),
                 "removed_card_ids": removed_ids,
+                "reverify_card_ids": reverify_ids,
                 "accepted_card_count": len(accepted_cards),
                 "mask_nonzero_ratio": change_result.mask_nonzero_ratio,
             },
@@ -144,12 +146,24 @@ class StateFirstDiffPipeline(VisionPipeline):
             removed_ids.extend(self.table_state.remove_cards_intersecting_bbox(region.bbox))
         return removed_ids
 
+    def _apply_moved_regions(self, regions):
+        reverify_ids = []
+        for region in regions:
+            if region.kind != "moved_or_replaced":
+                continue
+            reverify_ids.extend(
+                self.table_state.mark_cards_intersecting_bbox_needs_reverify(
+                    region.bbox,
+                    "moved_or_replaced",
+                )
+            )
+        return reverify_ids
+
     def _roi_hints_for_analysis(self, regions):
-        return [
-            region.bbox
-            for region in regions
-            if region.kind in {"added", "moved_or_replaced"}
-        ]
+        added_regions = [region.bbox for region in regions if region.kind == "added"]
+        if added_regions:
+            return added_regions
+        return [region.bbox for region in regions if region.kind == "moved_or_replaced"]
 
     def _apply_accepted_cards(self, cards, roi_hints):
         fallback_bbox = roi_hints[0] if len(roi_hints) == 1 else None
