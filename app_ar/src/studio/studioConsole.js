@@ -19,7 +19,7 @@ let isDecksApplying = false
 let studioPreviewMode = 'pip'
 let studioPipSize = Number(localStorage.getItem('studio:pipSize') || 30)
 const studioSidebarCollapsedStorageKey = 'studio:sidebarCollapsedSections'
-const studioSidebarDefaultOpenSections = new Set(['transport', 'preview', 'autotune', 'cv-diagnostics'])
+const studioSidebarDefaultOpenSections = new Set(['transport', 'preview', 'state-session', 'autotune', 'cv-diagnostics'])
 let studioSidebarCollapsedSections = loadStudioSidebarCollapsedSections()
 
 const studioCameraLabels = {
@@ -497,6 +497,48 @@ function renderStudioAutotune(data) {
     if (btnCancel) btnCancel.disabled = state === 'idle'
 }
 
+function renderStudioStateFirstSession(data) {
+    if (!sidebarEl) return
+    const panel = sidebarEl.querySelector('#studio-state-session-panel')
+    if (!panel) return
+
+    const layout = data.layout || {}
+    const pipeline = layout.source === 'state_first_diff' ? 'state_first_diff' : 'snapshot_first'
+    const layoutState = layout.state || 'inactive'
+    const emptyLocked = pipeline === 'state_first_diff' && layoutState !== 'waiting_for_empty_reference'
+    const sessionState =
+        pipeline !== 'state_first_diff'
+            ? 'inactive'
+            : (layoutState === 'waiting_for_empty_reference' ? 'waiting_empty' : layoutState)
+
+    const pipelineEl = panel.querySelector('#studio-state-session-pipeline')
+    const sessionEl = panel.querySelector('#studio-state-session-state')
+    const emptyEl = panel.querySelector('#studio-state-session-empty')
+    const nextEl = panel.querySelector('#studio-state-session-next')
+    const captureBtn = panel.querySelector('[data-state-session-action="session_capture_empty_reference"]')
+
+    panel.dataset.state = sessionState
+    if (pipelineEl) pipelineEl.textContent = pipeline
+    if (sessionEl) sessionEl.textContent = sessionState
+    if (emptyEl) {
+        emptyEl.textContent = emptyLocked ? 'locked' : 'missing'
+        emptyEl.classList.toggle('studio-autotune-value--ok', emptyLocked)
+        emptyEl.classList.toggle('studio-autotune-value--warning', !emptyLocked)
+    }
+    if (nextEl) {
+        if (pipeline !== 'state_first_diff') {
+            nextEl.textContent = 'Ustaw TAROTVISION_PIPELINE=state_first_diff, aby użyć sesji diff.'
+        } else if (!emptyLocked) {
+            nextEl.textContent = 'Start Session, potem Capture Empty na pustej macie.'
+        } else if (layoutState === 'resync_required') {
+            nextEl.textContent = 'Resync Table albo zakończ sesję i złap pustą matę ponownie.'
+        } else {
+            nextEl.textContent = 'Sesja gotowa: dodawaj lub zdejmuj karty po stabilizacji obrazu.'
+        }
+    }
+    if (captureBtn) captureBtn.disabled = emptyLocked
+}
+
 function buildStudioAutotuneProfileName() {
     const stamp = new Date().toISOString()
         .replace(/[-:]/g, '')
@@ -867,6 +909,42 @@ export function createStudioConsole() {
             </div>
         </div>
 
+        <div class="studio-card" data-studio-section="state-session">
+            <div class="studio-card__header" data-studio-accordion-toggle role="button" tabindex="0">
+                <div class="studio-card__title">Sesja state-first</div>
+                <div class="studio-card__subtitle">Snapshot diff</div>
+                <span class="studio-card__toggle" aria-label="Zwiń sekcję">-</span>
+            </div>
+            <div class="studio-card__body">
+            <div class="studio-autotune-panel" id="studio-state-session-panel" data-state="inactive">
+                <div class="studio-autotune-header">
+                    <span class="studio-autotune-title">State-first runtime</span>
+                    <span class="studio-autotune-state" id="studio-state-session-state">inactive</span>
+                </div>
+                <div class="studio-autotune-actions">
+                    <button type="button" data-state-session-action="session_start" title="Rozpocznij sesję snapshot diff">Start</button>
+                    <button type="button" data-state-session-action="session_capture_empty_reference" title="Zablokuj pustą matę dla tej sesji">Capture Empty</button>
+                    <button type="button" data-state-session-action="session_resync_table" title="Wymuś resynchronizację stołu">Resync</button>
+                    <button type="button" data-state-session-action="session_end" title="Zakończ sesję snapshot diff">End</button>
+                </div>
+                <div class="studio-autotune-info">
+                    <div class="studio-autotune-info-row">
+                        <span class="studio-autotune-info-label">Pipeline:</span>
+                        <span class="studio-autotune-info-value" id="studio-state-session-pipeline">snapshot_first</span>
+                    </div>
+                    <div class="studio-autotune-info-row">
+                        <span class="studio-autotune-info-label">Empty reference:</span>
+                        <span class="studio-autotune-info-value studio-autotune-value--warning" id="studio-state-session-empty">missing</span>
+                    </div>
+                </div>
+                <div class="studio-autotune-next-action">
+                    <span class="studio-autotune-next-action-label">Status</span>
+                    <div class="studio-autotune-next-action-val" id="studio-state-session-next">Brak aktywnej sesji.</div>
+                </div>
+            </div>
+            </div>
+        </div>
+
         <div class="studio-card" data-studio-section="autotune">
             <div class="studio-card__header" data-studio-accordion-toggle role="button" tabindex="0">
                 <div class="studio-card__title">Kalibracja stanowiska</div>
@@ -1094,6 +1172,15 @@ function initStudioConsoleEvents() {
             if (action === 'autotune_calibrate' || action === 'autotune_apply' || action === 'autotune_cancel') {
                 sendControlMessage({ type: action })
             }
+        })
+    }
+
+    const stateSessionPanel = sidebarEl.querySelector('#studio-state-session-panel')
+    if (stateSessionPanel) {
+        stateSessionPanel.addEventListener('click', (event) => {
+            const button = event.target.closest('[data-state-session-action]')
+            if (!button || button.disabled) return
+            sendControlMessage({ type: button.dataset.stateSessionAction })
         })
     }
 
@@ -1623,6 +1710,7 @@ export function updateStudioConsole(data) {
     }
 
     renderCvExplainability(data)
+    renderStudioStateFirstSession(data)
     renderStudioAutotune(data)
 
     // 4b. Ostrzeżenia operatora w Studio HUD

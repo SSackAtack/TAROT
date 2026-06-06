@@ -1045,7 +1045,7 @@ git commit -m "feat: wire state-first diff pipeline flag"
 - Modify: `app_ar/src/studio/studioState.js` if needed
 - Modify: `app_ar/src/transport/messageNormalizer.js` if needed
 
-- [ ] **Step 1: Add UI state fields**
+- [x] **Step 1: Add UI state fields**
 
 Display:
 
@@ -1055,7 +1055,7 @@ Empty reference: missing / locked
 Pipeline: snapshot_first / state_first_diff
 ```
 
-- [ ] **Step 2: Add buttons**
+- [x] **Step 2: Add buttons**
 
 Commands:
 
@@ -1068,7 +1068,7 @@ End Session -> session_end
 
 Disable `Capture Empty` after locked reference unless session is ended.
 
-- [ ] **Step 3: Build frontend**
+- [x] **Step 3: Build frontend**
 
 Run:
 
@@ -1078,7 +1078,7 @@ npm --prefix E:\Antigravity\Projekty\TAROT\app_ar run build
 
 Expected: PASS.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 Run:
 
@@ -1342,3 +1342,13 @@ Verification:
 - `python -m py_compile app_cv\main.py app_cv\tarotvision\tuning_protocol.py app_cv\tarotvision\pipelines\state_first_diff.py app_cv\tests\test_tuning_protocol.py app_cv\tests\test_main_static_audit.py` => PASS,
 - `TAROTVISION_TEST_MODE=1 python -c "import main; ..."` => PASS for default `SnapshotFirstPipeline`,
 - `TAROTVISION_TEST_MODE=1 TAROTVISION_PIPELINE=state_first_diff python -c "import main; ..."` => PASS for `StateFirstDiffPipeline`.
+
+Task 8 completed:
+
+- added a Studio sidebar section for `state_first_diff` session status,
+- added Operator buttons for `session_start`, `session_capture_empty_reference`, `session_resync_table`, `session_end`,
+- reused existing `layout.source/state` payload fields; `studioState.js` and `messageNormalizer.js` did not need changes in this step.
+
+Verification:
+
+- `npm --prefix E:\Antigravity\Projekty\TAROT\app_ar run build` => PASS.
