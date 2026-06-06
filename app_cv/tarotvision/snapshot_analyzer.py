@@ -172,6 +172,7 @@ class SnapshotAnalyzer:
             "name": recognition["name"],
             "x": scene_x,
             "y": scene_y,
+            "bbox": _quad_bbox(layout_quad),
             "angle": _layout_angle(
                 layout_quad,
                 recognition.get("orientation", "unknown"),
@@ -197,6 +198,15 @@ def _quad_center(quad):
     points = _quad_points(quad)
     center = np.mean(points, axis=0)
     return float(center[0]), float(center[1])
+
+
+def _quad_bbox(quad):
+    points = _quad_points(quad)
+    x1 = int(round(float(np.min(points[:, 0]))))
+    y1 = int(round(float(np.min(points[:, 1]))))
+    x2 = int(round(float(np.max(points[:, 0]))))
+    y2 = int(round(float(np.max(points[:, 1]))))
+    return [x1, y1, max(0, x2 - x1), max(0, y2 - y1)]
 
 
 def _quad_angle(quad):

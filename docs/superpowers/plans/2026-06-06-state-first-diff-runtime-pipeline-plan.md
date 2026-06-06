@@ -1390,3 +1390,19 @@ Verification:
 
 - `python -m unittest discover -s app_cv\tests -v` => PASS, 463 tests,
 - `npm --prefix E:\Antigravity\Projekty\TAROT\app_ar run build` => PASS.
+
+Follow-up implementation (2026-06-06, Codex):
+
+- added per-card `bbox` to `SnapshotAnalyzer` accepted card payloads,
+- verified `StateFirstDiffPipeline` stores individual card bboxes when one compound ROI contains multiple accepted cards,
+- this supports later remove/update events even when the diff detector returns a broad changed region.
+
+Verification:
+
+- `python -m unittest app_cv.tests.test_snapshot_analyzer app_cv.tests.test_state_first_diff_pipeline -v` => PASS,
+- `python -m py_compile app_cv\tarotvision\snapshot_analyzer.py app_cv\tests\test_snapshot_analyzer.py app_cv\tests\test_state_first_diff_pipeline.py` => PASS,
+- `python tools\cv_detection_lab\runtime_state_first_smoke.py` => still diagnostic `FAIL` for multi-card ROI counts.
+
+Remaining blocker:
+
+- `ChangeDetector` still reports merged/split region counts on `three_cards` fixture pairs. Do not make `state_first_diff` default until either physical smoke narrows MVP to one-card add/remove or a dedicated ROI grouping follow-up fixes these counts.

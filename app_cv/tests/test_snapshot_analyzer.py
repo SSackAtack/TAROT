@@ -227,6 +227,7 @@ class SnapshotAnalyzerTest(unittest.TestCase):
         self.assertEqual(crop_calls[0][0], (120, 80, 3))
         self.assertEqual(result.card_count, 1)
         self.assertEqual(result.cards[0]["name"], "Gilded_01")
+        self.assertEqual(result.cards[0]["bbox"], [70, 70, 20, 40])
         self.assertAlmostEqual(result.cards[0]["x"], -6.066666666666666)
         self.assertAlmostEqual(result.cards[0]["y"], 0.78)
         self.assertEqual(result.diagnostics["roi_count"], 1)

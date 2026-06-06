@@ -107,6 +107,45 @@ class TestStateFirstDiffPipeline(unittest.TestCase):
         self.assertEqual(kwargs["layout"]["state"], "state_updated")
         self.assertEqual(kwargs["layout"]["card_count"], 1)
 
+    def test_added_compound_roi_preserves_individual_card_bboxes(self):
+        store = SnapshotSessionStore(clock_ms=MagicMock(return_value=1000))
+        store.start_session()
+        store.capture_empty_reference(self._frame(0))
+        pipeline, _, table_state, change_detector, snapshot_analyzer, _ = self._pipeline(
+            session_store=store
+        )
+        region = ChangeRegion((20, 20, 120, 90), 0.30, "added", 0.0, 0.9)
+        change_detector.detect.return_value = ChangeDetectionResult([region], 0.30, False, 0, 0)
+        snapshot_analyzer.analyze.return_value = self._analysis_result([
+            {
+                "name": "Gilded_01",
+                "x": 40,
+                "y": 60,
+                "angle": 0,
+                "confidence": 0.91,
+                "bbox": [30, 30, 40, 60],
+            },
+            {
+                "name": "Gilded_02",
+                "x": 100,
+                "y": 60,
+                "angle": 0,
+                "confidence": 0.89,
+                "bbox": [90, 30, 40, 60],
+            },
+        ])
+
+        pipeline.process_frame(
+            frame=self._frame(50),
+            motion_result=MagicMock(),
+            frame_width=160,
+            frame_height=120,
+            frame_loop_start=123.0,
+        )
+
+        self.assertEqual(table_state.cards["Gilded_01"].bbox, (30, 30, 40, 60))
+        self.assertEqual(table_state.cards["Gilded_02"].bbox, (90, 30, 40, 60))
+
     def test_removed_roi_updates_table_state_without_analyzer(self):
         store = SnapshotSessionStore(clock_ms=MagicMock(return_value=1000))
         store.start_session()
