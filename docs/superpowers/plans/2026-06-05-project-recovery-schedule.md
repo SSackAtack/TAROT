@@ -153,7 +153,7 @@ git push
 - Create: `docs/operator/mvp_physical_smoke_checklist.md`
 - Modify: `README.md` only if launch instructions are stale
 
-- [ ] **Step 1: Utwórz folder operatora**
+- [x] **Step 1: Utwórz folder operatora**
 
 Run:
 
@@ -167,7 +167,7 @@ Expected:
 docs/operator
 ```
 
-- [ ] **Step 2: Utwórz runbook**
+- [x] **Step 2: Utwórz runbook**
 
 Create `docs/operator/mvp_recording_runbook.md`:
 
@@ -231,7 +231,7 @@ STOP:
 - nie można zebrać próbek.
 ```
 
-- [ ] **Step 3: Utwórz checklistę smoke**
+- [x] **Step 3: Utwórz checklistę smoke**
 
 Create `docs/operator/mvp_physical_smoke_checklist.md`:
 
@@ -280,7 +280,7 @@ Camera:
 - next action:
 ```
 
-- [ ] **Step 4: Verification**
+- [x] **Step 4: Verification**
 
 Run:
 
@@ -294,7 +294,7 @@ Expected:
 - runbook i checklist są samowystarczalne,
 - `active_decks.json` nie jest staged.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
 git add docs/operator/mvp_recording_runbook.md docs/operator/mvp_physical_smoke_checklist.md
@@ -893,3 +893,5 @@ Codex prepared this schedule after the MVP recovery audit and lightweight autono
 ## Session Status (2026-06-06)
 
 Task 0 execution completed. MVP Recovery Mode was written into `.ai/PROJECT_STATE.md`, WIP limits were added to the MVP recovery plan, and stale autotune/offline tasks were marked as historical for MVP Recovery Mode in `.ai/TASKS_INDEX.md`. Runtime code was not changed. Verification: `git diff --check` PASS; `active_decks.json` confirmed as local unstaged operator config. Commit: recorded in git history for `docs: ustaw tryb MVP recovery`.
+
+Task 1 execution completed. Added the MVP operator runbook and physical smoke checklist under `docs/operator/`. Runtime code was not changed. Verification: `git diff --check` PASS; `active_decks.json` confirmed as local unstaged operator config.
