@@ -98,6 +98,7 @@ class TestMainStaticAudit(unittest.TestCase):
 
         self.assertIn("snapshot_session_store.start_session()", source)
         self.assertIn("table_state.clear()", source)
+        self.assertIn("vision_pipeline.table_state.clear()", source)
         self.assertIn("pending_session_empty_capture = True", source)
         self.assertIn("snapshot_session_store.capture_empty_reference(capture_frame)", source)
         self.assertIn("snapshot_session_store.end_session()", source)
