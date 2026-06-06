@@ -28,6 +28,9 @@ class TableState:
         locked_ids = set(self.cards.keys())
         return [card_id for card_id in self.all_card_ids if card_id not in locked_ids]
 
+    def clear(self):
+        self.cards.clear()
+
     def upsert_locked(self, card_id, x, y, angle, confidence, frame_index, bbox=None):
         if card_id not in self.all_card_ids:
             raise ValueError(f"Unknown card id: {card_id}")

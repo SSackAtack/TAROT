@@ -496,6 +496,7 @@ def handle_control_message(message, camera_session):
 
     if message.type == "session_start":
         snapshot_session_store.start_session()
+        table_state.clear()
         pending_session_empty_capture = False
         add_operator_warning("State-first: rozpoczęto sesję, przechwyć pustą matę")
         return

@@ -26,6 +26,16 @@ class TableStateTest(unittest.TestCase):
 
         self.assertEqual(state.available_card_ids, ["00_fool", "01_magician"])
 
+    def test_clear_removes_all_locked_cards(self):
+        state = TableState(["00_fool", "01_magician"])
+        state.upsert_locked("00_fool", 1.0, 2.0, 0.1, 0.92, 10)
+        state.upsert_locked("01_magician", 3.0, 4.0, 0.2, 0.88, 11)
+
+        state.clear()
+
+        self.assertEqual(state.cards, {})
+        self.assertEqual(state.available_card_ids, ["00_fool", "01_magician"])
+
     def test_needs_reverify_does_not_return_card_to_pool(self):
         state = TableState(["00_fool", "01_magician"])
         state.upsert_locked("00_fool", 1.0, 2.0, 0.1, 0.92, 10)
