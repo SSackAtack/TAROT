@@ -129,9 +129,14 @@ class StateFirstDiffPipeline(VisionPipeline):
 
         if removed_ids or accepted_cards:
             self.snapshot_session_store.commit_current_snapshot()
+            self.snapshot_gate.mark_published(
+                layout_id=self.frame_index,
+                now_ms=now_ms,
+            )
             state = "state_updated"
         else:
             self.snapshot_session_store.discard_current_snapshot()
+            self.snapshot_gate.mark_rejected()
             state = self._idle_state(change_result.regions)
 
         self.last_diff_diagnostics = _build_last_diff_diagnostics(
