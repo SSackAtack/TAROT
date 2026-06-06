@@ -270,6 +270,32 @@ class TableCalibration:
         self.calibrated = True
         return True
 
+    def get_effective_workspace_corners(self):
+        """Return 4 effective workspace corners in raw frame coordinates: TL, TR, BR, BL.
+
+        Returns None when calibration is unavailable.
+        Corners include current workspace_inflate_percent, so motion ROI matches
+        the effective calibration workspace.
+        """
+        if not self.calibrated or self._last_corners is None or self._last_ids is None:
+            return None
+        workspace = extract_workspace_corners(self._last_corners, self._last_ids)
+        src_pts = [
+            workspace[MARKER_ID_TOP_LEFT],
+            workspace[MARKER_ID_TOP_RIGHT],
+            workspace[MARKER_ID_BOTTOM_RIGHT],
+            workspace[MARKER_ID_BOTTOM_LEFT],
+        ]
+        if abs(self.workspace_inflate_percent) > 1e-5:
+            centroid = np.mean(src_pts, axis=0)
+            inflated_pts = []
+            for pt in src_pts:
+                vector = pt - centroid
+                inflated_pt = pt + vector * (self.workspace_inflate_percent / 100.0)
+                inflated_pts.append(inflated_pt)
+            src_pts = inflated_pts
+        return np.array(src_pts, dtype=np.float32)
+
     def warp_frame(self, frame):
         """Warp a BGR or grayscale frame to the top-down table view.
 

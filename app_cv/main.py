@@ -10,7 +10,7 @@ import time
 import logging
 
 from tarotvision.metrics import RuntimeMetrics
-from tarotvision.motion import MotionDetector
+from tarotvision.motion import MotionDetector, MotionMaskCache
 from tarotvision.runtime_config import RuntimeConfigSession, ParameterValidationError
 from tarotvision.tuning_protocol import parse_control_message, ControlMessageError
 from tarotvision.profile_store import ProfileStore
@@ -886,6 +886,7 @@ if os.environ.get("TAROTVISION_TEST_MODE") != "1":
     log_event(f"[KAMERA] Rozdzielczosc: {frame_width}x{frame_height}")
 
 motion_detector = MotionDetector(min_changed_ratio=0.02, settle_frames=2)
+motion_mask_cache = MotionMaskCache()
 
 # Petla glowna (Live feed)
 while True:
@@ -976,7 +977,9 @@ while True:
 
     if gray_frame_raw is not None:
         gray_motion = cv2.GaussianBlur(gray_frame_raw, (5, 5), 0)
-        motion_result = motion_detector.update(gray_motion)
+        workspace_corners = table_calibration.get_effective_workspace_corners()
+        motion_mask = motion_mask_cache.update(gray_motion.shape, workspace_corners)
+        motion_result = motion_detector.update(gray_motion, mask=motion_mask)
     else:
         motion_result = motion_detector.update(np.zeros((8, 8), dtype=np.uint8))
     runtime_metrics.add("motion_changed_ratio", motion_result.changed_ratio)
