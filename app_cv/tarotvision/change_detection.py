@@ -30,6 +30,7 @@ class ChangeDetectionResult:
     global_shift: bool
     ignored_small_count: int
     ignored_large_count: int
+    mask: object = None
 
 
 class ChangeDetector:
@@ -40,12 +41,12 @@ class ChangeDetector:
         previous_gray = _to_gray(previous_frame)
         current_gray = _to_gray(current_frame)
         if previous_gray.shape != current_gray.shape:
-            return ChangeDetectionResult([], 0.0, True, 0, 0)
+            return ChangeDetectionResult([], 0.0, True, 0, 0, mask=None)
 
         mask = _difference_mask(previous_gray, current_gray, self.config.threshold)
         mask_ratio = _mask_ratio(mask)
         if mask_ratio >= self.config.global_shift_ratio:
-            return ChangeDetectionResult([], mask_ratio, True, 0, 0)
+            return ChangeDetectionResult([], mask_ratio, True, 0, 0, mask=mask)
 
         contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         frame_area = float(mask.shape[0] * mask.shape[1])
@@ -82,7 +83,7 @@ class ChangeDetector:
             ))
 
         regions.sort(key=lambda region: region.area_ratio, reverse=True)
-        return ChangeDetectionResult(regions, mask_ratio, False, ignored_small, ignored_large)
+        return ChangeDetectionResult(regions, mask_ratio, False, ignored_small, ignored_large, mask=mask)
 
 
 def _to_gray(frame):

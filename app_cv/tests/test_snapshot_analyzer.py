@@ -235,6 +235,50 @@ class SnapshotAnalyzerTest(unittest.TestCase):
         self.assertEqual(result.diagnostics["roi_with_accepted_card_count"], 1)
         self.assertEqual(result.diagnostics["roi_diagnostics"][0]["roi_bbox"], [40, 30, 80, 120])
 
+    def test_roi_mask_uses_offline_style_single_candidate_extractor(self):
+        frame = np.zeros((200, 300, 3), dtype=np.uint8)
+        roi_mask = np.zeros((150, 120), dtype=np.uint8)
+        roi_mask[15:135, 25:95] = 255
+        crop_calls = []
+
+        def fail_find_quads(_frame):
+            self.fail("ROI mask path should not run multi-profile quad detection")
+
+        def crop_card(source_frame, detected_quad):
+            crop_calls.append((source_frame.shape, detected_quad.copy()))
+            return "crop"
+
+        analyzer = SnapshotAnalyzer(
+            find_quads=fail_find_quads,
+            crop_card=crop_card,
+            recognize_crop=lambda crop: {
+                "name": "Gilded_01",
+                "confidence": 0.93,
+                "orientation": "upright",
+            },
+        )
+
+        result = analyzer.analyze(
+            frame,
+            roi_hints=[(40, 30, 120, 150)],
+            roi_masks=[roi_mask],
+        )
+
+        self.assertEqual(result.card_count, 1)
+        self.assertEqual(len(crop_calls), 1)
+        self.assertEqual(crop_calls[0][0], (150, 120, 3))
+        self.assertEqual(result.diagnostics["quads_found"], 1)
+        self.assertEqual(result.diagnostics["recognition_attempts"], 1)
+        roi_diag = result.diagnostics["roi_diagnostics"][0]
+        self.assertEqual(roi_diag["roi_quads_found"], 1)
+        self.assertEqual(roi_diag["roi_detection"]["source"], "offline_roi_extractor")
+        self.assertEqual(roi_diag["roi_detection"]["stage2_method"], "contour_external")
+        self.assertEqual(roi_diag["roi_detection"]["stage4_crop_method"], "quad_warp_perspective_fixed_aspect")
+        self.assertEqual(roi_diag["roi_detection"]["quads_final"], 1)
+        self.assertEqual(result.cards[0]["name"], "Gilded_01")
+        self.assertGreaterEqual(result.cards[0]["bbox"][0], 60)
+        self.assertGreaterEqual(result.cards[0]["bbox"][1], 40)
+
 
 if __name__ == "__main__":
     unittest.main()

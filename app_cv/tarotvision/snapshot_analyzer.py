@@ -8,6 +8,7 @@ import numpy as np
 from tarotvision.card_detection_profiles import find_card_quads_multi_profile
 from tarotvision.card_recognition import deskew_card_crop
 from tarotvision.recognition_debug import top_match_summary
+from tarotvision.roi_card_extraction import extract_card_quads_from_roi
 
 
 @dataclass(frozen=True)
@@ -32,7 +33,7 @@ class SnapshotAnalyzer:
     def _find_quads_default(self, frame):
         return find_card_quads_multi_profile(frame, background_model=self.background_model).quads
 
-    def analyze(self, frame, roi_hints=None):
+    def analyze(self, frame, roi_hints=None, roi_masks=None):
         cards = []
         diagnostics = {
             "quads_found": 0,
@@ -50,6 +51,7 @@ class SnapshotAnalyzer:
                 diagnostics,
                 frame_width,
                 frame_height,
+                roi_masks=roi_masks,
             )
 
         if self.find_quads_with_debug is not None:
@@ -76,7 +78,8 @@ class SnapshotAnalyzer:
             diagnostics=diagnostics,
         )
 
-    def _analyze_rois(self, frame, roi_hints, cards, diagnostics, frame_width, frame_height):
+    def _analyze_rois(self, frame, roi_hints, cards, diagnostics, frame_width, frame_height,
+                      roi_masks=None):
         diagnostics["roi_count"] = len(roi_hints)
         diagnostics["roi_diagnostics"] = []
         diagnostics["roi_with_quads_count"] = 0
@@ -100,7 +103,18 @@ class SnapshotAnalyzer:
                 diagnostics["roi_diagnostics"].append(roi_diag)
                 continue
 
-            if self.find_quads_with_debug is not None:
+            roi_mask = _roi_mask_for_index(
+                roi_masks,
+                roi_index,
+                (x, y, w, h),
+                frame_width,
+                frame_height,
+            )
+            if roi_mask is not None:
+                extraction_result = extract_card_quads_from_roi(roi_frame, roi_mask)
+                quads = extraction_result.quads
+                roi_diag["roi_detection"] = extraction_result.debug
+            elif self.find_quads_with_debug is not None:
                 detection_result = self.find_quads_with_debug(roi_frame)
                 quads = detection_result.quads
                 roi_diag["roi_detection"] = detection_result.debug
@@ -250,6 +264,21 @@ def _clip_bbox(bbox, frame_width, frame_height):
     x2 = min(frame_width, x + w)
     y2 = min(frame_height, y + h)
     return x1, y1, max(0, x2 - x1), max(0, y2 - y1)
+
+
+def _roi_mask_for_index(roi_masks, roi_index, roi_bbox, frame_width, frame_height):
+    if roi_masks is None or roi_index >= len(roi_masks):
+        return None
+    mask = roi_masks[roi_index]
+    if mask is None:
+        return None
+    arr = np.asarray(mask)
+    if arr.ndim < 2:
+        return None
+    x, y, w, h = [int(value) for value in roi_bbox]
+    if arr.shape[0] == frame_height and arr.shape[1] == frame_width:
+        return arr[y:y + h, x:x + w]
+    return arr
 
 
 def _serialize_recognition_debug(debug):

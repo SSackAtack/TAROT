@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 import time
 
+import numpy as np
+
 from tarotvision.background_model import BackgroundModel
 from tarotvision.pipelines.base import VisionPipeline
 
@@ -102,7 +104,15 @@ class StateFirstDiffPipeline(VisionPipeline):
         accepted_cards_before_dedup = []
         accepted_cards_after_dedup = []
         if roi_hints:
-            analysis = self.snapshot_analyzer.analyze(current_snapshot.image, roi_hints=roi_hints)
+            roi_masks = self._roi_masks_for_analysis(change_result, roi_hints)
+            if roi_masks is None:
+                analysis = self.snapshot_analyzer.analyze(current_snapshot.image, roi_hints=roi_hints)
+            else:
+                analysis = self.snapshot_analyzer.analyze(
+                    current_snapshot.image,
+                    roi_hints=roi_hints,
+                    roi_masks=roi_masks,
+                )
             accepted_cards = list(getattr(analysis, "cards", []) or [])
             accepted_cards_before_dedup = list(accepted_cards)
             analysis_diagnostics = getattr(analysis, "diagnostics", None) or {}
@@ -191,6 +201,26 @@ class StateFirstDiffPipeline(VisionPipeline):
         if added_regions:
             return added_regions
         return [region.bbox for region in regions if region.kind == "moved_or_replaced"]
+
+    def _roi_masks_for_analysis(self, change_result, roi_hints):
+        mask = getattr(change_result, "mask", None)
+        if mask is None or not roi_hints:
+            return None
+
+        arr = np.asarray(mask)
+        if arr.ndim < 2 or arr.size == 0:
+            return None
+
+        height, width = arr.shape[:2]
+        roi_masks = []
+        for roi_bbox in roi_hints:
+            x, y, w, h = [int(value) for value in roi_bbox]
+            x1 = max(0, min(width, x))
+            y1 = max(0, min(height, y))
+            x2 = max(x1, min(width, x + w))
+            y2 = max(y1, min(height, y + h))
+            roi_masks.append(arr[y1:y2, x1:x2].copy())
+        return roi_masks
 
     def _apply_accepted_cards(self, cards, roi_hints):
         fallback_bbox = roi_hints[0] if len(roi_hints) == 1 else None

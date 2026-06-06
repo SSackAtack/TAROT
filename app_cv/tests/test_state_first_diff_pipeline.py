@@ -167,6 +167,40 @@ class TestStateFirstDiffPipeline(unittest.TestCase):
         self.assertEqual(kwargs["layout"]["session"]["previous_snapshot"], True)
         self.assertEqual(kwargs["layout"]["session"]["current_snapshot"], False)
 
+    def test_added_roi_passes_clipped_diff_mask_to_roi_analyzer(self):
+        store = SnapshotSessionStore(clock_ms=MagicMock(return_value=1000))
+        store.start_session()
+        store.capture_empty_reference(self._frame(0))
+        pipeline, _, _, change_detector, snapshot_analyzer, _ = self._pipeline(
+            session_store=store
+        )
+        region = ChangeRegion((40, 30, 50, 60), 0.15, "added", 0.0, 0.9)
+        mask = np.zeros((120, 160), dtype=np.uint8)
+        mask[30:90, 40:90] = 255
+        change_detector.detect.return_value = ChangeDetectionResult(
+            [region],
+            0.15,
+            False,
+            0,
+            0,
+            mask=mask,
+        )
+        snapshot_analyzer.analyze.return_value = self._analysis_result([])
+
+        pipeline.process_frame(
+            frame=self._frame(50),
+            motion_result=MagicMock(),
+            frame_width=160,
+            frame_height=120,
+            frame_loop_start=123.0,
+        )
+
+        _, kwargs = snapshot_analyzer.analyze.call_args
+        self.assertEqual(kwargs["roi_hints"], [(40, 30, 50, 60)])
+        self.assertEqual(len(kwargs["roi_masks"]), 1)
+        self.assertEqual(kwargs["roi_masks"][0].shape, (60, 50))
+        self.assertEqual(int(np.count_nonzero(kwargs["roi_masks"][0])), 60 * 50)
+
     def test_publishes_persistent_last_diff_diagnostics_after_state_update(self):
         store = SnapshotSessionStore(clock_ms=MagicMock(return_value=1000))
         store.start_session()
