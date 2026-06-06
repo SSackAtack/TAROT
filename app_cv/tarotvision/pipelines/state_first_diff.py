@@ -37,9 +37,16 @@ class StateFirstDiffPipeline(VisionPipeline):
         self.runtime_profile = runtime_profile
         self.frame_index = 0
         self.last_diff_diagnostics = None
+        self.prev_time = time.time()
 
     def process_frame(self, frame, motion_result, frame_width, frame_height, frame_loop_start):
         self.frame_index += 1
+        current_time = time.time()
+        time_diff = current_time - self.prev_time
+        fps = 1.0 / time_diff if time_diff > 0 else 0.0
+        self.prev_time = current_time
+        self.runtime_metrics.add("fps", fps)
+
         now_ms = int(time.time() * 1000)
         gate_decision = self.snapshot_gate.update(
             now_ms=now_ms,

@@ -963,10 +963,8 @@ while True:
             add_operator_warning("State-first: przechwycono i zablokowano pustą matę")
         pending_session_empty_capture = False
 
-    gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-
-    # Zastosowanie CLAHE — obiekt tworzony RAZ na poczatku, nie w kazdej klatce
-    gray_frame = clahe.apply(gray_frame)
+    gray_frame_raw = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    gray_frame = clahe.apply(gray_frame_raw)
     runtime_metrics.add("preprocess_ms", (time.perf_counter() - preprocess_start) * 1000.0)
 
     # Kalibracja stolu ArUco — szukamy 4 markerow co klatke
@@ -976,8 +974,9 @@ while True:
         table_calibration.update(gray_frame, workspace_inflate_percent=workspace_inflate_percent)
     runtime_metrics.add("aruco_ms", (time.perf_counter() - aruco_start) * 1000.0)
 
-    if gray_frame is not None:
-        motion_result = motion_detector.update(gray_frame)
+    if gray_frame_raw is not None:
+        gray_motion = cv2.GaussianBlur(gray_frame_raw, (5, 5), 0)
+        motion_result = motion_detector.update(gray_motion)
     else:
         motion_result = motion_detector.update(np.zeros((8, 8), dtype=np.uint8))
     runtime_metrics.add("motion_changed_ratio", motion_result.changed_ratio)
