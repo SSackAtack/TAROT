@@ -28,7 +28,7 @@ class StateFirstDiffPipeline(VisionPipeline):
         self.table_calibration = table_calibration
         self.runtime_metrics = runtime_metrics
         self.runtime_config = runtime_config
-        self.build_operator_snapshot_fn = build_operator_snapshot_fn or (lambda: {})
+        self.build_operator_snapshot_fn = build_operator_snapshot_fn or (lambda **_: {})
         self.operator_warnings = operator_warnings or []
         self.runtime_profile = runtime_profile
         self.frame_index = 0
@@ -220,7 +220,13 @@ class StateFirstDiffPipeline(VisionPipeline):
             cards=cards,
             metrics=metrics_snapshot,
             runtime=runtime_snapshot,
-            operator=self.build_operator_snapshot_fn(),
+            operator=self.build_operator_snapshot_fn(
+                cards=cards,
+                metrics=metrics_snapshot,
+                runtime=runtime_snapshot,
+                layout=layout,
+                warnings=list(self.operator_warnings),
+            ),
             layout=layout,
             warnings=list(self.operator_warnings),
         )

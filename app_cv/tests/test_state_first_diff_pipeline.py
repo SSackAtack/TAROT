@@ -29,7 +29,7 @@ class TestStateFirstDiffPipeline(unittest.TestCase):
         result.diagnostics = {}
         return result
 
-    def _pipeline(self, session_store=None, table_state=None):
+    def _pipeline(self, session_store=None, table_state=None, build_operator_snapshot_fn=None):
         session_store = session_store or SnapshotSessionStore(clock_ms=MagicMock(return_value=1000))
         table_state = table_state or TableState(["Gilded_01", "Gilded_02"])
         change_detector = MagicMock()
@@ -52,6 +52,7 @@ class TestStateFirstDiffPipeline(unittest.TestCase):
             status_store=status_store,
             table_calibration=table_calibration,
             runtime_metrics=runtime_metrics,
+            build_operator_snapshot_fn=build_operator_snapshot_fn,
         )
         return pipeline, session_store, table_state, change_detector, snapshot_analyzer, status_store
 
@@ -95,6 +96,36 @@ class TestStateFirstDiffPipeline(unittest.TestCase):
             motion_detected=True,
             changed_ratio=0.17,
         )
+
+    def test_operator_snapshot_gets_state_first_runtime_context(self):
+        build_operator_snapshot = MagicMock(return_value={"active_decks": ["gilded"]})
+        pipeline, _, _, _, _, status_store = self._pipeline(
+            build_operator_snapshot_fn=build_operator_snapshot
+        )
+        pipeline.table_calibration.status.return_value = {
+            "calibrated": True,
+            "marker_ids": [10, 11, 12, 13],
+        }
+        motion_result = MagicMock()
+        motion_result.motion_detected = True
+        motion_result.changed_ratio = 0.17
+
+        pipeline.process_frame(
+            frame=self._frame(10),
+            motion_result=motion_result,
+            frame_width=160,
+            frame_height=120,
+            frame_loop_start=123.0,
+        )
+
+        build_operator_snapshot.assert_called_once()
+        _, kwargs = build_operator_snapshot.call_args
+        self.assertEqual(kwargs["runtime"]["aruco_calibrated"], True)
+        self.assertEqual(kwargs["runtime"]["aruco_markers"], 4)
+        self.assertEqual(kwargs["layout"]["state"], "waiting_for_empty_reference")
+        self.assertEqual(kwargs["warnings"], [])
+        _, status_kwargs = status_store.update_cv_state.call_args
+        self.assertEqual(status_kwargs["operator"], {"active_decks": ["gilded"]})
 
     def test_added_roi_is_analyzed_and_current_snapshot_committed(self):
         store = SnapshotSessionStore(clock_ms=MagicMock(return_value=1000))
