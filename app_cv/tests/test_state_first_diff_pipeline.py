@@ -220,11 +220,57 @@ class TestStateFirstDiffPipeline(unittest.TestCase):
         self.assertEqual(kwargs["layout"]["state"], "waiting_for_stable_frame")
         self.assertEqual(kwargs["layout"]["last_diff"]["state"], "state_updated")
 
-    def test_added_compound_roi_preserves_individual_card_bboxes(self):
+    def test_separate_added_rois_preserve_individual_card_bboxes(self):
         store = SnapshotSessionStore(clock_ms=MagicMock(return_value=1000))
         store.start_session()
         store.capture_empty_reference(self._frame(0))
         pipeline, _, table_state, change_detector, snapshot_analyzer, _ = self._pipeline(
+            session_store=store
+        )
+        left_region = ChangeRegion((20, 20, 40, 60), 0.10, "added", 0.0, 0.9)
+        right_region = ChangeRegion((90, 30, 40, 60), 0.10, "added", 0.0, 0.9)
+        change_detector.detect.return_value = ChangeDetectionResult(
+            [left_region, right_region],
+            0.20,
+            False,
+            0,
+            0,
+        )
+        snapshot_analyzer.analyze.return_value = self._analysis_result([
+            {
+                "name": "Gilded_01",
+                "x": 40,
+                "y": 60,
+                "angle": 0,
+                "confidence": 0.91,
+                "bbox": [30, 30, 40, 60],
+            },
+            {
+                "name": "Gilded_02",
+                "x": 100,
+                "y": 60,
+                "angle": 0,
+                "confidence": 0.89,
+                "bbox": [90, 30, 40, 60],
+            },
+        ])
+
+        pipeline.process_frame(
+            frame=self._frame(50),
+            motion_result=MagicMock(),
+            frame_width=160,
+            frame_height=120,
+            frame_loop_start=123.0,
+        )
+
+        self.assertEqual(table_state.cards["Gilded_01"].bbox, (30, 30, 40, 60))
+        self.assertEqual(table_state.cards["Gilded_02"].bbox, (90, 30, 40, 60))
+
+    def test_single_added_roi_keeps_only_highest_confidence_card(self):
+        store = SnapshotSessionStore(clock_ms=MagicMock(return_value=1000))
+        store.start_session()
+        store.capture_empty_reference(self._frame(0))
+        pipeline, _, table_state, change_detector, snapshot_analyzer, status_store = self._pipeline(
             session_store=store
         )
         region = ChangeRegion((20, 20, 120, 90), 0.30, "added", 0.0, 0.9)
@@ -256,8 +302,16 @@ class TestStateFirstDiffPipeline(unittest.TestCase):
             frame_loop_start=123.0,
         )
 
-        self.assertEqual(table_state.cards["Gilded_01"].bbox, (30, 30, 40, 60))
-        self.assertEqual(table_state.cards["Gilded_02"].bbox, (90, 30, 40, 60))
+        self.assertIn("Gilded_01", table_state.cards)
+        self.assertNotIn("Gilded_02", table_state.cards)
+        _, kwargs = status_store.update_cv_state.call_args
+        self.assertEqual(kwargs["layout"]["accepted_card_count"], 1)
+        self.assertEqual(kwargs["layout"]["last_diff"]["accepted_card_count_after_dedup"], 2)
+        self.assertEqual(kwargs["layout"]["last_diff"]["accepted_card_count"], 1)
+        self.assertEqual(
+            kwargs["layout"]["last_diff"]["accepted_cards_after_roi_limit"][0]["name"],
+            "Gilded_01",
+        )
 
     def test_added_roi_deduplicates_overlapping_recognition_candidates(self):
         store = SnapshotSessionStore(clock_ms=MagicMock(return_value=1000))
