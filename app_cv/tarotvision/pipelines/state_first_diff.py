@@ -204,14 +204,20 @@ class StateFirstDiffPipeline(VisionPipeline):
         if extra:
             layout.update(extra)
 
+        runtime_snapshot = {
+            "profile": self.runtime_profile,
+            "capture_width": frame_width,
+            "capture_height": frame_height,
+            "schedule_mode": "state_first_diff",
+            "table": self.table_calibration.status(),
+        }
+        metrics_snapshot = self.runtime_metrics.snapshot()
         self.status_store.update_cv_state(
-            frame_width=frame_width,
-            frame_height=frame_height,
             cards=cards,
-            layout=layout,
-            metrics=self.runtime_metrics.snapshot(),
-            calibration=self.table_calibration.status(),
+            metrics=metrics_snapshot,
+            runtime=runtime_snapshot,
             operator=self.build_operator_snapshot_fn(),
+            layout=layout,
             warnings=list(self.operator_warnings),
         )
         return {

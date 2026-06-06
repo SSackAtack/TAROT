@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, create_autospec
 
 import numpy as np
 
 from tarotvision.change_detection import ChangeDetectionResult, ChangeRegion
 from tarotvision.snapshot_session_store import SnapshotSessionStore
+from tarotvision.status.status_store import StatusStore
 from tarotvision.table_state import TableState
 from tarotvision.pipelines.state_first_diff import StateFirstDiffPipeline
 
@@ -35,7 +36,7 @@ class TestStateFirstDiffPipeline(unittest.TestCase):
         snapshot_analyzer = MagicMock()
         snapshot_gate = MagicMock()
         snapshot_gate.update.return_value = self._gate_decision()
-        status_store = MagicMock()
+        status_store = create_autospec(StatusStore, instance=True)
         table_calibration = MagicMock()
         table_calibration.calibrated = False
         table_calibration.status.return_value = {"calibrated": False, "marker_ids": []}
