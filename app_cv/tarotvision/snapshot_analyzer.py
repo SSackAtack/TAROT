@@ -32,7 +32,7 @@ class SnapshotAnalyzer:
     def _find_quads_default(self, frame):
         return find_card_quads_multi_profile(frame, background_model=self.background_model).quads
 
-    def analyze(self, frame):
+    def analyze(self, frame, roi_hints=None):
         cards = []
         diagnostics = {
             "quads_found": 0,
@@ -41,6 +41,16 @@ class SnapshotAnalyzer:
             "recognition_debug": [],
         }
         frame_height, frame_width = frame.shape[:2]
+
+        if roi_hints is not None:
+            return self._analyze_rois(
+                frame,
+                roi_hints,
+                cards,
+                diagnostics,
+                frame_width,
+                frame_height,
+            )
 
         if self.find_quads_with_debug is not None:
             detection_result = self.find_quads_with_debug(frame)
@@ -51,51 +61,136 @@ class SnapshotAnalyzer:
 
         diagnostics["quads_found"] = len(quads)
         for quad in quads:
-            crop = self.crop_card(frame, quad)
-            diagnostics["recognition_attempts"] += 1
-            _write_debug_crop(crop, diagnostics["recognition_attempts"])
-
-            recognition = self.recognize_crop(crop) if self.recognize_crop else None
-            recognition_debug = None
-            if isinstance(recognition, tuple):
-                recognition, recognition_debug = recognition
-            if recognition_debug is not None:
-                diagnostics["recognition_debug"].append(
-                    _serialize_recognition_debug(recognition_debug)
-                )
-            if not recognition:
-                diagnostics["recognition_rejections"] += 1
-                continue
-            center_x, center_y = _quad_center(quad)
-            scene_x, scene_y = _frame_to_scene(
-                center_x,
-                center_y,
-                frame_width,
-                frame_height,
-                self.scene_width,
-                self.scene_height,
+            self._recognize_quad(
+                source_frame=frame,
+                crop_quad=quad,
+                layout_quad=quad,
+                cards=cards,
+                diagnostics=diagnostics,
+                frame_width=frame_width,
+                frame_height=frame_height,
             )
-            cards.append({
-                "name": recognition["name"],
-                "x": scene_x,
-                "y": scene_y,
-                "angle": _layout_angle(
-                    quad,
-                    recognition.get("orientation", "unknown"),
-                ),
-                "confidence": recognition.get("confidence", 0.0),
-                "orientation": recognition.get("orientation", "unknown"),
-                "homography_angle_deg": recognition.get("homography_angle_deg", 0.0),
-            })
         return SnapshotAnalysisResult(
             cards=cards,
             card_count=len(cards),
             diagnostics=diagnostics,
         )
 
+    def _analyze_rois(self, frame, roi_hints, cards, diagnostics, frame_width, frame_height):
+        diagnostics["roi_count"] = len(roi_hints)
+        diagnostics["roi_diagnostics"] = []
+        diagnostics["roi_with_quads_count"] = 0
+        diagnostics["roi_with_accepted_card_count"] = 0
+        diagnostics["accepted_cards_before_dedup"] = 0
+        diagnostics["accepted_cards_after_dedup"] = 0
+
+        for roi_index, roi_bbox in enumerate(roi_hints):
+            x, y, w, h = _clip_bbox(roi_bbox, frame_width, frame_height)
+            roi_frame = frame[y:y + h, x:x + w]
+            roi_diag = {
+                "roi_index": roi_index,
+                "roi_bbox": [x, y, w, h],
+                "roi_area": int(w * h),
+                "roi_quads_found": 0,
+                "roi_accepted_cards": 0,
+                "roi_recognition_attempts": 0,
+                "roi_recognition_rejections": 0,
+            }
+            if roi_frame.size == 0:
+                diagnostics["roi_diagnostics"].append(roi_diag)
+                continue
+
+            if self.find_quads_with_debug is not None:
+                detection_result = self.find_quads_with_debug(roi_frame)
+                quads = detection_result.quads
+                roi_diag["roi_detection"] = detection_result.debug
+            else:
+                quads = self.find_quads(roi_frame)
+
+            roi_diag["roi_quads_found"] = len(quads)
+            diagnostics["quads_found"] += len(quads)
+            if quads:
+                diagnostics["roi_with_quads_count"] += 1
+
+            accepted_before = len(cards)
+            attempts_before = diagnostics["recognition_attempts"]
+            rejections_before = diagnostics["recognition_rejections"]
+            for quad in quads:
+                self._recognize_quad(
+                    source_frame=roi_frame,
+                    crop_quad=quad,
+                    layout_quad=_translate_quad(quad, x, y),
+                    cards=cards,
+                    diagnostics=diagnostics,
+                    frame_width=frame_width,
+                    frame_height=frame_height,
+                )
+            accepted_count = len(cards) - accepted_before
+            roi_diag["roi_accepted_cards"] = accepted_count
+            roi_diag["roi_recognition_attempts"] = diagnostics["recognition_attempts"] - attempts_before
+            roi_diag["roi_recognition_rejections"] = diagnostics["recognition_rejections"] - rejections_before
+            if accepted_count > 0:
+                diagnostics["roi_with_accepted_card_count"] += 1
+            diagnostics["roi_diagnostics"].append(roi_diag)
+
+        diagnostics["accepted_cards_before_dedup"] = len(cards)
+        diagnostics["accepted_cards_after_dedup"] = len(cards)
+        return SnapshotAnalysisResult(
+            cards=cards,
+            card_count=len(cards),
+            diagnostics=diagnostics,
+        )
+
+    def _recognize_quad(self, source_frame, crop_quad, layout_quad, cards,
+                        diagnostics, frame_width, frame_height):
+        crop = self.crop_card(source_frame, crop_quad)
+        diagnostics["recognition_attempts"] += 1
+        _write_debug_crop(crop, diagnostics["recognition_attempts"])
+
+        recognition = self.recognize_crop(crop) if self.recognize_crop else None
+        recognition_debug = None
+        if isinstance(recognition, tuple):
+            recognition, recognition_debug = recognition
+        if recognition_debug is not None:
+            diagnostics["recognition_debug"].append(
+                _serialize_recognition_debug(recognition_debug)
+            )
+        if not recognition:
+            diagnostics["recognition_rejections"] += 1
+            return
+
+        center_x, center_y = _quad_center(layout_quad)
+        scene_x, scene_y = _frame_to_scene(
+            center_x,
+            center_y,
+            frame_width,
+            frame_height,
+            self.scene_width,
+            self.scene_height,
+        )
+        cards.append({
+            "name": recognition["name"],
+            "x": scene_x,
+            "y": scene_y,
+            "angle": _layout_angle(
+                layout_quad,
+                recognition.get("orientation", "unknown"),
+            ),
+            "confidence": recognition.get("confidence", 0.0),
+            "orientation": recognition.get("orientation", "unknown"),
+            "homography_angle_deg": recognition.get("homography_angle_deg", 0.0),
+        })
+
 
 def _quad_points(quad):
     return np.asarray(quad, dtype=np.float32).reshape(4, 2)
+
+
+def _translate_quad(quad, offset_x, offset_y):
+    points = _quad_points(quad).copy()
+    points[:, 0] += float(offset_x)
+    points[:, 1] += float(offset_y)
+    return points.reshape(4, 1, 2)
 
 
 def _quad_center(quad):
@@ -136,6 +231,15 @@ def _frame_to_scene(center_x, center_y, frame_width, frame_height,
     scene_x = (center_x / frame_width * 2.0 - 1.0) * (scene_width / 2.0)
     scene_y = (1.0 - center_y / frame_height * 2.0) * (scene_height / 2.0)
     return float(scene_x), float(scene_y)
+
+
+def _clip_bbox(bbox, frame_width, frame_height):
+    x, y, w, h = [int(value) for value in bbox]
+    x1 = max(0, x)
+    y1 = max(0, y)
+    x2 = min(frame_width, x + w)
+    y2 = min(frame_height, y + h)
+    return x1, y1, max(0, x2 - x1), max(0, y2 - y1)
 
 
 def _serialize_recognition_debug(debug):

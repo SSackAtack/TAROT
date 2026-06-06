@@ -178,6 +178,62 @@ class SnapshotAnalyzerTest(unittest.TestCase):
         self.assertEqual(result.card_count, 1)
         self.assertIs(result.diagnostics["detection"], debug)
 
+    def test_empty_roi_hints_returns_no_cards_without_global_fallback(self):
+        calls = []
+        analyzer = SnapshotAnalyzer(
+            find_quads=lambda frame: calls.append(frame.shape) or [],
+            crop_card=lambda frame, quad: None,
+            recognize_crop=lambda crop: None,
+        )
+
+        result = analyzer.analyze(np.zeros((200, 300, 3), dtype=np.uint8), roi_hints=[])
+
+        self.assertEqual(calls, [])
+        self.assertEqual(result.cards, [])
+        self.assertEqual(result.card_count, 0)
+        self.assertEqual(result.diagnostics["roi_count"], 0)
+        self.assertEqual(result.diagnostics["quads_found"], 0)
+
+    def test_analyzes_roi_hints_and_maps_layout_to_full_frame(self):
+        quad = np.array([[[30, 40]], [[50, 40]], [[50, 80]], [[30, 80]]],
+                        dtype=np.float32)
+        detector_calls = []
+        crop_calls = []
+
+        def find_quads(frame):
+            detector_calls.append(frame.shape)
+            return [quad]
+
+        def crop_card(frame, detected_quad):
+            crop_calls.append((frame.shape, detected_quad.copy()))
+            return "crop"
+
+        analyzer = SnapshotAnalyzer(
+            find_quads=find_quads,
+            crop_card=crop_card,
+            recognize_crop=lambda crop: {
+                "name": "Gilded_01",
+                "confidence": 0.88,
+                "orientation": "upright",
+            },
+        )
+
+        result = analyzer.analyze(
+            np.zeros((200, 300, 3), dtype=np.uint8),
+            roi_hints=[(40, 30, 80, 120)],
+        )
+
+        self.assertEqual(detector_calls, [(120, 80, 3)])
+        self.assertEqual(crop_calls[0][0], (120, 80, 3))
+        self.assertEqual(result.card_count, 1)
+        self.assertEqual(result.cards[0]["name"], "Gilded_01")
+        self.assertAlmostEqual(result.cards[0]["x"], -6.066666666666666)
+        self.assertAlmostEqual(result.cards[0]["y"], 0.78)
+        self.assertEqual(result.diagnostics["roi_count"], 1)
+        self.assertEqual(result.diagnostics["roi_with_quads_count"], 1)
+        self.assertEqual(result.diagnostics["roi_with_accepted_card_count"], 1)
+        self.assertEqual(result.diagnostics["roi_diagnostics"][0]["roi_bbox"], [40, 30, 80, 120])
+
 
 if __name__ == "__main__":
     unittest.main()
