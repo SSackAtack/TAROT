@@ -167,6 +167,59 @@ class TestStateFirstDiffPipeline(unittest.TestCase):
         self.assertEqual(kwargs["layout"]["session"]["previous_snapshot"], True)
         self.assertEqual(kwargs["layout"]["session"]["current_snapshot"], False)
 
+    def test_publishes_persistent_last_diff_diagnostics_after_state_update(self):
+        store = SnapshotSessionStore(clock_ms=MagicMock(return_value=1000))
+        store.start_session()
+        store.capture_empty_reference(self._frame(0))
+        pipeline, _, _, change_detector, snapshot_analyzer, status_store = self._pipeline(
+            session_store=store
+        )
+        region = ChangeRegion((40, 30, 50, 60), 0.15, "added", 0.0, 0.9)
+        change_detector.detect.return_value = ChangeDetectionResult([region], 0.15, False, 0, 0)
+        snapshot_analyzer.analyze.return_value = self._analysis_result([
+            {
+                "name": "Gilded_01",
+                "x": 55,
+                "y": 65,
+                "angle": 4,
+                "confidence": 0.88,
+                "bbox": [40, 30, 50, 60],
+            }
+        ])
+        snapshot_analyzer.analyze.return_value.diagnostics = {
+            "quads_found": 3,
+            "recognition_attempts": 3,
+            "recognition_rejections": 2,
+            "roi_diagnostics": [{"roi_index": 0, "roi_quads_found": 3}],
+        }
+
+        pipeline.process_frame(
+            frame=self._frame(50),
+            motion_result=MagicMock(),
+            frame_width=160,
+            frame_height=120,
+            frame_loop_start=123.0,
+        )
+        _, kwargs = status_store.update_cv_state.call_args
+        last_diff = kwargs["layout"]["last_diff"]
+        self.assertEqual(last_diff["state"], "state_updated")
+        self.assertEqual(last_diff["regions"][0]["bbox"], [40, 30, 50, 60])
+        self.assertEqual(last_diff["roi_hints"], [[40, 30, 50, 60]])
+        self.assertEqual(last_diff["analysis"]["quads_found"], 3)
+        self.assertEqual(last_diff["accepted_cards_after_dedup"][0]["name"], "Gilded_01")
+
+        pipeline.snapshot_gate.update.return_value = self._gate_decision(should_sample=False)
+        pipeline.process_frame(
+            frame=self._frame(50),
+            motion_result=MagicMock(),
+            frame_width=160,
+            frame_height=120,
+            frame_loop_start=124.0,
+        )
+        _, kwargs = status_store.update_cv_state.call_args
+        self.assertEqual(kwargs["layout"]["state"], "waiting_for_stable_frame")
+        self.assertEqual(kwargs["layout"]["last_diff"]["state"], "state_updated")
+
     def test_added_compound_roi_preserves_individual_card_bboxes(self):
         store = SnapshotSessionStore(clock_ms=MagicMock(return_value=1000))
         store.start_session()

@@ -34,6 +34,7 @@ class StateFirstDiffPipeline(VisionPipeline):
         self.operator_warnings = operator_warnings or []
         self.runtime_profile = runtime_profile
         self.frame_index = 0
+        self.last_diff_diagnostics = None
 
     def process_frame(self, frame, motion_result, frame_width, frame_height, frame_loop_start):
         self.frame_index += 1
@@ -97,9 +98,13 @@ class StateFirstDiffPipeline(VisionPipeline):
         reverify_ids = self._apply_moved_regions(change_result.regions)
         roi_hints = self._roi_hints_for_analysis(change_result.regions)
         accepted_cards = []
+        analysis_diagnostics = None
+        accepted_cards_before_dedup = []
         if roi_hints:
             analysis = self.snapshot_analyzer.analyze(current_snapshot.image, roi_hints=roi_hints)
             accepted_cards = list(getattr(analysis, "cards", []) or [])
+            accepted_cards_before_dedup = list(accepted_cards)
+            analysis_diagnostics = getattr(analysis, "diagnostics", None) or {}
             accepted_cards = _deduplicate_overlapping_cards(accepted_cards)
             self._apply_accepted_cards(accepted_cards, roi_hints)
 
@@ -109,6 +114,17 @@ class StateFirstDiffPipeline(VisionPipeline):
         else:
             self.snapshot_session_store.discard_current_snapshot()
             state = self._idle_state(change_result.regions)
+
+        self.last_diff_diagnostics = _build_last_diff_diagnostics(
+            state=state,
+            change_result=change_result,
+            roi_hints=roi_hints,
+            removed_ids=removed_ids,
+            reverify_ids=reverify_ids,
+            accepted_cards_before_dedup=accepted_cards_before_dedup,
+            accepted_cards_after_dedup=accepted_cards,
+            analysis_diagnostics=analysis_diagnostics,
+        )
 
         return self._publish(
             frame_width,
@@ -204,6 +220,7 @@ class StateFirstDiffPipeline(VisionPipeline):
             "cards": cards,
             "gate_state": getattr(gate_decision, "state", None),
             "stable_for_ms": getattr(gate_decision, "stable_for_ms", 0),
+            "last_diff": self.last_diff_diagnostics,
         }
         if extra:
             layout.update(extra)
@@ -293,3 +310,71 @@ def _bbox_iou(first, second):
     if union <= 0.0:
         return 0.0
     return intersection / union
+
+
+def _build_last_diff_diagnostics(
+    state,
+    change_result,
+    roi_hints,
+    removed_ids,
+    reverify_ids,
+    accepted_cards_before_dedup,
+    accepted_cards_after_dedup,
+    analysis_diagnostics,
+):
+    return {
+        "state": state,
+        "change_region_count": len(change_result.regions),
+        "regions": [_serialize_region(region) for region in change_result.regions],
+        "roi_count": len(roi_hints),
+        "roi_hints": [_serialize_bbox(bbox) for bbox in roi_hints],
+        "removed_card_ids": list(removed_ids),
+        "reverify_card_ids": list(reverify_ids),
+        "accepted_card_count_before_dedup": len(accepted_cards_before_dedup),
+        "accepted_card_count": len(accepted_cards_after_dedup),
+        "accepted_cards_before_dedup": [
+            _serialize_card(card) for card in accepted_cards_before_dedup
+        ],
+        "accepted_cards_after_dedup": [
+            _serialize_card(card) for card in accepted_cards_after_dedup
+        ],
+        "mask_nonzero_ratio": change_result.mask_nonzero_ratio,
+        "ignored_small_count": change_result.ignored_small_count,
+        "ignored_large_count": change_result.ignored_large_count,
+        "analysis": _json_safe(analysis_diagnostics or {}),
+    }
+
+
+def _serialize_region(region):
+    return {
+        "bbox": _serialize_bbox(region.bbox),
+        "area_ratio": float(region.area_ratio),
+        "kind": region.kind,
+        "previous_empty_ratio": float(region.previous_empty_ratio),
+        "current_empty_ratio": float(region.current_empty_ratio),
+    }
+
+
+def _serialize_card(card):
+    return {
+        "name": card.get("name"),
+        "confidence": float(card.get("confidence", 0.0)),
+        "bbox": _serialize_bbox(card.get("bbox")) if card.get("bbox") is not None else None,
+        "x": float(card.get("x", 0.0)),
+        "y": float(card.get("y", 0.0)),
+        "angle": float(card.get("angle", 0.0)),
+    }
+
+
+def _serialize_bbox(bbox):
+    return [int(value) for value in bbox]
+
+
+def _json_safe(value):
+    if isinstance(value, dict):
+        return {str(key): _json_safe(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_safe(item) for item in value]
+    if isinstance(value, (str, int, float, bool)) or value is None:
+        return value
+    return str(value)
