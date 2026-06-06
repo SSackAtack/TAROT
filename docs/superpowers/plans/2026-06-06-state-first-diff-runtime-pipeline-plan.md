@@ -1418,3 +1418,15 @@ Verification:
 Remaining blocker:
 
 - raw `ChangeDetector` region counts still show merged/split diagnostics on `three_cards` fixture pairs, but runtime-effective ROI gating is now PASS. Do not make `state_first_diff` default until physical Gilded smoke validates add/remove behavior through Studio.
+
+Follow-up implementation (2026-06-06, Codex):
+
+- added `layout.session` telemetry to `StateFirstDiffPipeline`,
+- Studio `Sesja state-first` panel now reads `layout.session.empty_reference_locked` and `layout.session.active` when available,
+- smoke checklist now records backend session fields directly.
+
+Verification:
+
+- `python -m unittest app_cv.tests.test_state_first_diff_pipeline app_cv.tests.test_runtime_state_first_fixture_contract -v` => PASS,
+- `python -m py_compile app_cv\tarotvision\pipelines\state_first_diff.py app_cv\tests\test_state_first_diff_pipeline.py` => PASS,
+- `npm --prefix E:\Antigravity\Projekty\TAROT\app_ar run build` => PASS.

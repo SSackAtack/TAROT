@@ -70,6 +70,8 @@ class TestStateFirstDiffPipeline(unittest.TestCase):
         snapshot_analyzer.analyze.assert_not_called()
         _, kwargs = status_store.update_cv_state.call_args
         self.assertEqual(kwargs["layout"]["state"], "waiting_for_empty_reference")
+        self.assertEqual(kwargs["layout"]["session"]["active"], False)
+        self.assertEqual(kwargs["layout"]["session"]["empty_reference_locked"], False)
 
     def test_added_roi_is_analyzed_and_current_snapshot_committed(self):
         store = SnapshotSessionStore(clock_ms=MagicMock(return_value=1000))
@@ -106,6 +108,10 @@ class TestStateFirstDiffPipeline(unittest.TestCase):
         _, kwargs = status_store.update_cv_state.call_args
         self.assertEqual(kwargs["layout"]["state"], "state_updated")
         self.assertEqual(kwargs["layout"]["card_count"], 1)
+        self.assertEqual(kwargs["layout"]["session"]["active"], True)
+        self.assertEqual(kwargs["layout"]["session"]["empty_reference_locked"], True)
+        self.assertEqual(kwargs["layout"]["session"]["previous_snapshot"], True)
+        self.assertEqual(kwargs["layout"]["session"]["current_snapshot"], False)
 
     def test_added_compound_roi_preserves_individual_card_bboxes(self):
         store = SnapshotSessionStore(clock_ms=MagicMock(return_value=1000))

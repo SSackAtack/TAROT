@@ -191,6 +191,7 @@ class StateFirstDiffPipeline(VisionPipeline):
         layout = {
             "source": self.runtime_profile,
             "state": state,
+            "session": self._session_status(),
             "card_count": len(cards),
             "cards": cards,
             "gate_state": getattr(gate_decision, "state", None),
@@ -215,4 +216,15 @@ class StateFirstDiffPipeline(VisionPipeline):
             "frame_height": frame_height,
             "cards": cards,
             "layout": layout,
+        }
+
+    def _session_status(self):
+        store = self.snapshot_session_store
+        return {
+            "active": bool(getattr(store, "session_active", False)),
+            "empty_reference_locked": bool(getattr(store, "empty_reference_locked", False)),
+            "empty_reference": getattr(store, "empty_reference", None) is not None,
+            "previous_snapshot": getattr(store, "previous_snapshot", None) is not None,
+            "current_snapshot": getattr(store, "current_snapshot", None) is not None,
+            "ready_for_diff": bool(store.ready_for_diff()) if hasattr(store, "ready_for_diff") else False,
         }

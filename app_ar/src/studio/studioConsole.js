@@ -503,13 +503,21 @@ function renderStudioStateFirstSession(data) {
     if (!panel) return
 
     const layout = data.layout || {}
+    const session = layout.session || {}
     const pipeline = layout.source === 'state_first_diff' ? 'state_first_diff' : 'snapshot_first'
     const layoutState = layout.state || 'inactive'
-    const emptyLocked = pipeline === 'state_first_diff' && layoutState !== 'waiting_for_empty_reference'
+    const hasSessionTelemetry = Object.prototype.hasOwnProperty.call(session, 'empty_reference_locked')
+    const emptyLocked = hasSessionTelemetry
+        ? session.empty_reference_locked === true
+        : pipeline === 'state_first_diff' && layoutState !== 'waiting_for_empty_reference'
     const sessionState =
         pipeline !== 'state_first_diff'
             ? 'inactive'
-            : (layoutState === 'waiting_for_empty_reference' ? 'waiting_empty' : layoutState)
+            : (
+                session.active === false
+                    ? 'inactive'
+                    : (layoutState === 'waiting_for_empty_reference' ? 'waiting_empty' : layoutState)
+            )
 
     const pipelineEl = panel.querySelector('#studio-state-session-pipeline')
     const sessionEl = panel.querySelector('#studio-state-session-state')

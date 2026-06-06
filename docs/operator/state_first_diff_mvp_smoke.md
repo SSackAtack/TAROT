@@ -48,6 +48,8 @@ Interpretation: state-first should gate on runtime-effective analysis ROI and Ta
 
 - session state:
 - empty reference locked:
+- backend layout.session.active:
+- backend layout.session.ready_for_diff:
 - notes:
 
 ### 2. EMPTY -> EMPTY
@@ -99,3 +101,16 @@ Allowed outcomes:
 Current decision before physical smoke: `KEEP_SNAPSHOT_FIRST_DEFAULT_FOR_MVP`.
 
 Reason: offline smoke now passes at runtime-effective ROI level, but physical Gilded smoke has not been run. Keep `snapshot_first` as default until Operator camera validation passes.
+
+## Runtime Telemetry
+
+`StateFirstDiffPipeline` publishes `layout.session`:
+
+- `active`
+- `empty_reference_locked`
+- `empty_reference`
+- `previous_snapshot`
+- `current_snapshot`
+- `ready_for_diff`
+
+Studio uses these fields in the `Sesja state-first` panel instead of inferring locked empty reference only from `layout.state`.
