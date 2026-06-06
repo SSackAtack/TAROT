@@ -1,0 +1,186 @@
+# -*- coding: utf-8 -*-
+import unittest
+from unittest.mock import MagicMock
+
+import numpy as np
+
+from tarotvision.change_detection import ChangeDetectionResult, ChangeRegion
+from tarotvision.snapshot_session_store import SnapshotSessionStore
+from tarotvision.table_state import TableState
+from tarotvision.pipelines.state_first_diff import StateFirstDiffPipeline
+
+
+class TestStateFirstDiffPipeline(unittest.TestCase):
+    def _frame(self, value=0):
+        return np.full((120, 160, 3), value, dtype=np.uint8)
+
+    def _gate_decision(self, should_sample=True):
+        decision = MagicMock()
+        decision.state = "sampling_snapshots"
+        decision.stable_for_ms = 700
+        decision.should_sample = should_sample
+        return decision
+
+    def _analysis_result(self, cards):
+        result = MagicMock()
+        result.cards = cards
+        result.card_count = len(cards)
+        result.diagnostics = {}
+        return result
+
+    def _pipeline(self, session_store=None, table_state=None):
+        session_store = session_store or SnapshotSessionStore(clock_ms=MagicMock(return_value=1000))
+        table_state = table_state or TableState(["Gilded_01", "Gilded_02"])
+        change_detector = MagicMock()
+        snapshot_analyzer = MagicMock()
+        snapshot_gate = MagicMock()
+        snapshot_gate.update.return_value = self._gate_decision()
+        status_store = MagicMock()
+        table_calibration = MagicMock()
+        table_calibration.calibrated = False
+        table_calibration.status.return_value = {"calibrated": False, "marker_ids": []}
+        runtime_metrics = MagicMock()
+        runtime_metrics.snapshot.return_value = {}
+
+        pipeline = StateFirstDiffPipeline(
+            snapshot_session_store=session_store,
+            change_detector=change_detector,
+            snapshot_analyzer=snapshot_analyzer,
+            table_state=table_state,
+            snapshot_gate=snapshot_gate,
+            status_store=status_store,
+            table_calibration=table_calibration,
+            runtime_metrics=runtime_metrics,
+        )
+        return pipeline, session_store, table_state, change_detector, snapshot_analyzer, status_store
+
+    def test_waits_for_locked_empty_reference_without_analyzer_call(self):
+        pipeline, _, _, change_detector, snapshot_analyzer, status_store = self._pipeline()
+        motion_result = MagicMock()
+
+        pipeline.process_frame(
+            frame=self._frame(10),
+            motion_result=motion_result,
+            frame_width=160,
+            frame_height=120,
+            frame_loop_start=123.0,
+        )
+
+        change_detector.detect.assert_not_called()
+        snapshot_analyzer.analyze.assert_not_called()
+        _, kwargs = status_store.update_cv_state.call_args
+        self.assertEqual(kwargs["layout"]["state"], "waiting_for_empty_reference")
+
+    def test_added_roi_is_analyzed_and_current_snapshot_committed(self):
+        store = SnapshotSessionStore(clock_ms=MagicMock(return_value=1000))
+        store.start_session()
+        store.capture_empty_reference(self._frame(0))
+        pipeline, store, table_state, change_detector, snapshot_analyzer, status_store = self._pipeline(
+            session_store=store
+        )
+        region = ChangeRegion((40, 30, 50, 60), 0.15, "added", 0.0, 0.9)
+        change_detector.detect.return_value = ChangeDetectionResult([region], 0.15, False, 0, 0)
+        snapshot_analyzer.analyze.return_value = self._analysis_result([
+            {
+                "name": "Gilded_01",
+                "x": 55,
+                "y": 65,
+                "angle": 4,
+                "confidence": 0.88,
+            }
+        ])
+
+        pipeline.process_frame(
+            frame=self._frame(50),
+            motion_result=MagicMock(),
+            frame_width=160,
+            frame_height=120,
+            frame_loop_start=123.0,
+        )
+
+        snapshot_analyzer.analyze.assert_called_once()
+        self.assertEqual(snapshot_analyzer.analyze.call_args.kwargs["roi_hints"], [(40, 30, 50, 60)])
+        self.assertIsNone(store.current_snapshot)
+        self.assertIsNotNone(store.previous_snapshot)
+        self.assertIn("Gilded_01", table_state.cards)
+        _, kwargs = status_store.update_cv_state.call_args
+        self.assertEqual(kwargs["layout"]["state"], "state_updated")
+        self.assertEqual(kwargs["layout"]["card_count"], 1)
+
+    def test_removed_roi_updates_table_state_without_analyzer(self):
+        store = SnapshotSessionStore(clock_ms=MagicMock(return_value=1000))
+        store.start_session()
+        store.capture_empty_reference(self._frame(0))
+        table_state = TableState(["Gilded_01"])
+        table_state.upsert_locked("Gilded_01", 50, 50, 0, 0.9, 1, bbox=(40, 30, 50, 60))
+        pipeline, store, table_state, change_detector, snapshot_analyzer, status_store = self._pipeline(
+            session_store=store,
+            table_state=table_state,
+        )
+        region = ChangeRegion((40, 30, 50, 60), 0.15, "removed", 0.9, 0.0)
+        change_detector.detect.return_value = ChangeDetectionResult([region], 0.15, False, 0, 0)
+
+        pipeline.process_frame(
+            frame=self._frame(0),
+            motion_result=MagicMock(),
+            frame_width=160,
+            frame_height=120,
+            frame_loop_start=123.0,
+        )
+
+        snapshot_analyzer.analyze.assert_not_called()
+        self.assertEqual(table_state.cards, {})
+        self.assertIsNone(store.current_snapshot)
+        _, kwargs = status_store.update_cv_state.call_args
+        self.assertEqual(kwargs["cards"], [])
+        self.assertEqual(kwargs["layout"]["state"], "state_updated")
+
+    def test_noise_discards_current_and_keeps_previous_snapshot(self):
+        store = SnapshotSessionStore(clock_ms=MagicMock(return_value=1000))
+        store.start_session()
+        store.capture_empty_reference(self._frame(0))
+        previous_before = store.previous_snapshot.image.copy()
+        pipeline, store, _, change_detector, snapshot_analyzer, status_store = self._pipeline(session_store=store)
+        region = ChangeRegion((3, 3, 8, 8), 0.01, "noise_or_lighting", 0.0, 0.0)
+        change_detector.detect.return_value = ChangeDetectionResult([region], 0.01, False, 0, 0)
+
+        pipeline.process_frame(
+            frame=self._frame(5),
+            motion_result=MagicMock(),
+            frame_width=160,
+            frame_height=120,
+            frame_loop_start=123.0,
+        )
+
+        snapshot_analyzer.analyze.assert_not_called()
+        self.assertTrue(np.array_equal(store.previous_snapshot.image, previous_before))
+        self.assertIsNone(store.current_snapshot)
+        _, kwargs = status_store.update_cv_state.call_args
+        self.assertEqual(kwargs["layout"]["state"], "noise_or_lighting")
+
+    def test_global_shift_discards_current_and_requests_resync(self):
+        store = SnapshotSessionStore(clock_ms=MagicMock(return_value=1000))
+        store.start_session()
+        store.capture_empty_reference(self._frame(0))
+        previous_before = store.previous_snapshot.image.copy()
+        pipeline, store, _, change_detector, snapshot_analyzer, status_store = self._pipeline(session_store=store)
+        change_detector.detect.return_value = ChangeDetectionResult([], 0.7, True, 0, 0)
+
+        pipeline.process_frame(
+            frame=self._frame(90),
+            motion_result=MagicMock(),
+            frame_width=160,
+            frame_height=120,
+            frame_loop_start=123.0,
+        )
+
+        snapshot_analyzer.analyze.assert_not_called()
+        self.assertTrue(np.array_equal(store.previous_snapshot.image, previous_before))
+        self.assertIsNone(store.current_snapshot)
+        _, kwargs = status_store.update_cv_state.call_args
+        self.assertEqual(kwargs["layout"]["state"], "resync_required")
+        self.assertEqual(kwargs["layout"]["resync_reason"], "global_shift_detected")
+
+
+if __name__ == "__main__":
+    unittest.main()

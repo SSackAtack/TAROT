@@ -872,7 +872,7 @@ git commit -m "feat: update table state from change events"
 - Create: `app_cv/tests/test_state_first_diff_pipeline.py`
 - Modify: `app_cv/tarotvision/pipelines/__init__.py`
 
-- [ ] **Step 1: Add pipeline tests**
+- [x] **Step 1: Add pipeline tests**
 
 Create tests for these cases:
 
@@ -885,7 +885,7 @@ noise_or_lighting -> keep previous state, discard current
 global_shift -> keep previous state, discard current, resync recommended
 ```
 
-- [ ] **Step 2: Implement minimal pipeline**
+- [x] **Step 2: Implement minimal pipeline**
 
 The pipeline constructor must accept:
 
@@ -913,7 +913,7 @@ publish TableState full layout
 commit current only after accepted state update
 ```
 
-- [ ] **Step 3: Export pipeline**
+- [x] **Step 3: Export pipeline**
 
 Modify `app_cv/tarotvision/pipelines/__init__.py`:
 
@@ -927,7 +927,7 @@ __all__ = [
 ]
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 Run:
 
@@ -938,7 +938,7 @@ python -m unittest app_cv.tests.test_state_first_diff_pipeline app_cv.tests.test
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 Run:
 
@@ -1318,3 +1318,13 @@ Plan prepared from the clarified product direction:
 - autotune is not the center of this implementation.
 
 No production code was changed in this planning step.
+
+Task 6 completed:
+
+- added `StateFirstDiffPipeline` skeleton without changing default runtime wiring,
+- added mock-based tests for empty-reference wait, added ROI analysis, removed ROI state update, noise discard and global-shift resync,
+- exported `StateFirstDiffPipeline` while keeping `SnapshotFirstPipeline`.
+
+Verification:
+
+- `python -m unittest app_cv.tests.test_state_first_diff_pipeline app_cv.tests.test_pipelines_contract -v` => PASS.

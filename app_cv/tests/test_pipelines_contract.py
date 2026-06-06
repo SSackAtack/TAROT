@@ -3,7 +3,7 @@ import unittest
 from unittest.mock import MagicMock
 import numpy as np
 import tarotvision.pipelines as pipelines
-from tarotvision.pipelines import VisionPipeline, SnapshotFirstPipeline
+from tarotvision.pipelines import VisionPipeline, SnapshotFirstPipeline, StateFirstDiffPipeline
 
 class MockVisionPipeline(VisionPipeline):
     def process_frame(self, frame):
@@ -100,6 +100,10 @@ class TestPipelinesContract(unittest.TestCase):
     def test_legacy_pipeline_is_not_exported(self):
         self.assertFalse(hasattr(pipelines, "StateFirstLegacyPipeline"))
         self.assertNotIn("StateFirstLegacyPipeline", pipelines.__all__)
+
+    def test_state_first_diff_pipeline_is_exported(self):
+        self.assertTrue(issubclass(StateFirstDiffPipeline, VisionPipeline))
+        self.assertIn("StateFirstDiffPipeline", pipelines.__all__)
 
     def test_snapshot_pipeline_analyzes_warped_frame_when_table_is_calibrated(self):
         camera_session = MagicMock()
