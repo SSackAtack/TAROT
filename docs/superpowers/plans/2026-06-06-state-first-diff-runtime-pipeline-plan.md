@@ -1160,7 +1160,7 @@ git commit -m "test: add runtime state-first fixture smoke"
 - Create: `docs/operator/state_first_diff_mvp_smoke.md`
 - Modify: `.ai/PROJECT_STATE.md` only after smoke result
 
-- [ ] **Step 1: Write smoke checklist**
+- [x] **Step 1: Write smoke checklist**
 
 Create `docs/operator/state_first_diff_mvp_smoke.md` with:
 
@@ -1206,7 +1206,7 @@ Active deck: gilded
 - result:
 ```
 
-- [ ] **Step 2: Run backend tests**
+- [x] **Step 2: Run backend tests**
 
 Run:
 
@@ -1217,7 +1217,7 @@ python -m unittest discover -s app_cv\tests -v
 
 Expected: PASS.
 
-- [ ] **Step 3: Run frontend build**
+- [x] **Step 3: Run frontend build**
 
 Run:
 
@@ -1228,6 +1228,8 @@ npm --prefix E:\Antigravity\Projekty\TAROT\app_ar run build
 Expected: PASS.
 
 - [ ] **Step 4: Physical smoke**
+
+Status: `PHYSICAL_SMOKE_NOT_RUN` in this Codex run. Requires Operator camera session.
 
 Run with:
 
@@ -1246,6 +1248,8 @@ Expected:
 
 - [ ] **Step 5: Decision**
 
+Current pre-smoke decision: `KEEP_SNAPSHOT_FIRST_DEFAULT_FOR_MVP`.
+
 Possible outcomes:
 
 ```text
@@ -1254,7 +1258,7 @@ STATE_FIRST_BRANCH_FIX_REQUIRED
 KEEP_SNAPSHOT_FIRST_DEFAULT_FOR_MVP
 ```
 
-- [ ] **Step 6: Commit smoke docs**
+- [x] **Step 6: Commit smoke docs**
 
 Run:
 
@@ -1375,3 +1379,14 @@ Current detector result on real fixture:
 - `three_cards->empty`: FAIL, actual 2 / expected 3.
 
 Conclusion: state-first diff is useful for add/remove one-card workflows, but multi-card ROI grouping still needs a follow-up before using three-card counts as an MVP gate.
+
+Task 10 prepared:
+
+- added `docs/operator/state_first_diff_mvp_smoke.md`,
+- physical smoke was not run in this Codex environment,
+- rollout decision remains `KEEP_SNAPSHOT_FIRST_DEFAULT_FOR_MVP` before Operator camera validation.
+
+Verification:
+
+- `python -m unittest discover -s app_cv\tests -v` => PASS, 463 tests,
+- `npm --prefix E:\Antigravity\Projekty\TAROT\app_ar run build` => PASS.
